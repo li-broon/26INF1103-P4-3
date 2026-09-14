@@ -1,0 +1,28 @@
+{
+    "name": "INF1103 P4-3",
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "context": ".."
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached",
+    "workspaceFolder": "/app",
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "runArgs": [
+        "--name",
+        "inf1103-p4-3"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.terminal.activateEnvironment": false
+            }
+        }
+    }
+}

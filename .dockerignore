@@ -1,0 +1,10 @@
+.env
+data/
+.git
+.devcontainer
+__pycache__/
+*.pyc
+.mypy_cache/
+.venv/
+data/*
+!data/.gitkeep
