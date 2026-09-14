@@ -10,9 +10,9 @@ This system solves this by letting workers report incidents conversationally in 
 
 <ins>Target Users:</ins>
 
-    -	**Contractors:** Workers themselves who can quickly report incidents in their native language without navigating complex forms.
-    -	**Safety officers:** They require data that is structured, categorised and accurate to ensure site safety.
-    -	**Supervisors & Managers:** People with leadership positions who need information on work stoppages and severe safety violations.
+    -	Contractors: Workers themselves who can quickly report incidents in their native language without navigating complex forms.
+    -	Safety officers: They require data that is structured, categorised and accurate to ensure site safety.
+    -	Supervisors & Managers: People with leadership positions who need information on work stoppages and severe safety violations.
 
 ## 2.	**User Inputs**
 
@@ -41,9 +41,9 @@ Users will type into the terminal similar to having a conversation with the AI. 
 
 ## 4.	**Business Rules**
 
-    -	**Severity Escalation:** If the AI outputs its severity rating as ‘Critical’, or a worker is hospitalised, the logic manager will immediately flag the specific entry to the safety officers.
-    -	**Data validation:** The logic manager must check the JSON output for any missing mandatory fields. If it detects this, it will reject it. Then, it goes back to the I/O Manager to reprompt the user for the missing fields. 
-    -	**High-risk root cause:** If the AI categorised some incidents as ‘chemical’ or ‘electrical’. The logic manager immediately flags the specific entry to the safety officers, regardless of whether an injury occurred.
+    -	Severity Escalation: If the AI outputs its severity rating as ‘Critical’, or a worker is hospitalised, the logic manager will immediately flag the specific entry to the safety officers.
+    -	Data validation: The logic manager must check the JSON output for any missing mandatory fields. If it detects this, it will reject it. Then, it goes back to the I/O Manager to reprompt the user for the missing fields. 
+    -	High-risk root cause: If the AI categorised some incidents as ‘chemical’ or ‘electrical’. The logic manager immediately flags the specific entry to the safety officers, regardless of whether an injury occurred.
 
 ## 5.	**Repository Link:**
 
