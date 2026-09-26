@@ -7,12 +7,12 @@ def display_messages(messages):
     print(messages)
 
 fields= [
-    ("What is your name?", "name"), 
-    ("Where did this happen?", "location"),
-    ("When did the incident occur (date and time)?", "incident_datetime"),
+    ("What is your name? ", "name"), 
+    ("Where did this happen? ", "location"),
+    ("When did the incident occur (date and time)? ", "incident_datetime"),
     ("Please descirbe what happened. ", "description"),
     ("Was anyone injured? If so, describe the injury.", "injury_status"),
-    ("was the person hospitalized?(Yes/No)", "hospitalization_status"),
+    ("was the person hospitalized?(Yes/No) ", "hospitalization_status"),
     ("What immediate action was taken? ", "immediate_action"),
     ("How many hours of work were stopped? ", "hours_stopped"),
     ("On a scale of 1-10, how urgent is this? ", "urgency_rating"),
@@ -29,5 +29,10 @@ def collect_report_data():
         
     return report_data
 
+#Data collected will be organised and not in one whole chunk
+def display_report_data(data):
+    for key, value in data.items():
+        print(f"{key}: {value}")
+
 data = collect_report_data()
-print(data)
+display_report_data(data)
