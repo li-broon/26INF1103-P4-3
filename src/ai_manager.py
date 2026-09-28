@@ -3,16 +3,17 @@
 # ------- #
 import json
 import os
+import time
 from datetime import datetime
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 
 #----------------------- #
 # Gemini AI Configuration
 #----------------------- #
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-3.8-flash"
+GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 # Details the AI Collect from User
 USER_FIELDS = {
@@ -75,6 +76,10 @@ Respond ONLY with JSON in this exact format:
 # How many Times to Ask AI to Fix a Invalid JSON Reply
 MAX_JSON_RETRIES = 2
 
+# How many Times to Try when Gemini is Busy (503), and Seconds to Wait between Tries (waits 3s, 6s, 9s, 12s)
+MAX_BUSY_ATTEMPTS = 5
+BUSY_WAIT_SECONDS = 3
+
 # Error Messages
 MISSING_KEY_MESSAGE = """\
 GEMINI_API_KEY is missing.
@@ -121,12 +126,26 @@ def _parse_reply(text):
         return None
     return data
 
+# Send Message to Gemini, Waiting and Trying Again while it is Busy (503) (A failed call is not saved in the chat history, so the conversation is not affected)
+def _send_with_retry(chat, message):
+    attempt = 1
+    while True:
+        try:
+            return chat.send_message(message)
+        except errors.APIError as error:
+            
+            # Not a busy error, or out of tries (_ask_ai handles all other errors)
+            if error.code != 503 or attempt >= MAX_BUSY_ATTEMPTS:
+                raise
+            time.sleep(BUSY_WAIT_SECONDS * attempt)
+            attempt += 1
+
 # Send One Message to AI and Return JSON Reply as a Dict (If the reply is bad JSON, push it back to the AI to fix, up to MAX_JSON_RETRIES times)
 def _ask_ai(chat, text):
     message = text
     for _ in range(1 + MAX_JSON_RETRIES):
         try:
-            response = chat.send_message(message)
+            response = _send_with_retry(chat, message)
 
         # Ensure it Never Crash on API/ Connection Problem
         except Exception as error:
