@@ -156,7 +156,14 @@ def _ask_ai(chat, text):
         try:
             response = _send_with_retry(chat, message)
 
-        # Ensure it Never Crash on API/ Connection Problem
+        # If API Replied with an Error, Return its Code and Status
+        except errors.APIError as error:
+            result = _error_result(error.message)
+            result["error_code"] = error.code
+            result["error_status"] = error.status
+            return result
+
+        # Ensure it Never Crash on Any Other Problem (e.g. no internet, no code/status)
         except Exception as error:
             return _error_result(f"Could not reach the AI: {error}")
 

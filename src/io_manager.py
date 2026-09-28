@@ -61,11 +61,21 @@ def main():
         while True:
             result = send_message(chat, input("> ")) # User Input
             
-            # Error Handling, Show Error Message
+            # Error Handling, Show Error Message Nicely
             if "error" in result:
-                print(f"{RED}Error: {result['error']}\n{BOLD}Please resend your last message to try again!{RESET}")
+                print(f"{RED}{BOLD}⚠️  Error Occurred:{RESET}")
+                
+                # Only API Errors have a Code/ Status
+                if "error_code" in result:
+                    print(f"   {BOLD}{RED}Code:{RESET}    {result['error_code']}")
+                    print(f"   {BOLD}{RED}Status:{RESET}  {result['error_status']}")
+                    
+                print(f"   {BOLD}{RED}Message:{RESET} {result['error']}")
+                print(f"{BOLD}{RED}Please resend your last message to try again!{RESET}\n")
+                
+            # The AI Replies
             else:
-                print(result["reply"]) # AI Replies
+                print(result["reply"])
                 
                 # If Chat is Completed, Send Completed JSON to 'logic_manager'
                 if result["is_complete"]:
