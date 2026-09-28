@@ -51,7 +51,7 @@ def main():
     # Check if API Key Exists
     error = check_api_key()
     if error:
-        print(error)
+        print(f"{RED}{error}{RESET}")
     else:
         
         # Initalise AI & Welcome User
@@ -63,7 +63,7 @@ def main():
             
             # Error Handling, Show Error Message
             if "error" in result:
-                print("Error:", result["error"])
+                print(f"{RED}Error: {result['error']}\n{BOLD}Please resend your last message to try again!{RESET}")
             else:
                 print(result["reply"]) # AI Replies
                 
