@@ -25,21 +25,21 @@ WELCOME = f"""
 
 ========================================================================
 {BOLD}
-    👋 Hello! I'm here to help you report a workplace incident.{RESET}
-    Just tell me what happened, like you're talking to a friend.
-    I'll ask a few questions if anything is missing. 📝
+      👋 Hello! I'm here to help you report a workplace incident.{RESET}
+      Just tell me what happened, like you're talking to a friend.
+          I'll ask a few questions if anything is missing. 📝
         
         {GREEN}{BOLD}{UNDERLINE}🌏 Speak in YOUR language! Any language or a mix is OK.{RESET}
 
       🇬🇧  {GREEN}English{RESET}   : You can talk to me in your own language.
       🇲🇾  {GREEN}Melayu{RESET}    : Anda boleh bercakap dalam bahasa anda sendiri.
       🇨🇳  {GREEN}中文{RESET}      : 您可以用您的母语与我交谈。
-      🇮🇳  {GREEN}தமிழ்{RESET}     : நீங்கள் உங்கள் சொந்த மொழியில் பேசலாம்.
-      🇮🇳  {GREEN}हिन्दी{RESET}       : आप अपनी भाषा में बात कर सकते हैं।
-      🇧🇩  {GREEN}বাংলা{RESET}      : আপনি আপনার নিজের ভাষায় কথা বলতে পারেন।{RESET}
+      🇮🇳  {GREEN}தமிழ்{RESET}      : நீங்கள் உங்கள் சொந்த மொழியில் பேசலாம்.
+      🇮🇳  {GREEN}हिन्दी{RESET}     : आप अपनी भाषा में बात कर सकते हैं।
+      🇧🇩  {GREEN}বাংলা{RESET}     : আপনি আপনার নিজের ভাষায় কথা বলতে পারেন।{RESET}
     
-    {RED}{BOLD}🚨 If someone is still in danger, call 995 and your supervisor FIRST! 🚨{RESET}
-    {YELLOW}💬 Type your message below and press Enter to start. ⬇️{RESET}
+{RED}{BOLD}🚨 If someone is still in danger, call 995 and your supervisor FIRST! 🚨{RESET}
+      {YELLOW}💬 Type your message below and press Enter to start. ⬇️{RESET}
 """
 
 # ------------------------- #
@@ -60,7 +60,6 @@ def main():
 
         while True:
             result = send_message(chat, input("> ")) # User Input
-            print("Thinking...\n")
             
             # Error Handling, Show Error Message
             if "error" in result:
