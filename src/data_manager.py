@@ -10,7 +10,7 @@ def save_data_to_csv(data, file_path):
     file_path (str): The path where the CSV file will be saved.
     """
 
-    # Create the directory if it doesn't exist
+    # Create the directory if the file path exists
     dir_name = os.path.dirname(file_path)
     if dir_name:
         os.makedirs(dir_name)
