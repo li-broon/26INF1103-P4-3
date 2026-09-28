@@ -2,8 +2,11 @@
 # returns their raw typed answer; display_messages() shows a message back
 # to them. Every other function in this file builds on top of these two.
 def get_user_input(prompt):
-    user_input = input(prompt)
-    return user_input
+    while True: 
+        user_input= input(prompt).strip()
+        if user_input !="":
+            return user_input
+        display_messages("This can't be left blank. If you don't know, type 'unknown'.")
 
 def display_messages(messages):
     print(messages)
