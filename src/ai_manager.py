@@ -1,6 +1,7 @@
 # ------- #
 # Imports
 # ------- #
+
 import json
 import os
 import time
@@ -25,7 +26,7 @@ USER_FIELDS = {
     "description": "what happened, in clear English",
     "injury_status": "who was hurt and how, or 'no injury'",
     "body_part_injured": "body part(s) injured, or 'none'",
-    "hospitalised": "true or false",
+    "hospitalised": "true if the injured person was sent to hospital, otherwise false",
     "ppe_worn": "safety equipment worn at the time, or 'none'",
     "witnesses": "names of witnesses, or 'none'",
     "immediate_action_taken": "what was done straight after",
@@ -54,6 +55,12 @@ Each turn:
   and simple, and ask for at most two missing details at a time.
 - Keep track of every detail the worker has given so far. Store all values
   in English. Use null for anything not given yet. Never make things up.
+  Only use 'none' or 'no injury' when the worker actually says so.
+- Never guess from a vague answer. If an answer is unclear or not specific
+  (e.g. "a while", "not long", "7 or 8", "my friends", "maybe"), keep that
+  field null and politely ask again for an exact answer (a number, a single
+  rating, names). If the worker still cannot be exact after you ask again,
+  store their best estimate and add "(estimate)" to text answers.
 - Work out relative dates like "yesterday" using today's date: {today}.
 - If someone is still in danger, first tell them to call 995 and their supervisor.
 
@@ -61,7 +68,9 @@ Details to collect from the worker:
 {user_fields}
 
 When ALL details above are filled, set "is_complete" to true, thank the
-worker, and also fill in your own analysis:
+worker, and in that SAME reply fill in every one of these analysis fields.
+They are your own judgement of the incident, so never ask the worker for
+them and never leave them null:
 {ai_fields}
 Until then, keep "is_complete" false and leave the analysis fields null.
 
@@ -191,10 +200,29 @@ def find_missing_fields(report):
 def send_message(chat, user_text):
     result = _ask_ai(chat, user_text)
 
-    # Double-check the AI (if it says it is done but fields are missing, tell it which ones so it asks the worker for them.)
+    # Double-check the AI (if it says it is done but fields are missing, tell it what to fix)
     missing = find_missing_fields(result.get("report", {}))
     if result.get("is_complete") and missing:
-        result = _ask_ai(chat, "Not complete yet. These fields are still missing: " + ", ".join(missing) + ". Set is_complete to false and ask the worker for them.")
-        result["is_complete"] = False
+        missing_user = [name for name in missing if name in USER_FIELDS]
+        missing_ai = [name for name in missing if name in AI_FIELDS]
+
+        # User Details Missing, AI asks the User.
+        if missing_user:
+            fix = (
+                "Not complete yet. Set is_complete to false and ask the worker for: "
+                + ", ".join(missing_user) + "."
+            )
+            
+        # Only Analysis Missing, AI Fills it in Itself.
+        else:
+            fix = (
+                "You set is_complete to true but left your analysis fields empty. "
+                "Fill these in yourself now and keep is_complete true: " + ", ".join(missing_ai) + "."
+            )
+        result = _ask_ai(chat, fix + " Keep your reply to the worker in their language.")
+
+        # Only accept "complete" if the AI really filled everything this time
+        if find_missing_fields(result.get("report", {})):
+            result["is_complete"] = False
 
     return result
