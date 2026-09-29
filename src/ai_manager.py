@@ -19,19 +19,14 @@ GEMINI_MODEL = "gemini-3.5-flash-lite"
 # Details the AI Collect from User
 USER_FIELDS = {
     "reporter_name": "full name of the person reporting",
-    "reporter_role": "job title or trade, e.g. electrician",
     "location": "site and exact area where it happened",
     "incident_date": "date in YYYY-MM-DD",
     "incident_time": "time in 24h HH:MM",
     "description": "what happened, in clear English",
     "injury_status": "who was hurt and how, or 'no injury'",
-    "body_part_injured": "body part(s) injured, or 'none'",
     "hospitalised": "true if the injured person was sent to hospital, otherwise false",
-    "ppe_worn": "safety equipment worn at the time, or 'none'",
-    "witnesses": "names of witnesses, or 'none'",
     "immediate_action_taken": "what was done straight after",
     "work_stoppage_hours": "hours work was stopped, 0 if none",
-    "urgency_rating": "worker's own urgency rating, whole number 1-10",
 }
 
 # Details the AI Creates once Report is Complete
