@@ -39,7 +39,7 @@ def load_data_from_csv(file_path):
 
     try:
         df = pd.read_csv(file_path)
-        print(f"Success: loaded {len(df)} rows from '{file_path}'.")
+        print(f"Success: loaded data from '{file_path}'.")
         return df
     #Removing the first two errors for now, add back if needed
     #except FileNotFoundError:
