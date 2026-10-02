@@ -11,7 +11,9 @@
     },
     "runArgs": [
         "--name",
-        "inf1103-p4-3"
+        "inf1103-p4-3",
+        "--env-file",
+        "${localWorkspaceFolder}/.env"
     ],
     "customizations": {
         "vscode": {
