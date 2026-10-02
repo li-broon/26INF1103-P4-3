@@ -15,7 +15,8 @@ DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
 
 # Column used to keep data.csv sorted by urgency - change this if your
 # urgency/priority field is named something else.
-URGENCY_COLUMN = "priority_score"
+URGENCY_COLUMN = "importance_score"  # Must Match the Name 'logic_manager' Saves the Score Under
+
 # -------------------------- #
 # data_manager Main Functions
 # -------------------------- #
@@ -62,3 +63,16 @@ def resort_data_file(ascending=False):
     table = sort_by_urgency(pd.read_csv(DATA_FILE), ascending=ascending)
     table.to_csv(DATA_FILE, index=False)
     return table
+
+
+# Read All Saved Records from 'data.csv' and Return them Sorted by Urgency
+# (Read-Only: Does Not Change the File. 'io_manager' Calls this to Display the Data)
+def load_records(ascending=False):
+
+    # If 'data.csv' Doesn't Exist or is Empty, Return an Empty Table (Nothing Saved Yet)
+    if not os.path.exists(DATA_FILE) or os.path.getsize(DATA_FILE) == 0:
+        return pd.DataFrame()
+
+    # Read the CSV into a Dataframe and Sort it (Most Urgent First)
+    table = pd.read_csv(DATA_FILE)
+    return sort_by_urgency(table, ascending=ascending)
