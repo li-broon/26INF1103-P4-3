@@ -41,22 +41,27 @@ def save_data_to_csv(data, file_path):
 def load_data_from_csv(file_path):
     """
     Loads data from CSV file and sends success or error message.
-
-    Parameters:
-    file_path (str): The path of the CSV file to load.
-
-    Returns:
-    pd.DataFrame: The loaded data, or an empty DataFrame if loading failed/empty.
     """
     if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
         return pd.DataFrame()
 
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, on_bad_lines='skip')  # Skip any bad lines instead of raising an error
+        
+        # Detect rows where data shifted left, leaving importance_score empty (NaN)
+        if df['importance_score'].isnull().any():
+            corrupted_count = df['importance_score'].isnull().sum()
+            print(f"Warning: Detected {corrupted_count} corrupted row(s) in '{file_path}'. Skipping bad data.")
+            
+            # Safely drop the corrupted rows so the rest of the app doesn't crash
+            df = df.dropna(subset=['importance_score'])
+        # ----------------------------
+
         print(f"Success: loaded data from '{file_path}'.")
         return df
+        
     except pd.errors.ParserError:
-        print(f"Error: the file '{file_path}' is not a valid CSV or is badly formatted.")
+        print(f"Error: the file '{file_path}' has extra columns and is badly formatted.")
     except PermissionError:
         print(f"Error: you don't have permission to read '{file_path}'.")
     except Exception as e:
@@ -107,7 +112,6 @@ def save_record(record):
     table = sort_by_urgency(table)
     
     # Overwrite the CSV so it remains fully sorted on disk 
-    # (We bypass save_data_to_csv here because it uses mode='a' which breaks sorting)
     table.to_csv(DATA_FILE, index=False)
 
 
