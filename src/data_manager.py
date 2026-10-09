@@ -40,7 +40,13 @@ def save_data_to_csv(data, file_path):
 
 def load_data_from_csv(file_path):
     """
+    Parameters:
+    
     Loads data from CSV file and sends success or error message.
+    file_path (str): The path of the CSV file to load.
+
+    Returns:
+    pd.DataFrame: The loaded data, or an empty DataFrame if loading failed/empty.
     """
     if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
         return pd.DataFrame()
