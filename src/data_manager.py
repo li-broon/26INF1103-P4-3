@@ -28,9 +28,9 @@ def save_data_to_csv(data, file_path):
 
 def load_data_from_csv(file_path):
     """
-    Loads data from CSV file and sends success or error message.
-
     Parameters:
+    
+    Loads data from CSV file and sends success or error message.
     file_path (str): The path of the CSV file to load.
 
     Returns:
