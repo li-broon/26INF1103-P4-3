@@ -2,6 +2,8 @@
 # Imports
 # ------- #
 
+import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
+
 from src.ai_manager import start_chat, send_message, check_api_key
 from src.logic_manager import logic
 from src.data_manager import load_records  # Gets Saved Reports from 'data_manager'
@@ -64,15 +66,36 @@ MAX_OPTION = 3
 # Saved Report Display
 # -------------------- #
 
-# Columns in the Saved Reports Table: (Heading, Column Name in 'data.csv', Width)
+# Summary Row of Each Report: (Heading, Column Name in 'data.csv', Width)
+# Ordered the Way a Safety Officer Triages a List: How Urgent is it, How Bad was it,
+# Did Anyone Go to Hospital, What Caused it, Where, When, and Who Reported it Last.
 TABLE_COLUMNS = [
     ("Score", "importance_score", 7),
-    ("Date", "incident_date", 12),
-    ("Reporter", "reporter_name", 15),
-    ("Location", "location", 18),
     ("Severity", "ai_severity", 10),
-    ("Root Cause", "root_cause_category", 18),
+    ("Hosp.", "hospitalised", 7),
+    ("Root Cause", "root_cause_category", 20),
+    ("Location", "location", 18),
+    ("Date", "incident_date", 12),
+    ("Reporter", "reporter_name", 12),
 ]
+
+# Full-Text Fields Printed Under Each Summary Row: (Label, Column Name in 'data.csv')
+# These Hold Whole Sentences, so They are Wrapped Instead of Squeezed into a Column
+# (a 200-Character Safety Recommendation Cut to 18 Characters is No Use to Anyone).
+DETAIL_FIELDS = [
+    ("Injury", "injury_status"),
+    ("What happened", "description"),
+    ("Action taken", "immediate_action_taken"),
+    ("Recommended action", "safety_recommendation"),
+]
+
+# Layout of the Wrapped Detail Lines
+DETAIL_INDENT = 7        # Spaces Before the Label, so Details Sit Under their Row
+DETAIL_LABEL_WIDTH = 20  # Width of the "Label:" Part, Keeps the Text Lined Up
+DETAIL_TEXT_WIDTH = 64   # Characters per Line Before Wrapping (Ends Level with the Table)
+
+# Values that Mean "Nothing Was Saved Here" - Detail Lines with These are Skipped
+EMPTY_VALUES = ("", "-", "nan", "none", "null")
 
 # ---------------------------- #
 # io_manager Private Functions
@@ -94,6 +117,46 @@ def _fit(text, width):
     if len(text) >= width:
         text = text[:width - 2] + "…"
     return text.ljust(width)
+
+# Show True/False as YES/No (Safety Officers Scan this Column First for Hospital Cases)
+def _yes_no(value):
+    text = str(value).strip().lower()
+    if text in ("true", "yes", "1", "1.0"):
+        return "YES"
+    if text in ("false", "no", "0", "0.0"):
+        return "No"
+    return "-"
+
+# Turn One Long Field into Wrapped, Indented Lines (Returns [] if the Field is Empty)
+def _wrap_detail(label, text):
+    text = str(text).strip()
+    if text.lower() in EMPTY_VALUES:
+        return []
+
+    indent = " " * DETAIL_INDENT
+    label_cell = f"{label}:".ljust(DETAIL_LABEL_WIDTH)
+    lines = textwrap.wrap(text, width=DETAIL_TEXT_WIDTH) or [text]
+
+    # First Line Carries the Label, the Rest Line Up Underneath the Text
+    wrapped = [f"{indent}{CYAN}{label_cell}{RESET}{lines[0]}"]
+    wrapped += [f"{indent}{' ' * DETAIL_LABEL_WIDTH}{line}" for line in lines[1:]]
+    return wrapped
+
+# Build One Summary Row, Highlighting Hospital Cases in Red
+def _build_row(number, report):
+    row = _fit(number, 5)
+    for heading, column, width in TABLE_COLUMNS:
+        value = report.get(column, "-")
+
+        # Hospitalisation is a Straight Yes/No, and YES is Worth Shouting About
+        if column == "hospitalised":
+            value = _yes_no(value)
+            cell = _fit(value, width)  # Padded Before Colouring, so Columns Stay Lined Up
+            row += f"{RED}{BOLD}{cell}{RESET}" if value == "YES" else cell
+            continue
+
+        row += _fit(value, width)
+    return row
 
 # ------------------------- #
 # io_manager Main Functions
@@ -144,14 +207,16 @@ def view_reports():
     print(f"{BOLD}{header}{RESET}")
     print("-" * len(header))
 
-    # One Row per Report (Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
+    # One Block per Report: a Summary Row, then its Full-Text Details Underneath
+    # (Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
     table = table.fillna("-")
     for number, report in enumerate(table.to_dict("records"), start=1):
-        row = _fit(number, 5)
-        for heading, column, width in TABLE_COLUMNS:
-            row += _fit(report.get(column, "-"), width)
-        print(row)
-    print()
+        print(_build_row(number, report))
+
+        for label, column in DETAIL_FIELDS:
+            for line in _wrap_detail(label, report.get(column, "-")):
+                print(line)
+        print()
 
 # Run the Chatbot to Collect One Incident Report
 def run_chatbot():
