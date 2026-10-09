@@ -127,17 +127,16 @@ def show_menu():
 # Get Saved Reports from 'data_manager' and Print them in the Terminal
 def view_reports():
 
-    # Step 1: Go to 'data_manager' for the Data (Returns a Table, Empty if Nothing is Saved)
+    # Go to 'data_manager' for the Data (Returns a Table, Empty if Nothing is Saved)
     table = load_records()
 
-    # Step 2: Back in 'io_manager', Print the Data for the User
+    # Back in 'io_manager', Print the Data for the User
     if table.empty:
         print(f"{YELLOW}No incident reports have been saved yet.{RESET}")
         return
 
     print(f"\n{BOLD}{UNDERLINE}Saved Incident Reports ({len(table)} total, most urgent first){RESET}\n")
 
-    # Heading Row, then a Line Underneath
     header = _fit("No.", 5)
     for heading, column, width in TABLE_COLUMNS:
         header += _fit(heading, width)
@@ -153,7 +152,7 @@ def view_reports():
         print(row)
     print()
 
-# Run the Chatbot to Collect One Incident Report
+# Run the Chatbot to collect Incident Report
 def run_chatbot():
 
     # Check if API Key Exists (Go Back to the Menu if it Doesn't)
@@ -169,7 +168,7 @@ def run_chatbot():
     while True:
         result = send_message(chat, input("> "))  # User Input
 
-        # Error Handling, Show Error Message Nicely
+        # Error Handling, Show Error Message
         if "error" in result:
             print(f"{RED}{BOLD}⚠️  Error Occurred:{RESET}")
 
@@ -188,7 +187,7 @@ def run_chatbot():
             # If Chat is Completed, Send Completed JSON to 'logic_manager' (Scores & Saves it)
             if result["is_complete"]:
                 logic(result["report"])
-                print(f"\n{GREEN}{BOLD}✅ Your report has been saved.{RESET}\n")
+                print(f"\n{GREEN}{BOLD} Your report has been saved.{RESET}\n")
 
                 # Offer to Show the Saved Reports from 'data_manager' Straight Away
                 if _ask_yes_no("Would you like to view all saved reports now?"):
@@ -198,7 +197,7 @@ def run_chatbot():
 # Main Loop: Show Menu, Run the Chosen Option, Repeat until User Exits
 def main():
     while True:
-        choice = show_menu()  # Always an Integer (1, 2 or 3)
+        choice = show_menu()  
 
         if choice == 1:
             run_chatbot()
