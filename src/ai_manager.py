@@ -91,6 +91,9 @@ MAX_JSON_RETRIES = 2
 MAX_BUSY_ATTEMPTS = 5
 BUSY_WAIT_SECONDS = 3
 
+# How many Times to Tell the AI to Fix a Report it Marked Complete while Fields are Missing
+MAX_FIX_ATTEMPTS = 2
+
 # Error Messages
 MISSING_KEY_MESSAGE = """\
 GEMINI_API_KEY is missing.
@@ -103,6 +106,11 @@ BAD_JSON_MESSAGE = (
     "Your last reply was not valid JSON in the required format. "
     "Send the same reply again using ONLY the JSON format with the "
     "keys \"reply\", \"is_complete\" and \"report\"."
+)
+
+INCOMPLETE_MESSAGE = (
+    "The report is not finished yet. Still missing: {fields}. "
+    "Please give these details (or say you do not know) in your next message."
 )
 
 # ---------------------------- #
@@ -176,6 +184,27 @@ def _ask_ai(chat, text):
 
     return _error_result("The AI kept replying in the wrong format.")
 
+# Build the Message Telling the AI What to Fix when it Says "Complete" but Fields are Missing
+def _build_fix_message(missing):
+    missing_user = [name for name in missing if name in USER_FIELDS]
+    missing_ai = [name for name in missing if name in AI_FIELDS]
+
+    # User Details Missing, AI asks the User (or stores UNKNOWN_VALUE if they already said they don't know)
+    if missing_user:
+        fix = (
+            "Not complete yet. Set is_complete to false and ask the worker for: "
+            + ", ".join(missing_user) + ". If the worker already said twice that "
+            f"they do not know one of these, store \"{UNKNOWN_VALUE}\" for it instead."
+        )
+
+    # Only Analysis Missing, AI Fills it in Itself.
+    else:
+        fix = (
+            "You set is_complete to true but left your analysis fields empty. "
+            "Fill these in yourself now and keep is_complete true: " + ", ".join(missing_ai) + "."
+        )
+    return fix + " Keep your reply to the worker in their language."
+
 # ------------------------- #
 # ai_manager Main Functions
 # ------------------------- # 
@@ -211,29 +240,16 @@ def send_message(chat, user_text):
     print("Thinking...\n")
     result = _ask_ai(chat, user_text)
 
-    # Double-check the AI (if it says it is done but fields are missing, tell it what to fix)
+    # Double-check the AI (if it says it is done but fields are missing, tell it what to fix, up to MAX_FIX_ATTEMPTS times)
+    for _ in range(MAX_FIX_ATTEMPTS):
+        missing = find_missing_fields(result.get("report", {}))
+        if not (result.get("is_complete") and missing):
+            return result
+        result = _ask_ai(chat, _build_fix_message(missing))
+
+    # AI still says "complete" with fields missing: don't show its "all done" reply, tell the user what is missing instead
     missing = find_missing_fields(result.get("report", {}))
     if result.get("is_complete") and missing:
-        missing_user = [name for name in missing if name in USER_FIELDS]
-        missing_ai = [name for name in missing if name in AI_FIELDS]
-
-        # User Details Missing, AI asks the User.
-        if missing_user:
-            fix = (
-                "Not complete yet. Set is_complete to false and ask the worker for: "
-                + ", ".join(missing_user) + "."
-            )
-            
-        # Only Analysis Missing, AI Fills it in Itself.
-        else:
-            fix = (
-                "You set is_complete to true but left your analysis fields empty. "
-                "Fill these in yourself now and keep is_complete true: " + ", ".join(missing_ai) + "."
-            )
-        result = _ask_ai(chat, fix + " Keep your reply to the worker in their language.")
-
-        # Only accept "complete" if the AI really filled everything this time
-        if find_missing_fields(result.get("report", {})):
-            result["is_complete"] = False
+        return _error_result(INCOMPLETE_MESSAGE.format(fields=", ".join(missing).replace("_", " ")))
 
     return result
