@@ -40,6 +40,9 @@ AI_FIELDS = {
     "safety_recommendation": "practical actions the safety officer should take",
 }
 
+# Value the AI Stores when the Worker Really Does Not Know a Detail (Counts as Filled)
+UNKNOWN_VALUE = "unknown (worker could not say)"
+
 # Gemini Prompt Template
 SYSTEM_PROMPT = """\
 You are a friendly workplace safety assistant helping a worker report an
@@ -56,6 +59,10 @@ Each turn:
   field null and politely ask again for an exact answer (a number, a single
   rating, names). If the worker still cannot be exact after you ask again,
   store their best estimate and add "(estimate)" to text answers.
+- If the worker says they do not know a text detail at all (e.g. "idk",
+  "not sure") and still does not know after you ask again, store
+  "{unknown}" for it. Never leave a field null just because the
+  worker does not know, or the report can never be finished.
 - Work out relative dates like "yesterday" using today's date: {today}.
 - If someone is still in danger, first tell them to call 995 and their supervisor.
 
@@ -183,6 +190,7 @@ def check_api_key():
 def start_chat():
     prompt = SYSTEM_PROMPT.format(
         today=datetime.now().strftime("%Y-%m-%d"),
+        unknown=UNKNOWN_VALUE,
         user_fields=_format_fields(USER_FIELDS),
         ai_fields=_format_fields(AI_FIELDS),
     )
