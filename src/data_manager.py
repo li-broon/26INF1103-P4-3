@@ -1,7 +1,9 @@
 # ------- #
 # Imports
 # ------- #
+import logging
 import os
+
 import pandas as pd
 
 # ------------------ #
@@ -15,34 +17,95 @@ DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
 # Column used to keep data.csv sorted by urgency
 URGENCY_COLUMN = "importance_score"  # Must Match the Name 'logic_manager' Saves the Score Under
 
+# Fields every record must have before it is allowed into data.csv
+REQUIRED_FIELDS = ["reporter_name", "incident_date", URGENCY_COLUMN]
+DATE_FIELD = "incident_date"
+DATE_FORMAT = "%Y-%m-%d"
+
+# 'logging' is used for diagnostics because all console output lives in 'io_manager'
+logger = logging.getLogger(__name__)
+
+
+# -------------------------- #
+# Cleaning (Runtime)
+# -------------------------- #
+def clean_record(record):
+    """
+    Normalize ONE record before it is saved. This is the last safety net;
+    user input is validated in 'io_manager' and AI output in 'ai_manager'.
+
+    Parameters:
+    record (dict): The record to clean.
+
+    Returns:
+    dict | None: The cleaned record, or None if a required field is missing/invalid.
+    """
+    if not isinstance(record, dict):
+        return None
+
+    cleaned = record.copy()
+
+    # Strip whitespace from every text value
+    for k, v in cleaned.items():
+        if isinstance(v, str):
+            cleaned[k] = v.strip()
+        else:
+            cleaned[k] = v
+
+    # Required fields must exist and be non-empty
+    for field in REQUIRED_FIELDS:
+        value = cleaned.get(field)
+        if value is None or (isinstance(value, str) and value == "") or pd.isna(value):
+            return None
+
+    try:
+        cleaned[DATE_FIELD] = pd.to_datetime(
+            cleaned[DATE_FIELD], format=DATE_FORMAT
+        ).strftime(DATE_FORMAT)
+        cleaned[URGENCY_COLUMN] = float(cleaned[URGENCY_COLUMN])
+    except (ValueError, TypeError):
+        return None
+
+    return cleaned
+
+
+def comparable(value):
+    """Turns float type values into floats, and everything else into lowercase stripped strings"""
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return str(value).strip().lower()
+
+
+def is_duplicate(existing_data, record):
+    """Return True if every field of 'record' matches an existing row exactly"""
+    # If the existing data is empty, there can't be a duplicate
+    if existing_data.empty:
+        return False
+
+    for row in existing_data.to_dict("records"):
+        row_matches = True  # Assume a match until a field proves otherwise
+
+        for field, new_value in record.items():
+            if comparable(row.get(field)) != comparable(new_value):
+                row_matches = False
+                break
+
+        if row_matches:
+            return True
+        
+    return False
+
+
 # -------------------------- #
 # General Data Functions
 # -------------------------- #
-
-def save_data_to_csv(data, file_path):
-    """
-    Save the given data to a CSV file using append mode.
-
-    Parameters:
-    data (pd.DataFrame): The data to be saved.
-    file_path (str): The path where the CSV file will be saved.
-    """
-    dir_name = os.path.dirname(file_path)
-    if dir_name:
-        os.makedirs(dir_name, exist_ok=True)
-
-    df = pd.DataFrame(data)
-
-    # Check if file exists and isn't empty to determine if we need to write headers
-    file_exists = os.path.exists(file_path) and os.path.getsize(file_path) > 0
-    df.to_csv(file_path, mode='a', header=not file_exists, index=False)
-
-
 def load_data_from_csv(file_path):
     """
+    Load a CSV file WITHOUT cleaning or deleting anything.
+    Missing, empty, unreadable or wrongly-structured files give an empty DataFrame.
+
     Parameters:
-    
-    Loads data from CSV file and sends success or error message.
     file_path (str): The path of the CSV file to load.
 
     Returns:
@@ -52,53 +115,26 @@ def load_data_from_csv(file_path):
         return pd.DataFrame()
 
     try:
-        df = pd.read_csv(file_path, on_bad_lines='skip')  # Skip any bad lines instead of raising an error
-
-        # 1. Standardize dates properly using format='mixed'
-        # Enforce a strict YYYY-MM-DD format and coerce anything that doesn't comply
-        df['incident_date'] = pd.to_datetime(
-            df['incident_date'], 
-            format='%Y-%m-%d', 
-            errors='coerce'
-        ).dt.strftime('%Y-%m-%d')
-
-        # 2. Drop "ghost" rows that are missing critical information (like the reporter's name)
-        df = df.dropna(subset=['reporter_name'])
-
-        # 3. Drop exact duplicate rows
-        df = df.drop_duplicates()
-
-        # 4. Fill any remaining empty fields with "-" for safe printing
-        df.fillna("-", inplace=True)
-
-        # 5. Detect trailing spaces in string columns and strip them
-        for col in df.select_dtypes(include=['object']).columns:
-            df[col] = df[col].str.strip()
-
-        # Detect rows where data shifted left, leaving importance_score empty (NaN)
-        if df['importance_score'].isnull().any():
-            corrupted_count = df['importance_score'].isnull().sum()
-            print(f"Warning: Detected {corrupted_count} corrupted row(s) in '{file_path}'. Skipping bad data.")
-            
-            # Safely drop the corrupted rows so the rest of the app doesn't crash
-            df = df.dropna(subset=['importance_score'])
-        # ----------------------------
-
-        print(f"Success: loaded data from '{file_path}'.")
-        return df
-
-    except FileNotFoundError:
-        print(f"Error: the file '{file_path}' does not exist.")
+        df = pd.read_csv(file_path)
     except pd.errors.EmptyDataError:
-        print(f"Error: the file '{file_path}' is empty.")
+        logger.warning("File '%s' is empty.", file_path)
+        return pd.DataFrame()
     except pd.errors.ParserError:
-        print(f"Error: the file '{file_path}' has extra columns and is badly formatted.")
+        logger.warning("File '%s' is badly formatted.", file_path)
+        return pd.DataFrame()
     except PermissionError:
-        print(f"Error: you don't have permission to read '{file_path}'.")
+        logger.error("No permission to read '%s'.", file_path)
+        return pd.DataFrame()
     except Exception as e:
-        print(f"Error: an unexpected problem occurred while loading '{file_path}': {e}")
+        logger.error("Unexpected problem loading '%s': %s", file_path, e)
+        return pd.DataFrame()
 
-    return pd.DataFrame()
+    missing = [col for col in REQUIRED_FIELDS if col not in df.columns]
+    if missing:
+        logger.warning("File '%s' is missing required columns: %s", file_path, missing)
+        return pd.DataFrame()
+
+    return df
 
 
 def sort_by_column(data, column_name, ascending=True):
@@ -108,14 +144,16 @@ def sort_by_column(data, column_name, ascending=True):
     Parameters:
     data (pd.DataFrame): The data to be sorted.
     column_name (str): The name of the column to sort by.
+    ascending (bool): Sort direction.
 
     Returns:
     pd.DataFrame: The sorted data.
     """
     if column_name not in data.columns:
         return data
-        
+
     return data.sort_values(by=column_name, ascending=ascending, na_position="last").reset_index(drop=True)
+
 
 def filter_by_value(data, column_name, value):
     """
@@ -131,70 +169,100 @@ def filter_by_value(data, column_name, value):
     doesn't exist or the value is invalid for that column.
     """
     if column_name not in data.columns:
-        print(f"Error: column '{column_name}' not found.")
         return pd.DataFrame()
 
     if pd.api.types.is_numeric_dtype(data[column_name]):
         try:
             mask = data[column_name] == float(value)
         except ValueError:
-            print(f"Error: '{value}' is not a valid number for column '{column_name}'.")
             return pd.DataFrame()
     else:
         mask = data[column_name].astype(str).str.strip().str.lower() == str(value).strip().lower()
 
     return data[mask].reset_index(drop=True)
 
+
 # -------------------------- #
 # Specific Manager Functions
 # -------------------------- #
-
 def sort_by_urgency(table, ascending=False):
-    """Sort a Dataframe by Urgency, Most Urgent First"""
+    """Sort a DataFrame by Urgency, Most Urgent First (non-numeric scores go last)"""
+    if URGENCY_COLUMN in table.columns:
+        table = table.copy()
+        table[URGENCY_COLUMN] = pd.to_numeric(table[URGENCY_COLUMN], errors="coerce")
     return sort_by_column(table, URGENCY_COLUMN, ascending=ascending)
 
 
 def save_record(record):
-    """Add Record as New Row in 'data.csv' and maintain urgency sort"""
-    os.makedirs(DATA_FOLDER, exist_ok=True)
-    new_row = pd.DataFrame([record])
+    """
+    Clean a record, reject duplicates, then add it to 'data.csv' sorted by urgency.
 
-    # Load existing data safely using the general function
+    Parameters:
+    record (dict): The processed record to save.
+
+    Returns:
+    tuple[bool, str]: (success, message). 'io_manager' decides whether to print the message.
+    """
+    cleaned = clean_record(record)
+    if cleaned is None:
+        return False, "Record rejected: missing or invalid required field."
+
+    os.makedirs(DATA_FOLDER, exist_ok=True)
     existing_data = load_data_from_csv(DATA_FILE)
 
-    if not existing_data.empty:
-        table = pd.concat([existing_data, new_row], ignore_index=True)
-    else:
-        table = new_row
+    # File exists but couldn't be read: keep a backup instead of overwriting it
+    if existing_data.empty and os.path.exists(DATA_FILE) and os.path.getsize(DATA_FILE) > 0:
+        os.replace(DATA_FILE, DATA_FILE + ".bak")
+        logger.warning("Unreadable data file backed up to '%s.bak'.", DATA_FILE)
 
-    # Keep the Table Sorted by Urgency (Highest First) Before Saving
+    if is_duplicate(existing_data, cleaned):
+        return False, "Record rejected: an identical record already exists."
+
+    new_row = pd.DataFrame([cleaned])
+    table = new_row if existing_data.empty else pd.concat([existing_data, new_row], ignore_index=True)
     table = sort_by_urgency(table)
-    
-    # Overwrite the CSV so it remains fully sorted on disk 
-    table.to_csv(DATA_FILE, index=False)
 
+    # Write to a temp file first so an interrupted write can't corrupt data.csv
+    temp_file = DATA_FILE + ".tmp"
+    try:
+        table.to_csv(temp_file, index=False)
+        os.replace(temp_file, DATA_FILE)
+    except OSError as e:
+        logger.error("Could not write '%s': %s", DATA_FILE, e)
+        return False, "Record could not be saved (file write error)."
 
-def resort_data_file(ascending=False):
-    """Re-sort the Existing 'data.csv' on Disk (e.g. if the File was Edited Manually)"""
-    table = load_data_from_csv(DATA_FILE)
-    if table.empty:
-        return table
-
-    table = sort_by_urgency(table, ascending=ascending)
-    table.to_csv(DATA_FILE, index=False)
-    return table
+    return True, "Record saved."
 
 
 def load_records(ascending=False):
     """
-    Read All Saved Records from 'data.csv' and Return them Sorted by Urgency
-    (Read-Only: Does Not Change the File. 'io_manager' Calls this to Display the Data)
+    Read All Saved Records from 'data.csv', clean out any manual corruption 
+    in memory, and Return them Sorted by Urgency.
     """
     table = load_data_from_csv(DATA_FILE)
     if table.empty:
         return table
 
-    return sort_by_urgency(table, ascending=ascending)
+    # 1. Run every loaded row through your existing clean_record function
+    valid_records = []
+    for record in table.to_dict("records"):
+        cleaned = clean_record(record)
+        # 2. Only keep rows that pass validation (rejects None)
+        if cleaned is not None:
+            valid_records.append(cleaned)
+            
+    # If all rows were corrupt, return empty
+    if not valid_records:
+        return pd.DataFrame()
+
+    # 3. Convert back to DataFrame and sort
+    clean_table = pd.DataFrame(valid_records)
+    
+    # 4. (Optional but recommended) Drop exact duplicates that might have been pasted in manually
+    clean_table = clean_table.drop_duplicates()
+
+    return sort_by_urgency(clean_table, ascending=ascending)
+
 
 def get_column_names():
     """Return the column names in 'data.csv' so the user can choose from them"""
@@ -210,12 +278,10 @@ def get_unique_values(column_name):
 
 
 def load_matching_records(column_name, value, ascending=False):
-    """Read 'data.csv' sorted by urgency and keep only rows where column_name equals value"""
+    """Read 'data.csv' sorted by urgency and keep only rows where column_name equals value.
+    Returns an empty DataFrame when nothing matches; 'io_manager' prints the 'no results' message."""
     table = load_records(ascending=ascending)
     if table.empty:
         return table
 
-    matches = filter_by_value(table, column_name, value)
-    if matches.empty and column_name in table.columns:
-        print(f"No rows found where '{column_name}' is '{value}'.")
-    return matches
+    return filter_by_value(table, column_name, value)
