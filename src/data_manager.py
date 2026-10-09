@@ -86,7 +86,11 @@ def load_data_from_csv(file_path):
 
         print(f"Success: loaded data from '{file_path}'.")
         return df
-        
+
+    except FileNotFoundError:
+        print(f"Error: the file '{file_path}' does not exist.")
+    except pd.errors.EmptyDataError:
+        print(f"Error: the file '{file_path}' is empty.")
     except pd.errors.ParserError:
         print(f"Error: the file '{file_path}' has extra columns and is badly formatted.")
     except PermissionError:
@@ -112,6 +116,34 @@ def sort_by_column(data, column_name, ascending=True):
         return data
         
     return data.sort_values(by=column_name, ascending=ascending, na_position="last").reset_index(drop=True)
+
+def filter_by_value(data, column_name, value):
+    """
+    Return all rows where the given column matches the given value.
+
+    Parameters:
+    data (pd.DataFrame): The data to filter.
+    column_name (str): The column to check.
+    value: The value to match. Text is compared ignoring case and extra spaces.
+
+    Returns:
+    pd.DataFrame: The matching rows, or an empty DataFrame if the column
+    doesn't exist or the value is invalid for that column.
+    """
+    if column_name not in data.columns:
+        print(f"Error: column '{column_name}' not found.")
+        return pd.DataFrame()
+
+    if pd.api.types.is_numeric_dtype(data[column_name]):
+        try:
+            mask = data[column_name] == float(value)
+        except ValueError:
+            print(f"Error: '{value}' is not a valid number for column '{column_name}'.")
+            return pd.DataFrame()
+    else:
+        mask = data[column_name].astype(str).str.strip().str.lower() == str(value).strip().lower()
+
+    return data[mask].reset_index(drop=True)
 
 # -------------------------- #
 # Specific Manager Functions
@@ -163,3 +195,27 @@ def load_records(ascending=False):
         return table
 
     return sort_by_urgency(table, ascending=ascending)
+
+def get_column_names():
+    """Return the column names in 'data.csv' so the user can choose from them"""
+    return list(load_data_from_csv(DATA_FILE).columns)
+
+
+def get_unique_values(column_name):
+    """Return the distinct values in a column so the user can see what they can filter by"""
+    table = load_data_from_csv(DATA_FILE)
+    if column_name not in table.columns:
+        return []
+    return sorted(table[column_name].astype(str).unique())
+
+
+def load_matching_records(column_name, value, ascending=False):
+    """Read 'data.csv' sorted by urgency and keep only rows where column_name equals value"""
+    table = load_records(ascending=ascending)
+    if table.empty:
+        return table
+
+    matches = filter_by_value(table, column_name, value)
+    if matches.empty and column_name in table.columns:
+        print(f"No rows found where '{column_name}' is '{value}'.")
+    return matches
