@@ -1,0 +1,21 @@
+{
+  "reply": "Thank you, your report is complete.",
+  "is_complete": true,
+  "report": {
+    "reporter_name": "Ravi",
+    "location": "unknown (worker could not say)",
+    "incident_date": "2026-10-09",
+    "incident_time": "08:00",
+    "description": "Worker tripped over a cable.",
+    "injury_status": "no injury",
+    "hospitalised": "no",
+    "immediate_action_taken": "unknown (worker could not say)",
+    "work_stoppage_hours": "unknown (worker could not say)",
+    "detected_language": "Tamil",
+    "ai_severity": "low",
+    "is_near_miss": "yes",
+    "root_cause_category": "Cable",
+    "lost_time_injury": null,
+    "safety_recommendation": "Route cables away from walkways."
+  }
+}
