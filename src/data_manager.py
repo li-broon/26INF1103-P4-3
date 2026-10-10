@@ -15,10 +15,10 @@ from datetime import datetime, timedelta
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "data")
 DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
 
-# Column used to keep data.csv sorted by urgency
+# Sort by score means sorting by urgency 
 URGENCY_COLUMN = "importance_score"
 
-# Fields every record must have before it is allowed into data.csv
+# Important fields that csv must contain
 REQUIRED_FIELDS = ["reporter_name", "incident_date", URGENCY_COLUMN]
 DATE_FIELD = "incident_date"
 DATE_FORMAT = "%Y-%m-%d"
@@ -71,7 +71,16 @@ def clean_record(record):
 
 
 def comparable(value):
-    """Turns float type values into floats, and everything else into lowercase stripped strings"""
+    """
+    Convert a value into a standardized format for safe comparison.
+    Numeric strings are converted to floats; text is lowercased and stripped.
+
+    Parameters:
+    value (any): The data value to convert.
+
+    Returns:
+    float | str: The processed value.
+    """
     try:
         return float(value)
     except (ValueError, TypeError):
@@ -192,7 +201,7 @@ def filter_by_value(data, column_name, value):
     elif column_name == "incident_date":
         now = datetime.now()
         
-        # Calculate the cutoff date based on the user's exact menu choice
+        # calculate the difference in days based on the value provided
         if value == "Last 7 Days":
             cutoff = now - timedelta(days=7)
         elif value == "Last 30 Days":
@@ -209,10 +218,11 @@ def filter_by_value(data, column_name, value):
         mask = dates >= cutoff
 
     elif column_name in ["location"]:
-        # Removes leading/trailing whitespace and compares case-insensitively
+        # Adds matching locations to the filtered results, ignoring case and whitespace
         mask = data[column_name].astype(str).str.contains(str(value).strip(), case=False, na=False)
 
     else:
+        # For columns that are strings, compare ignoring case and whitespace
         mask = data[column_name].astype(str).str.strip().str.lower() == str(value).strip().lower()
 
     return data[mask].reset_index(drop=True)
@@ -222,7 +232,9 @@ def filter_by_value(data, column_name, value):
 # Specific Manager Functions
 # -------------------------- #
 def sort_by_urgency(table, ascending=False):
-    """Sort a DataFrame by Urgency
+    """
+    Sort a DataFrame by Urgency.
+    
     Parameters:
     table (pd.DataFrame): The DataFrame to sort.
     ascending (bool): Whether to sort in ascending order (default is False, i.e., most urgent first).
@@ -281,18 +293,25 @@ def save_record(record):
 
 def load_records(ascending=False):
     """
-    Read All Saved Records from 'data.csv', clean out any manual corrupted 
-    data in the csv file, and Return them Sorted by Urgency.
+    Read all saved records from 'data.csv', clean them, reject invalid rows, 
+    and return the valid dataset sorted by urgency.
+
+    Parameters:
+    ascending (bool): Sort direction based on the urgency column.
+
+    Returns:
+    pd.DataFrame: A cleaned and sorted DataFrame containing all valid incident reports.
     """
     table = load_data_from_csv(DATA_FILE)
     if table.empty:
         return table
 
-    # Clean each row and only keep valid ones
     valid_records = []
+    # Convert dataframe to a list of dictionaries
     for record in table.to_dict("records"):
+        # Clean each row and only keep valid ones
         cleaned = clean_record(record)
-        # 2. Only keep rows that pass validation (rejects None)
+        # Only keep rows that pass validation (rejects None)
         if cleaned is not None:
             valid_records.append(cleaned)
             
@@ -300,21 +319,36 @@ def load_records(ascending=False):
     if not valid_records:
         return pd.DataFrame()
 
-    # 3. Convert back to DataFrame and sort
+    # Convert back to DataFrame and sort
     clean_table = pd.DataFrame(valid_records)
     
-    # 4. (Optional but recommended) Drop exact duplicates that might have been pasted in manually
+    # Drop exact duplicates that might have been pasted in manually
     clean_table = clean_table.drop_duplicates()
 
     return sort_by_urgency(clean_table, ascending=ascending)
 
 
 def get_column_names():
-    """Return the column names in 'data.csv' so the user can choose from them"""
+    """
+    Retrieve all column headers currently present in the saved CSV database.
+
+    Returns:
+    list: A list of strings representing the column names.
+    """
     return list(load_data_from_csv(DATA_FILE).columns)
 
 
 def get_unique_values(column_name):
+    """
+    Extract distinct values from a specified column to populate user filter menus,
+    providing custom threshold options for date and numeric score columns.
+
+    Parameters:
+    column_name (str): The name of the column to extract data from.
+
+    Returns:
+    list: A sorted list of unique strings or predefined threshold options.
+    """
     table = load_data_from_csv(DATA_FILE)
     if column_name not in table.columns:
         return []
@@ -330,8 +364,17 @@ def get_unique_values(column_name):
 
 
 def load_matching_records(column_name, value, ascending=False):
-    """Read 'data.csv' sorted by urgency and keep only rows where column_name equals value.
-    Returns an empty DataFrame when nothing matches; 'io_manager' prints the 'no results' message."""
+    """
+    Retrieve a filtered subset of incident reports based on a specific column value or threshold.
+
+    Parameters:
+    column_name (str): The column to apply the filter against.
+    value (str): The exact value, numeric threshold, or date boundary to search for.
+    ascending (bool): Sort direction based on the urgency column.
+
+    Returns:
+    pd.DataFrame: A filtered and sorted DataFrame containing only the matching records.
+    """
     table = load_records(ascending=ascending)
     if table.empty:
         return table
