@@ -5,6 +5,7 @@ import logging
 import os
 
 import pandas as pd
+from datetime import datetime, timedelta
 
 # ------------------ #
 # Data Configuration
@@ -15,14 +16,14 @@ DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "data")
 DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
 
 # Column used to keep data.csv sorted by urgency
-URGENCY_COLUMN = "importance_score"  # Must Match the Name 'logic_manager' Saves the Score Under
+URGENCY_COLUMN = "importance_score"
 
 # Fields every record must have before it is allowed into data.csv
 REQUIRED_FIELDS = ["reporter_name", "incident_date", URGENCY_COLUMN]
 DATE_FIELD = "incident_date"
 DATE_FORMAT = "%Y-%m-%d"
 
-# 'logging' is used for diagnostics because all console output lives in 'io_manager'
+# Used for debugging to log warnings and errors instead of printing them to the console
 logger = logging.getLogger(__name__)
 
 
@@ -31,8 +32,8 @@ logger = logging.getLogger(__name__)
 # -------------------------- #
 def clean_record(record):
     """
-    Normalize ONE record before it is saved. This is the last safety net;
-    user input is validated in 'io_manager' and AI output in 'ai_manager'.
+    cleans each column of a dataset, ensuring that required fields are present and valid, 
+    and that text values are stripped of whitespace.
 
     Parameters:
     record (dict): The record to clean.
@@ -78,7 +79,16 @@ def comparable(value):
 
 
 def is_duplicate(existing_data, record):
-    """Return True if every field of 'record' matches an existing row exactly"""
+    """
+    Return True if every field of 'record' matches an existing row exactly
+
+    Parameters:
+    existing_data (pd.DataFrame): The DataFrame to check against.
+    record (dict): The record to check for duplicates.
+
+    Returns:
+    bool: True if a duplicate is found, False otherwise.
+    """
     # If the existing data is empty, there can't be a duplicate
     if existing_data.empty:
         return False
@@ -87,11 +97,13 @@ def is_duplicate(existing_data, record):
         row_matches = True  # Assume a match until a field proves otherwise
 
         for field, new_value in record.items():
+            # Comparing the existing row's value and the new record's value
             if comparable(row.get(field)) != comparable(new_value):
                 row_matches = False
                 break
 
-        if row_matches:
+        # If all fields matched, there's a duplicate
+        if row_matches: 
             return True
         
     return False
@@ -102,8 +114,8 @@ def is_duplicate(existing_data, record):
 # -------------------------- #
 def load_data_from_csv(file_path):
     """
-    Load a CSV file WITHOUT cleaning or deleting anything.
-    Missing, empty, unreadable or wrongly-structured files give an empty DataFrame.
+    Load data from a CSV file into a pandas DataFrame,
+    handling errors and missing required columns.
 
     Parameters:
     file_path (str): The path of the CSV file to load.
@@ -173,9 +185,33 @@ def filter_by_value(data, column_name, value):
 
     if pd.api.types.is_numeric_dtype(data[column_name]):
         try:
-            mask = data[column_name] == float(value)
+            mask = data[column_name] >= float(value)
         except ValueError:
             return pd.DataFrame()
+        
+    elif column_name == "incident_date":
+        now = datetime.now()
+        
+        # Calculate the cutoff date based on the user's exact menu choice
+        if value == "Last 7 Days":
+            cutoff = now - timedelta(days=7)
+        elif value == "Last 30 Days":
+            cutoff = now - timedelta(days=30)
+        elif value == "Last 90 Days":
+            cutoff = now - timedelta(days=90)
+        elif value == "Last 180 Days":
+            cutoff = now - timedelta(days=180)
+        else:
+            cutoff = now - timedelta(days=365)
+
+        # Convert string dates to datetime objects for comparison, ignoring invalid dates
+        dates = pd.to_datetime(data[column_name], format="%Y-%m-%d", errors="coerce")
+        mask = dates >= cutoff
+
+    elif column_name in ["location"]:
+        # Removes leading/trailing whitespace and compares case-insensitively
+        mask = data[column_name].astype(str).str.contains(str(value).strip(), case=False, na=False)
+
     else:
         mask = data[column_name].astype(str).str.strip().str.lower() == str(value).strip().lower()
 
@@ -186,7 +222,14 @@ def filter_by_value(data, column_name, value):
 # Specific Manager Functions
 # -------------------------- #
 def sort_by_urgency(table, ascending=False):
-    """Sort a DataFrame by Urgency, Most Urgent First (non-numeric scores go last)"""
+    """Sort a DataFrame by Urgency
+    Parameters:
+    table (pd.DataFrame): The DataFrame to sort.
+    ascending (bool): Whether to sort in ascending order (default is False, i.e., most urgent first).
+
+    Returns:
+    pd.DataFrame: The sorted DataFrame.
+    """
     if URGENCY_COLUMN in table.columns:
         table = table.copy()
         table[URGENCY_COLUMN] = pd.to_numeric(table[URGENCY_COLUMN], errors="coerce")
@@ -195,7 +238,7 @@ def sort_by_urgency(table, ascending=False):
 
 def save_record(record):
     """
-    Clean a record, reject duplicates, then add it to 'data.csv' sorted by urgency.
+    Clean a dataset, reject duplicates, then add it to 'data.csv' sorted by urgency.
 
     Parameters:
     record (dict): The processed record to save.
@@ -219,10 +262,12 @@ def save_record(record):
         return False, "Record rejected: an identical record already exists."
 
     new_row = pd.DataFrame([cleaned])
+    # Creates a new DataFrame with the new row if existing_data is empty, otherwise concatenates the new row to existing_data
     table = new_row if existing_data.empty else pd.concat([existing_data, new_row], ignore_index=True)
+    # Sort the table by urgency before saving
     table = sort_by_urgency(table)
 
-    # Write to a temp file first so an interrupted write can't corrupt data.csv
+    # Write a temporary file first to avoid data loss if the write fails, then replace the original
     temp_file = DATA_FILE + ".tmp"
     try:
         table.to_csv(temp_file, index=False)
@@ -236,14 +281,14 @@ def save_record(record):
 
 def load_records(ascending=False):
     """
-    Read All Saved Records from 'data.csv', clean out any manual corruption 
-    in memory, and Return them Sorted by Urgency.
+    Read All Saved Records from 'data.csv', clean out any manual corrupted 
+    data in the csv file, and Return them Sorted by Urgency.
     """
     table = load_data_from_csv(DATA_FILE)
     if table.empty:
         return table
 
-    # 1. Run every loaded row through your existing clean_record function
+    # Clean each row and only keep valid ones
     valid_records = []
     for record in table.to_dict("records"):
         cleaned = clean_record(record)
@@ -270,10 +315,17 @@ def get_column_names():
 
 
 def get_unique_values(column_name):
-    """Return the distinct values in a column so the user can see what they can filter by"""
     table = load_data_from_csv(DATA_FILE)
     if column_name not in table.columns:
         return []
+
+    # State threshold values for the range of urgency scores, instead of returning the actual unique values in the column
+    if column_name == URGENCY_COLUMN:
+        return ["0", "25", "50", "75", "100"]
+
+    elif column_name == "incident_date":
+        return ["Last 7 Days", "Last 30 Days", "Last 90 Days", "Last 180 Days", "Last 365 Days"]
+        
     return sorted(table[column_name].astype(str).unique())
 
 

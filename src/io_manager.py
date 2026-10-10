@@ -4,8 +4,11 @@
 
 from src.ai_manager import start_chat, send_message, check_api_key
 from src.logic_manager import logic
-from src.data_manager import load_records  # Gets Saved Reports from 'data_manager'
-
+from src.data_manager import (  # Gets Saved Reports from 'data_manager'
+    load_records,
+    get_unique_values,
+    load_matching_records,
+)
 # --------------- #
 # Welcome Message
 # --------------- #
@@ -75,6 +78,63 @@ TABLE_COLUMNS = [
 ]
 
 # ---------------------------- #
+# Saved Report Sub Menu
+# ---------------------------- #
+
+# Sub Menu View Options for saved reports (next page, previous page, filter, back to main menu)
+VIEW_MENU = f"""
+========================================================================
+{CYAN}{BOLD}                    📄 Report Options{RESET}
+========================================================================
+      {GREEN}{BOLD}1{RESET}. ➡️  Next page
+      {GREEN}{BOLD}2{RESET}. ⬅️  Previous page
+      {GREEN}{BOLD}3{RESET}. 🔍 Filter these reports
+      {GREEN}{BOLD}4{RESET}. ↩️  Back to the main menu
+"""
+VIEW_MIN_OPTION = 1
+VIEW_MAX_OPTION = 4
+
+# ------------- #
+# Filter Menu
+# ------------- #
+
+PAGE_MENU = f"""
+========================================================================
+{CYAN}{BOLD}                    📄 Page Options{RESET}
+========================================================================
+      {GREEN}{BOLD}1{RESET}. ➡️  Next page
+      {GREEN}{BOLD}2{RESET}. ⬅️  Previous page
+      {GREEN}{BOLD}3{RESET}. ↩️  Back to report options
+"""
+
+# Page Menu Options range
+PAGE_MIN_OPTION = 1
+PAGE_MAX_OPTION = 3
+
+# Page Size for Saved Reports Table (Number of Rows per Page)
+PAGE_SIZE = 5
+
+# Column Labels for the Filter Menu
+FILTER_COLUMNS = [
+    ("Score", "importance_score"),
+    ("Date", "incident_date"),
+    ("Location", "location"),
+    ("Severity", "ai_severity"),
+    ("Root Cause", "root_cause_category"),
+]
+
+# The "Back" Option is always the last index of the list of filter columns, so it is calculated dynamically
+FILTER_BACK_OPTION = len(FILTER_COLUMNS) + 1
+
+# Title Shown Above the Filter Options
+FILTER_HEADER = f"""
+========================================================================
+{CYAN}{BOLD}                    🔍 Filter Reports{RESET}
+========================================================================
+      Which column would you like to filter by?
+"""
+
+# ---------------------------- #
 # io_manager Private Functions
 # ---------------------------- #
 
@@ -95,17 +155,10 @@ def _fit(text, width):
         text = text[:width - 2] + "…"
     return text.ljust(width)
 
-# ------------------------- #
-# io_manager Main Functions
-# ------------------------- #
-
-# Show the Menu and Return the User's Choice as an Integer (1, 2 or 3)
-def show_menu():
-    print(MENU)
-
-    # Keep Asking until a Valid Option is Typed
+# Ask for a number between low and high (inclusive), re-ask if invalid input is given
+def _ask_number(prompt, low, high):
     while True:
-        user_input = input(f"Choose an option ({MIN_OPTION}-{MAX_OPTION}): ").strip()
+        user_input = input(prompt).strip()
 
         # Reject Blank Input
         if user_input == "":
@@ -119,12 +172,120 @@ def show_menu():
             print(f"{YELLOW}'{user_input}' is not a number. Please type a whole number.{RESET}")
             continue
 
-        # Check the Integer is One of the Menu Options
-        if MIN_OPTION <= choice <= MAX_OPTION:
+        # Check the Integer is in one of the menu options
+        if low <= choice <= high:
             return choice
-        print(f"{YELLOW}{choice} is not an option. Please type a number from {MIN_OPTION} to {MAX_OPTION}.{RESET}")
+        print(f"{YELLOW}{choice} is not an option. Please type a number from {low} to {high}.{RESET}")
 
-# Get Saved Reports from 'data_manager' and Print them in the Terminal
+# Show the Saved Values as a Numbered List and Return the One the User Picks (None if they go Back)
+def _choose_value(heading, values):
+    back_option = len(values) + 1
+
+    print(f"\n{BOLD}Values saved under {heading}:{RESET}")
+    # Shows the data field values as a list of options, with the last option being "Back"
+    for number, value in enumerate(values, start=1):
+        print(f"      {GREEN}{BOLD}{number}{RESET}. {value}")
+    print(f"      {GREEN}{BOLD}{back_option}{RESET}. ↩️  Back")
+
+    choice = _ask_number(f"Choose a value (1-{back_option}): ", 1, back_option)
+    if choice == back_option:
+        return None
+    return values[choice - 1]
+
+# Calculate the total number of pages needed to display the table
+def _page_count(table):
+    pages = -(-len(table) // PAGE_SIZE)  # Divide and Round Up
+    return max(pages, 1)
+
+# Print ONE Page of a Table of Reports (Used by Both the Full List and the Filtered List)
+def _print_table(table, title, page=1):
+    total = len(table)
+    first = (page - 1) * PAGE_SIZE           # Index of the First Row on this Page
+    last = min(first + PAGE_SIZE, total)     # Index After the Last Row on this Page
+
+    print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
+
+    header = _fit("No.", 5)
+    for heading, column, width in TABLE_COLUMNS:
+        header += _fit(heading, width)
+    print(f"{BOLD}{header}{RESET}")
+    print("-" * len(header))
+
+    # One Row per Report on this Page (Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
+    rows = table.iloc[first:last].fillna("-")
+    for number, report in enumerate(rows.to_dict("records"), start=first + 1):
+        row = _fit(number, 5)
+        for heading, column, width in TABLE_COLUMNS:
+            row += _fit(report.get(column, "-"), width)
+        print(row)
+
+    print(f"\n{CYAN}Page {page} of {_page_count(table)}  (showing {first + 1}-{last} of {total}){RESET}\n")
+
+# Go to the Next Page, or Stay Put with a Message if Already on the Last Page
+# Returns (new_page, moved) so the Caller Knows whether to Print the Page Again
+def _go_next(page, pages):
+    if page >= pages:
+        print(f"{YELLOW}You are already on the last page.{RESET}")
+        return page, False
+    return page + 1, True
+
+# Go to the Previous Page, or Stay Put with a Message if Already on the First Page
+def _go_previous(page):
+    if page <= 1:
+        print(f"{YELLOW}You are already on the first page.{RESET}")
+        return page, False
+    return page - 1, True
+    
+# ------------------------- #
+# io_manager Main Functions
+# ------------------------- #
+
+# Show the Menu and Return the User's Choice as an Integer limit user choices to the range of options available in the menu
+def show_menu():
+    print(MENU)
+    return _ask_number(f"Choose an option ({MIN_OPTION}-{MAX_OPTION}): ", MIN_OPTION, MAX_OPTION)
+
+# Show the Saved Reports Sub-Menu and Return the User's Choice (VIEW_MIN_OPTION to VIEW_MAX_OPTION)
+def show_view_menu():
+    print(VIEW_MENU)
+    return _ask_number(f"Choose an option ({VIEW_MIN_OPTION}-{VIEW_MAX_OPTION}): ", VIEW_MIN_OPTION, VIEW_MAX_OPTION)
+
+# Show the Page Menu and Return the User's Choice (PAGE_MIN_OPTION to PAGE_MAX_OPTION)
+def show_page_menu():
+    print(PAGE_MENU)
+    return _ask_number(f"Choose an option ({PAGE_MIN_OPTION}-{PAGE_MAX_OPTION}): ", PAGE_MIN_OPTION, PAGE_MAX_OPTION)
+
+# Show the Filter Menu and Return the User's Choice (1 to FILTER_BACK_OPTION)
+def show_filter_menu():
+    print(FILTER_HEADER)
+    for number, (heading, column) in enumerate(FILTER_COLUMNS, start=1):
+        print(f"      {GREEN}{BOLD}{number}{RESET}. {heading}")
+    print(f"      {GREEN}{BOLD}{FILTER_BACK_OPTION}{RESET}. ↩️  Back")
+    return _ask_number(f"Choose a column (1-{FILTER_BACK_OPTION}): ", 1, FILTER_BACK_OPTION)
+
+# Print a Table One Page at a Time and Let the User Move Between Pages (Used for Filtered Results)
+def browse_pages(table, title):
+    pages = _page_count(table)
+    page = 1
+    show_page = True
+
+    while True:
+        if show_page:
+            _print_table(table, title, page)
+
+        # Everything Fits on One Page, so there is Nothing to Scroll
+        if pages == 1:
+            return
+
+        choice = show_page_menu()
+        if choice == 1:
+            page, show_page = _go_next(page, pages)
+        elif choice == 2:
+            page, show_page = _go_previous(page)
+        else:
+            return
+
+# Get Saved Reports from 'data_manager', Print them One Page at a Time, then Offer the Sub-Menu
 def view_reports():
 
     # Go to 'data_manager' for the Data (Returns a Table, Empty if Nothing is Saved)
@@ -135,22 +296,53 @@ def view_reports():
         print(f"{YELLOW}No incident reports have been saved yet.{RESET}")
         return
 
-    print(f"\n{BOLD}{UNDERLINE}Saved Incident Reports ({len(table)} total, most urgent first){RESET}\n")
+    title = f"Saved Incident Reports ({len(table)} total, most urgent first)"
+    pages = _page_count(table)
+    page = 1
+    show_page = True  # Only Print the Table Again when the Page Changed
 
-    header = _fit("No.", 5)
-    for heading, column, width in TABLE_COLUMNS:
-        header += _fit(heading, width)
-    print(f"{BOLD}{header}{RESET}")
-    print("-" * len(header))
+    # Keep Offering the Sub-Menu until the User Goes Back (so they can Scroll or Filter More than Once)
+    while True:
+        if show_page:
+            _print_table(table, title, page)
 
-    # One Row per Report (Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
-    table = table.fillna("-")
-    for number, report in enumerate(table.to_dict("records"), start=1):
-        row = _fit(number, 5)
-        for heading, column, width in TABLE_COLUMNS:
-            row += _fit(report.get(column, "-"), width)
-        print(row)
-    print()
+        choice = show_view_menu()
+
+        if choice == 1:
+            page, show_page = _go_next(page, pages)
+        elif choice == 2:
+            page, show_page = _go_previous(page)
+        elif choice == 3:
+            filter_reports()
+            show_page = False  # The Filtered Results are on Screen, so Don't Reprint the Full Table
+        else:
+            break
+
+# Let the User Pick a Column and a Value, then Show Only the Matching Reports
+def filter_reports():
+    # Choose the column to filter
+    choice = show_filter_menu()
+    if choice == FILTER_BACK_OPTION:
+        return
+    heading, column = FILTER_COLUMNS[choice - 1]
+
+    # Open Ended search for location
+    if column in ["location"]:
+        value = input(f"\n{BOLD}Enter a keyword to search in {heading}:{RESET} ").strip()
+        if not value:
+            return
+    else:
+        value = _choose_value(heading, get_unique_values(column))
+        if value is None:
+            return
+
+    # Step 3: Go to 'data_manager' for the Matching Rows (Most Urgent First) and Print them
+    matches = load_matching_records(column, value)
+    if matches.empty:
+        print(f"{YELLOW}No reports found where {heading} is '{value}'.{RESET}")
+        return
+
+    browse_pages(matches, f"Reports where {heading} = {value} ({len(matches)} found, most urgent first)")
 
 # Run the Chatbot to collect Incident Report
 def run_chatbot():
