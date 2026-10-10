@@ -6,7 +6,7 @@
 
 Traditional workplace incident reporting is rigid, time-consuming, and cumbersome for some users. Especially for foreign workers who have come from other countries and have to adjust to safety reporting norms that differ from one workplace to another, alongside the language barrier. 
 
-This system solves this by letting workers report incidents conversationally in their own native languages. Then let the AI do the translating and parse the information given into a string of useful text that can be added into a database. The AI can also extract insights from the conversation to give even more additional data for higher-ups.
+This system solves this by letting workers report incidents conversationally in their own native languages. Then let the AI do the translating and conversing and produce a structured JSON record that is sent to a database. The AI can also extract insights from the conversation to give even more additional data for higher-ups.
 
 <ins>Target Users:</ins>
 
@@ -26,28 +26,27 @@ Users will type into the terminal similar to having a conversation with the AI. 
     -	Hospitalization status
     -	Immediate Action Taken
     -	Number of hours stopped
-    -	User’s subjective severity rating
  
 ## 3.	**Use of AI**
 
     -	The AI will interpret any type of language input and parse all requested data points into English.
-    -	Once conversion concludes, the AI will return a structured JSON response containing the necessary data.
-    -	The AI itself will analyse the conversion and generate additional insightful metadata:
+    -	Once conversation concludes, the AI will return a structured JSON response containing the necessary data.
+    -	The AI itself will analyse the conversation and generate additional insightful metadata:
         -	Was it a Near-Miss
         -	Root cause categorisation
         -	Lost Time Injury
         -	AI’s severity rating
         -	AI’s safety recommendation
+        -   Detected Language
 
 ## 4.	**Business Rules**
 
-    -	Severity Escalation: If the AI outputs its severity rating as ‘Critical’, or a worker is hospitalised, the logic manager will immediately flag the specific entry to the safety officers.
-    -	Data validation: The logic manager must check the JSON output for any missing mandatory fields. If it detects this, it will reject it. Then, it goes back to the I/O Manager to reprompt the user for the missing fields. 
-    -	High-risk root cause: If the AI categorised some incidents as ‘chemical’ or ‘electrical’. The logic manager immediately flags the specific entry to the safety officers, regardless of whether an injury occurred.
+    -	Importance score: The various data points each have their own respective weights which is used to calculate each incident's importance. After calculation, the incidents are all sorted from most to least urgent, so safety officers see the most serious incidents first.
+    -	Completeness check: A report is only accepted once every field is filled. If any are missing, the AI asks the worker for them in their language. If the worker cannot answer after being asked twice, the field is recorded as "unknown (worker could not say)".
 
 ## 5.	**Repository Link:**
 
-https://github.com/li-broon/26_INF1103_P4-3
+[https://github.com/li-broon/26INF1103-P4-3](https://github.com/li-broon/26INF1103-P4-3)
 
 ## Running with Docker
 

@@ -1,0 +1,21 @@
+{
+  "reply": "Terima kasih. Laporan anda telah lengkap.",
+  "is_complete": true,
+  "report": {
+    "reporter_name": "Ahmad bin Ismail",
+    "location": "Tuas site, Level 3 electrical room",
+    "incident_date": "2026-10-08",
+    "incident_time": "14:30",
+    "description": "Worker touched an exposed live wire while replacing a panel cover and received an electric shock.",
+    "injury_status": "Ahmad has burns on his right hand",
+    "hospitalised": true,
+    "immediate_action_taken": "Power isolated, first aid given, ambulance called",
+    "work_stoppage_hours": 4,
+    "detected_language": "Malay",
+    "ai_severity": "Critical",
+    "is_near_miss": false,
+    "root_cause_category": "Electrical",
+    "lost_time_injury": true,
+    "safety_recommendation": "Enforce lock-out/tag-out before panel work and inspect all panels for exposed wiring."
+  }
+}

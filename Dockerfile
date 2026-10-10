@@ -13,4 +13,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN mkdir -p data
 
-CMD ["python", "main.py"]
+# Load the API key from the copied .env file (unless one was already passed in with --env-file or -e)
+CMD ["sh", "-c", "if [ -z \"$GEMINI_API_KEY\" ] && [ -f .env ]; then export $(grep -v '^#' .env | tr -d '\\r' | xargs); fi; exec python main.py"]
