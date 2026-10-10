@@ -5,7 +5,7 @@ import logging
 import os
 
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 # ------------------ #
 # Data Configuration
@@ -22,6 +22,21 @@ URGENCY_COLUMN = "importance_score"
 REQUIRED_FIELDS = ["reporter_name", "incident_date", URGENCY_COLUMN]
 DATE_FIELD = "incident_date"
 DATE_FORMAT = "%Y-%m-%d"
+
+# Columns that are searched for keywords (location)
+KEYWORD_COLUMNS = ["location"]
+
+# Predefined date ranges for filtering, counting back from today
+DATE_RANGES = {
+    "Last 7 Days": 7,
+    "Last 30 Days": 30,
+    "Last 90 Days": 90,
+    "Last 180 Days": 180,
+    "Last 365 Days": 365,
+}
+
+# Indicates the boundary for each threshold filter in the urgency column.
+SCORE_THRESHOLDS = ["0", "25", "50", "75", "100"]
 
 # Used for debugging to log warnings and errors instead of printing them to the console
 logger = logging.getLogger(__name__)
@@ -176,56 +191,119 @@ def sort_by_column(data, column_name, ascending=True):
     return data.sort_values(by=column_name, ascending=ascending, na_position="last").reset_index(drop=True)
 
 
-def filter_by_value(data, column_name, value):
+def filter_by_minimum(data, column_name, value):
     """
-    Return all rows where the given column matches the given value.
+    Keep the rows whose number in 'column_name' is at least 'value' (used for the score filter).
+
+    Parameters:
+    data (pd.DataFrame): The data to filter.
+    column_name (str): A numeric column.
+    value (str): The minimum, e.g. "20". Not a number gives an empty DataFrame.
+
+    Returns:
+    pd.DataFrame: The matching rows.
+    """
+    try:
+        minimum = float(value)
+    except ValueError:
+        return pd.DataFrame()
+
+    return data[data[column_name] >= minimum].reset_index(drop=True)
+
+
+def filter_by_date_range(data, column_name, value):
+    """
+    Keep the rows dated within the chosen window, counting back from today.
+
+    Parameters:
+    data (pd.DataFrame): The data to filter.
+    column_name (str): The date column (YYYY-MM-DD text).
+    value (str): One of the labels in DATE_RANGES, e.g. "Last 7 Days". Anything else gives an empty DataFrame.
+
+    Returns:
+    pd.DataFrame: The matching rows. Rows with an invalid date are left out.
+    """
+    days = DATE_RANGES.get(value)
+    if days is None:
+        return pd.DataFrame()
+
+    # Count from midnight today, so "Last 7 Days" includes a report dated exactly 7 days ago
+    cutoff = pd.Timestamp.today().normalize() - timedelta(days=days)
+    dates = pd.to_datetime(data[column_name], format=DATE_FORMAT, errors="coerce")
+
+    return data[dates >= cutoff].reset_index(drop=True)
+
+
+def filter_by_keyword(data, column_name, value):
+    """
+    Keep the rows whose text CONTAINS the keyword, ignoring case and extra spaces.
+    The keyword is matched as string, so symbols such as ( ) [ ] + . are safe to type.
+
+    Parameters:
+    data (pd.DataFrame): The data to filter.
+    column_name (str): The column to search.
+    value (str): The keyword, e.g. "warehouse". A blank keyword gives an empty DataFrame.
+
+    Returns:
+    pd.DataFrame: The matching rows.
+    """
+    keyword = str(value).strip()
+    if keyword == "":
+        return pd.DataFrame()
+
+    found = data[column_name].astype(str).str.contains(keyword, case=False, regex=False, na=False)
+
+    return data[found].reset_index(drop=True)
+
+
+def filter_by_text(data, column_name, value):
+    """
+    Keep the rows whose string matches 'value' exactly, ignoring case and extra spaces.
 
     Parameters:
     data (pd.DataFrame): The data to filter.
     column_name (str): The column to check.
-    value: The value to match. Text is compared ignoring case and extra spaces.
+    value (str): The text to match.
 
     Returns:
-    pd.DataFrame: The matching rows, or an empty DataFrame if the column
-    doesn't exist or the value is invalid for that column.
+    pd.DataFrame: The matching rows.
+    """
+    column_text = data[column_name].astype(str).str.strip().str.lower()
+
+    return data[column_text == str(value).strip().lower()].reset_index(drop=True)
+
+
+def filter_by_value(data, column_name, value):
+    """
+    Return the rows of data that match the chosen filter value. How the value is
+    matched depends on the column:
+      - number columns (e.g. score): the row's number is AT LEAST the value
+      - the date column: the row is dated within the chosen "Last N no. of days" window
+      - keyword columns (e.g. location): the text contains the keyword (ignoring case and extra spaces)
+      - every other column: the text matches exactly (ignoring case and extra spaces)
+
+    Parameters:
+    data (pd.DataFrame): The data to filter.
+    column_name (str): The column to check.
+    value (str): The value picked by the user.
+
+    Returns:
+    pd.DataFrame: The matching rows, or an empty DataFrame if the column doesn't
+    exist or the value is not valid for that column.
     """
     if column_name not in data.columns:
         return pd.DataFrame()
 
     if pd.api.types.is_numeric_dtype(data[column_name]):
-        try:
-            mask = data[column_name] >= float(value)
-        except ValueError:
-            return pd.DataFrame()
-        
-    elif column_name == "incident_date":
-        now = datetime.now()
-        
-        # calculate the difference in days based on the value provided
-        if value == "Last 7 Days":
-            cutoff = now - timedelta(days=7)
-        elif value == "Last 30 Days":
-            cutoff = now - timedelta(days=30)
-        elif value == "Last 90 Days":
-            cutoff = now - timedelta(days=90)
-        elif value == "Last 180 Days":
-            cutoff = now - timedelta(days=180)
-        else:
-            cutoff = now - timedelta(days=365)
+        return filter_by_minimum(data, column_name, value)
 
-        # Convert string dates to datetime objects for comparison, ignoring invalid dates
-        dates = pd.to_datetime(data[column_name], format="%Y-%m-%d", errors="coerce")
-        mask = dates >= cutoff
+    if column_name == DATE_FIELD:
+        return filter_by_date_range(data, column_name, value)
 
-    elif column_name in ["location"]:
-        # Adds matching locations to the filtered results, ignoring case and whitespace
-        mask = data[column_name].astype(str).str.contains(str(value).strip(), case=False, na=False)
+    if column_name in KEYWORD_COLUMNS:
+        return filter_by_keyword(data, column_name, value)
 
-    else:
-        # For columns that are strings, compare ignoring case and whitespace
-        mask = data[column_name].astype(str).str.strip().str.lower() == str(value).strip().lower()
-
-    return data[mask].reset_index(drop=True)
+    return filter_by_text(data, column_name, value)
 
 
 # -------------------------- #
@@ -338,7 +416,7 @@ def get_column_names():
     return list(load_data_from_csv(DATA_FILE).columns)
 
 
-def get_unique_values(column_name):
+def get_unique_values(column_name: str) -> list[str]:
     """
     Extract distinct values from a specified column to populate user filter menus,
     providing custom threshold options for date and numeric score columns.
@@ -353,13 +431,13 @@ def get_unique_values(column_name):
     if column_name not in table.columns:
         return []
 
-    # State threshold values for the range of urgency scores, instead of returning the actual unique values in the column
+    # Score and date offer fixed choices instead of every unique value saved in the column
     if column_name == URGENCY_COLUMN:
-        return ["0", "25", "50", "75", "100"]
+        return list(SCORE_THRESHOLDS)
 
-    elif column_name == "incident_date":
-        return ["Last 7 Days", "Last 30 Days", "Last 90 Days", "Last 180 Days", "Last 365 Days"]
-        
+    if column_name == DATE_FIELD:
+        return list(DATE_RANGES)
+
     return sorted(table[column_name].astype(str).unique())
 
 
