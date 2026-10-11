@@ -32,4 +32,4 @@ jobs:
     # 4. Run the data manager tests you already wrote
     - name: Run Tests
       run: |
-        pytest test_data_manager.py
+        pytest
