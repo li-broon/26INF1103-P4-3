@@ -1,0 +1,35 @@
+name: Workflow CI
+
+# Trigger the workflow on pushes or pull requests to the main branch
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Grab your repository's code
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    # 2. Set up the correct Python version
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    # 3. Install the packages from your requirements.txt
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pandas
+
+    # 4. Run the data manager tests you already wrote
+    - name: Run Tests
+      run: |
+        pytest test_data_manager.py
