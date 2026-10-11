@@ -204,8 +204,12 @@ def filter_by_minimum(data, column_name, value):
     pd.DataFrame: The matching rows.
     """
     try:
-        minimum = float(value)
-        min_index = SCORE_THRESHOLDS.index(value)
+        # Extract the selected threshold from value which is the range (0-24 etc.)
+        raw_value = str(value).split()[0].replace("+", "")
+        minimum = float(raw_value)
+        min_index = SCORE_THRESHOLDS.index(raw_value)
+
+        # next_threshold is the threshold in the SCORE_THRESHOLDS list after the selected threshold
         next_threshold = float(SCORE_THRESHOLDS[min_index + 1]) if min_index + 1 < len(SCORE_THRESHOLDS) else None
 
         if next_threshold is not None:
@@ -362,7 +366,9 @@ def save_record(record):
         return False, "Record rejected: an identical record already exists."
 
     new_row = pd.DataFrame([cleaned])
+
     # Creates a new DataFrame with the new row if existing_data is empty, otherwise concatenates the new row to existing_data
+
     table = new_row if existing_data.empty else pd.concat([existing_data, new_row], ignore_index=True)
     # Sort the table by urgency before saving
     table = sort_by_urgency(table)
@@ -426,7 +432,7 @@ def get_column_names():
     return list(load_data_from_csv(DATA_FILE).columns)
 
 
-def get_unique_values(column_name: str) -> list[str]:
+def get_unique_values(column_name):
     """
     Extract distinct values from a specified column to populate user filter menus,
     providing custom threshold options for date and numeric score columns.
@@ -441,9 +447,18 @@ def get_unique_values(column_name: str) -> list[str]:
     if column_name not in table.columns:
         return []
 
-    # Score and date offer fixed choices instead of every unique value saved in the column
+    # score column shows predefined ranges
     if column_name == URGENCY_COLUMN:
-        return list(SCORE_THRESHOLDS)
+        ranges = []
+        for i, threshold in enumerate(SCORE_THRESHOLDS):
+            if i + 1 < len(SCORE_THRESHOLDS):
+                # upper_bound is the threshold in the SCORE_THRESHOLDS list after the selected threshold
+                upper_bound = int(SCORE_THRESHOLDS[i+1]) - 1
+                # Add it to list which is used to populate the filter menu
+                ranges.append(f"{threshold} - {upper_bound}")
+            else:
+                ranges.append(f"{threshold}+")
+        return ranges             
 
     if column_name == DATE_FIELD:
         return list(DATE_RANGES)
