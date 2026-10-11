@@ -205,10 +205,20 @@ def filter_by_minimum(data, column_name, value):
     """
     try:
         minimum = float(value)
+        min_index = SCORE_THRESHOLDS.index(value)
+        next_threshold = float(SCORE_THRESHOLDS[min_index + 1]) if min_index + 1 < len(SCORE_THRESHOLDS) else None
+
+        if next_threshold is not None:
+            # Keep the values within the threshold range
+            data = data[(data[column_name] >= minimum) & (data[column_name] < next_threshold)]
+        else:
+            # No next threshold, so just filter by the minimum
+            data = data[data[column_name] >= minimum]
+            
     except ValueError:
         return pd.DataFrame()
 
-    return data[data[column_name] >= minimum].reset_index(drop=True)
+    return data.reset_index(drop=True)
 
 
 def filter_by_date_range(data, column_name, value):
