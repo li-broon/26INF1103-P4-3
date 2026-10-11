@@ -1,0 +1,21 @@
+{
+  "reply": "Thank you, your report is complete.",
+  "is_complete": true,
+  "report": {
+    "reporter_name": "Arun Kumar",
+    "location": "SBC site, ground floor walkway",
+    "incident_date": "2026-10-09",
+    "incident_time": "12:00",
+    "description": "Worker slipped on a wet floor but caught the railing and did not fall.",
+    "injury_status": "no injury",
+    "hospitalised": false,
+    "immediate_action_taken": "Floor was mopped and a wet floor sign was placed",
+    "work_stoppage_hours": 0,
+    "detected_language": "English",
+    "ai_severity": "Low",
+    "is_near_miss": true,
+    "root_cause_category": "Slip or Trip",
+    "lost_time_injury": false,
+    "safety_recommendation": "Place wet floor signs during cleaning and check drainage near the walkway."
+  }
+}

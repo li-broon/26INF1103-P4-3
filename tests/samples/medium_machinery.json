@@ -1,0 +1,21 @@
+{
+  "reply": "谢谢，您的报告已完成。",
+  "is_complete": true,
+  "report": {
+    "reporter_name": "Wang Wei",
+    "location": "Jurong workshop, cutting bay",
+    "incident_date": "2026-10-07",
+    "incident_time": "09:15",
+    "description": "Worker's glove was caught in a drill press and his finger was cut.",
+    "injury_status": "Wang Wei has a cut on his left index finger",
+    "hospitalised": false,
+    "immediate_action_taken": "Machine stopped and wound bandaged at the first aid station",
+    "work_stoppage_hours": 2.5,
+    "detected_language": "Chinese",
+    "ai_severity": "Medium",
+    "is_near_miss": false,
+    "root_cause_category": "Machinery",
+    "lost_time_injury": false,
+    "safety_recommendation": "Ban gloves near rotating machinery and refresh drill press training."
+  }
+}
