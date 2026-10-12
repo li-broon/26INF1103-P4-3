@@ -110,10 +110,34 @@ VIEW_MENU = f"""
       {GREEN}{BOLD}1{RESET}. ➡️  Next page
       {GREEN}{BOLD}2{RESET}. ⬅️  Previous page
       {GREEN}{BOLD}3{RESET}. 🔍 Filter these reports
-      {GREEN}{BOLD}4{RESET}. ↩️  Back to the main menu
+      {GREEN}{BOLD}4{RESET}. 📋 View a full report
+      {GREEN}{BOLD}5{RESET}. ↩️  Back to the main menu
 """
 VIEW_MIN_OPTION = 1
-VIEW_MAX_OPTION = 4
+VIEW_MAX_OPTION = 5
+
+# Every Field Shown when One Report is Opened in Full: (Label, Column Name in 'data.csv')
+FULL_REPORT_FIELDS = [
+    ("Reporter", "reporter_name"),
+    ("Location", "location"),
+    ("Date", "incident_date"),
+    ("Time", "incident_time"),
+    ("Score", "importance_score"),
+    ("Severity", "ai_severity"),
+    ("Root cause", "root_cause_category"),
+    ("Near miss", "is_near_miss"),
+    ("Hospitalised", "hospitalised"),
+    ("Lost time injury", "lost_time_injury"),
+    ("Hours stopped", "work_stoppage_hours"),
+    ("Injury", "injury_status"),
+    ("What happened", "description"),
+    ("Action taken", "immediate_action_taken"),
+    ("Recommended action", "safety_recommendation"),
+    ("Language", "detected_language"),
+]
+
+# True/False Fields, Shown as YES/No in the Full Report
+YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury")
 
 # ------------- #
 # Filter Menu
@@ -341,6 +365,26 @@ def _print_table(table, title, page=1):
 
     print(f"\n{CYAN}Page {page} of {_page_count(table)}  (showing {first + 1}-{last} of {total}){RESET}\n")
 
+def _print_full_report(table, number):
+    """
+    Print every field of one report in full, so long names and locations are not cut off.
+
+    Parameters:
+    table (pd.DataFrame): The data the report is in.
+    number (int): The report's 'No.' as shown in the table (starts at 1).
+    """
+    # Subtract 1 because the table numbers start at 1, but rows start at 0
+    report = table.iloc[number - 1].fillna("-").to_dict()
+
+    print(f"\n{BOLD}{UNDERLINE}Report #{number}{RESET}\n")
+    for label, column in FULL_REPORT_FIELDS:
+        value = report.get(column, "-")
+        if column in YES_NO_COLUMNS:
+            value = _yes_no(value)
+        for line in _wrap_detail(label, value):
+            print(line)
+    print()
+
 def _go_next(page, pages):
     """
     Increment the page index if a next page exists.
@@ -453,7 +497,7 @@ def browse_pages(table, title):
 def view_reports():
     """
     Retrieve saved reports from the Data Manager and initiate the viewing sequence.
-    Provides options to paginate or filter the full dataset.
+    Provides options to paginate, filter the full dataset, or open one report in full.
     """
     table = load_records() # Load all saved data from the Data Manager
 
@@ -482,7 +526,12 @@ def view_reports():
         elif choice == 3:
             filter_reports()
             # Stop the main table from re-printing immediately after they finish viewing the filtered results
-            show_page = False  
+            show_page = False
+        elif choice == 4:
+            number = _ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
+            _print_full_report(table, number)
+            # Keep the full report on screen instead of printing the table over it
+            show_page = False
         else:
             break
 
