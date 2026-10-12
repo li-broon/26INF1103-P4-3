@@ -435,6 +435,28 @@ def _go_previous(page):
         print(f"{YELLOW}You are already on the first page.{RESET}")
         return page, False
     return page - 1, True
+
+def _print_save_outcome(outcome):
+    """
+    Tell the worker whether their report was really saved, and what the Logic Manager decided.
+
+    Parameters:
+    outcome (dict): The result from logic(): saved, message, importance_score, mom_reportable, deadline.
+    """
+    # Only claim success when the Data Manager actually wrote the record
+    if not outcome["saved"]:
+        print(f"\n{RED}{BOLD}❌ Your report was NOT saved.{RESET} {outcome['message']}")
+        print(f"{YELLOW}Please tell your supervisor about this incident directly.{RESET}\n")
+        return
+
+    print(f"\n{GREEN}{BOLD}✅ Your report has been saved.{RESET}")
+    print(f"   {BOLD}Importance score:{RESET} {outcome['importance_score']} / 10")
+
+    # A MOM-reportable incident has a legal deadline, so make it stand out
+    if outcome["mom_reportable"] == "Yes":
+        print(f"   {RED}{BOLD}Must be reported to MOM by: {outcome['deadline']}{RESET}\n")
+    else:
+        print(f"   {BOLD}MOM report needed:{RESET} No\n")
     
 # ------------------------- #
 # io_manager Main Functions
@@ -635,8 +657,8 @@ def run_chatbot():
 
             # If all required fields are collected, push the payload to the Logic Manager for scoring
             if result["is_complete"]:
-                logic(result["report"])
-                print(f"\n{GREEN}{BOLD}✅ Your report has been saved.{RESET}\n")
+                outcome = logic(result["report"])
+                _print_save_outcome(outcome)
 
                 if _ask_yes_no("Would you like to view all saved reports now?"):
                     view_reports()

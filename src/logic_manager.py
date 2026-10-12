@@ -132,14 +132,22 @@ def _save_with_score(report, score, mom_reportable, deadline):
     record["importance_score"] = score
     record["mom_reportable"] = mom_reportable
     record["deadline"] = deadline
-    save_record(record)
+    return save_record(record)  # (success, message) from 'data_manager'
 
 
 # logic_manager Main Functions
 
 
+# Score the Report, Save it, and Return the Outcome so 'io_manager' can Show it
 def logic(json_result):
-    print(json.dumps(json_result, indent=2, ensure_ascii=False))  
+    print(json.dumps(json_result, indent=2, ensure_ascii=False))
     score = _calculate_importance_score(json_result)
     mom_reportable, deadline = _check_mom_reporting(json_result)
-    _save_with_score(json_result, score, mom_reportable, deadline)
+    saved, message = _save_with_score(json_result, score, mom_reportable, deadline)
+    return {
+        "saved": saved,
+        "message": message,
+        "importance_score": score,
+        "mom_reportable": mom_reportable,
+        "deadline": deadline,
+    }

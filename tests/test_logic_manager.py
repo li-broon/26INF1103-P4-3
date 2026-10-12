@@ -42,10 +42,14 @@ def score(report):
 
 # Run logic() with save_record Replaced by a Fake, so data.csv is Never Touched. Returns the Fake.
 def run_logic_without_saving(report):
-    with mock.patch.object(logic_manager, "save_record") as fake_save:
+    return run_logic_with_save_result(report)[0]
+
+# Same, but the Fake save_record Returns 'save_result'. Returns (Fake, What logic() Returned).
+def run_logic_with_save_result(report, save_result=(True, "Record saved.")):
+    with mock.patch.object(logic_manager, "save_record", return_value=save_result) as fake_save:
         with contextlib.redirect_stdout(io.StringIO()):  # Hide logic()'s Debug Print
-            logic_manager.logic(report)
-    return fake_save
+            outcome = logic_manager.logic(report)
+    return fake_save, outcome
 
 # Scores are Rounded Floats, so Compare with a Small Tolerance (e.g. 2.725 can Round to 2.72 or 2.73)
 def assert_close(actual, expected, tolerance=0.01):
@@ -218,6 +222,23 @@ def test_logic_does_not_change_original_report():
     assert "importance_score" not in report
     assert "mom_reportable" not in report
     assert "deadline" not in report
+
+# logic() Returns the Real Save Result and the Score and MOM Details, for 'io_manager' to Show
+def test_logic_returns_outcome():
+    _, outcome = run_logic_with_save_result(load_sample_report("critical_electrical.json"))
+    assert outcome["saved"] is True
+    assert outcome["message"] == "Record saved."
+    assert_close(outcome["importance_score"], 7.4)
+    assert outcome["mom_reportable"] == "Yes"
+
+# A Failed Save is Passed On, Not Hidden
+def test_logic_returns_failed_save():
+    rejected = (False, "Record rejected: an identical record already exists.")
+    _, outcome = run_logic_with_save_result(load_sample_report("near_miss_slip.json"), rejected)
+    assert outcome["saved"] is False
+    assert outcome["message"] == rejected[1]
+    assert outcome["mom_reportable"] == "No"
+    assert outcome["deadline"] == "N/A"
 
 # Same Input Gives the Same Score Every Run
 def test_score_is_deterministic():
