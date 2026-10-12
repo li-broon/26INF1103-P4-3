@@ -3,6 +3,7 @@
 # ------- #
 
 import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
+from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
 from src.ai_manager import start_chat, send_message, check_api_key
 from src.logic_manager import logic
@@ -393,8 +394,18 @@ def _print_full_report(table, number):
     """
     # Subtract 1 because the table numbers start at 1, but rows start at 0
     report = table.iloc[number - 1].fillna("-").to_dict()
+    _print_report_card(report, f"Report #{number}")
 
-    print(f"\n{BOLD}{UNDERLINE}Report #{number}{RESET}\n")
+def _print_report_card(report, title):
+    """
+    Print every field of one report under a title. Used for a saved report opened from
+    the table, and for the confirmation card the worker sees after submitting.
+
+    Parameters:
+    report (dict): The report's fields, keyed by column name. Empty fields are skipped.
+    title (str): The heading shown above the fields.
+    """
+    print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
     for label, column in FULL_REPORT_FIELDS:
         value = report.get(column, "-")
         if column in YES_NO_COLUMNS:
@@ -436,11 +447,13 @@ def _go_previous(page):
         return page, False
     return page - 1, True
 
-def _print_save_outcome(outcome):
+def _print_save_outcome(report, outcome):
     """
-    Tell the worker whether their report was really saved, and what the Logic Manager decided.
+    Tell the worker whether their report was really saved. If it was, show it back to them
+    as a confirmation card, with the score and MOM details the Logic Manager added.
 
     Parameters:
+    report (dict): The report the AI collected from the worker.
     outcome (dict): The result from logic(): saved, message, importance_score, mom_reportable, deadline.
     """
     # Only claim success when the Data Manager actually wrote the record
@@ -450,14 +463,38 @@ def _print_save_outcome(outcome):
         return
 
     print(f"\n{GREEN}{BOLD}✅ Your report has been saved.{RESET}")
-    print(f"   {BOLD}Importance score:{RESET} {outcome['importance_score']} / 10")
+
+    # The card shows what was saved: the worker's details plus the Logic Manager's results
+    card = dict(report)
+    for column in ("importance_score", "mom_reportable", "deadline"):
+        card[column] = outcome[column]
+    _print_report_card(card, "Your Saved Report")
 
     # A MOM-reportable incident has a legal deadline, so make it stand out
     if outcome["mom_reportable"] == "Yes":
-        print(f"   {RED}{BOLD}Must be reported to MOM by: {outcome['deadline']}{RESET}\n")
-    else:
-        print(f"   {BOLD}MOM report needed:{RESET} No\n")
-    
+        if _is_overdue(outcome["deadline"]):
+            print(f"{RED}{BOLD}⚠️  OVERDUE: this incident had to be reported to MOM by {outcome['deadline']}. "
+                  f"Tell your supervisor now.{RESET}\n")
+        else:
+            print(f"{RED}{BOLD}⚠️  This incident must be reported to MOM by {outcome['deadline']}.{RESET}\n")
+
+def _is_overdue(deadline, today=None):
+    """
+    Check whether a MOM deadline has already passed. A deadline of today is not overdue yet.
+
+    Parameters:
+    deadline (str): The deadline as YYYY-MM-DD.
+    today (date): The date to compare against (default: today). Lets tests pick the date.
+
+    Returns:
+    bool: True if the deadline is before today. False if it is today, later, or not a valid date.
+    """
+    try:
+        due = datetime.strptime(str(deadline), "%Y-%m-%d").date()
+    except ValueError:
+        return False  # e.g. "Check incident date": no real date to compare
+    return due < (today or date.today())
+
 # ------------------------- #
 # io_manager Main Functions
 # ------------------------- #
@@ -658,7 +695,7 @@ def run_chatbot():
             # If all required fields are collected, push the payload to the Logic Manager for scoring
             if result["is_complete"]:
                 outcome = logic(result["report"])
-                _print_save_outcome(outcome)
+                _print_save_outcome(result["report"], outcome)
 
                 if _ask_yes_no("Would you like to view all saved reports now?"):
                     view_reports()
