@@ -73,12 +73,14 @@ MAX_OPTION = 3
 
 TABLE_COLUMNS = [
     ("Score", "importance_score", 7),
-    ("Severity", "ai_severity", 10),
-    ("Hosp.", "hospitalised", 7),
-    ("Root Cause", "root_cause_category", 20),
-    ("Location", "location", 18),
+    ("Severity", "ai_severity", 9),
+    ("Hosp.", "hospitalised", 6),
+    ("MOM?", "mom_reportable", 6),
+    ("Deadline", "deadline", 12),
+    ("Root Cause", "root_cause_category", 16),
+    ("Location", "location", 14),
     ("Date", "incident_date", 12),
-    ("Reporter", "reporter_name", 12),
+    ("Reporter", "reporter_name", 10),
 ]
 
 # Full-Text Fields Printed Under Each Summary Row: (Label, Column Name in 'data.csv')
@@ -134,10 +136,12 @@ FULL_REPORT_FIELDS = [
     ("Action taken", "immediate_action_taken"),
     ("Recommended action", "safety_recommendation"),
     ("Language", "detected_language"),
+    ("MOM reportable", "mom_reportable"),
+    ("MOM deadline", "deadline"),
 ]
 
 # True/False Fields, Shown as YES/No in the Full Report
-YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury")
+YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury", "mom_reportable")
 
 # ------------- #
 # Filter Menu
@@ -240,16 +244,27 @@ def _wrap_detail(label, text):
     return wrapped
 
 # Build One Summary Row, Highlighting Hospital Cases in Red
+# Columns Shown in Red when the Value is YES
+ALERT_COLUMNS = ("hospitalised", "mom_reportable")
+
+# Build One Summary Row, Highlighting Hospital and MOM Cases in Red
 def _build_row(number, report):
     row = _fit(number, 5)
     for heading, column, width in TABLE_COLUMNS:
         value = report.get(column, "-")
 
-        # Hospitalisation is a Straight Yes/No, and YES is Worth Shouting About
-        if column == "hospitalised":
+        # Yes/No Columns: YES is Worth Shouting About
+        if column in ALERT_COLUMNS:
             value = _yes_no(value)
             cell = _fit(value, width)  # Padded Before Colouring, so Columns Stay Lined Up
             row += f"{RED}{BOLD}{cell}{RESET}" if value == "YES" else cell
+            continue
+
+        # The Deadline is Only Urgent when MOM Must be Told
+        if column == "deadline":
+            cell = _fit(value, width)
+            must_report = _yes_no(report.get("mom_reportable")) == "YES"
+            row += f"{RED}{BOLD}{cell}{RESET}" if must_report else cell
             continue
 
         row += _fit(value, width)

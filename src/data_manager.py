@@ -36,8 +36,7 @@ DATE_RANGES = {
 }
 
 # Indicates the boundary for each threshold filter in the urgency column.
-SCORE_THRESHOLDS = ["0", "25", "50", "75", "100"]
-
+SCORE_THRESHOLDS = ["0", "2", "4", "6", "8"]
 # Used for debugging to log warnings and errors instead of printing them to the console
 logger = logging.getLogger(__name__)
 
@@ -452,13 +451,10 @@ def get_unique_values(column_name):
         ranges = []
         for i, threshold in enumerate(SCORE_THRESHOLDS):
             if i + 1 < len(SCORE_THRESHOLDS):
-                # upper_bound is the threshold in the SCORE_THRESHOLDS list after the selected threshold
-                upper_bound = int(SCORE_THRESHOLDS[i+1]) - 1
-                # Add it to list which is used to populate the filter menu
-                ranges.append(f"{threshold} - {upper_bound}")
+                ranges.append(f"{threshold} to under {SCORE_THRESHOLDS[i + 1]}")
             else:
                 ranges.append(f"{threshold}+")
-        return ranges             
+        return ranges           
 
     if column_name == DATE_FIELD:
         return list(DATE_RANGES)
