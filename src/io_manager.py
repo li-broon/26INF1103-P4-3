@@ -65,6 +65,7 @@ MENU = f"""
 MIN_OPTION = 1
 MAX_OPTION = 3
 GOODBYE = f"{GREEN}Goodbye! Stay safe. {RESET}"
+CANCEL_WORDS = ("quit", "exit", "cancel")
 
 # -------------------- #
 # Saved Report Display
@@ -600,7 +601,20 @@ def run_chatbot():
     print(WELCOME)
 
     while True:
-        result = send_message(chat, input("> "))  
+        user_text = input("> ").strip()
+        # Reject blank input and ask again, instead of spending an API call on nothing
+        if user_text == "":
+            print(f"{YELLOW}Please type something, or 'quit' to go back to the menu.{RESET}")
+            continue
+
+            #let the workers leave without finishing 
+        if user_text.lower() in CANCEL_WORDS:
+            if _ask_yes_no("Leave without finishing this report?"):
+                print(f"{YELLOW}Report cancelled. Nothing was saved.{RESET}\n")
+                return
+            continue 
+
+        result = send_message(chat, user_text)
 
         # Catch API errors (like rate limits etc.) and allow the user to try again without losing their spot
         if "error" in result:
