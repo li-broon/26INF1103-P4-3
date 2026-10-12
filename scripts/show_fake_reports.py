@@ -15,7 +15,7 @@ from datetime import date, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src import data_manager
-from src.logic_manager import _calculate_importance_score
+from src.logic_manager import _calculate_importance_score, _check_mom_reporting
 from src.io_manager import view_reports
 
 NAMES = ["Ahmad bin Ismail", "Tan Wei Ming", "Priya Raman", "Nguyen Van An", "John Lim", "Siti Nurhaliza"]
@@ -28,10 +28,10 @@ LOCATIONS = [
 ]
 INCIDENTS = [
     ("Worker touched an exposed live wire while replacing a panel cover.", "Electrical", "Critical"),
-    ("Worker slipped on an oily floor near the forklift charging area.", "Slip/Trip/Fall", "Medium"),
+    ("Worker slipped on an oily floor near the forklift charging area.", "Slip or Trip", "Medium"),
     ("Hand caught in conveyor belt roller during cleaning without isolating power.", "Machinery", "High"),
-    ("Box fell from the top shelf and narrowly missed a worker.", "Falling Object", "Low"),
-    ("Worker fell from 2m scaffolding when a guardrail gave way.", "Working at Height", "Critical"),
+    ("Box fell from the top shelf and narrowly missed a worker.", "Struck by Object", "Low"),
+    ("Worker fell from 2m scaffolding when a guardrail gave way.", "Fall from Height", "Critical"),
     ("Strong chemical smell after a container leaked in storage.", "Chemical", "Medium"),
 ]
 LANGUAGES = ["English", "Malay", "Chinese", "Tamil", "Vietnamese"]
@@ -55,7 +55,7 @@ def fake_report(i):
         "ai_severity": severity,
         "is_near_miss": near_miss,
         "root_cause_category": cause,
-        "lost_time_injury": hospitalised,
+        "lost_time_injury": hospitalised or (not near_miss and random.random() < 0.3),
         "safety_recommendation": "Review the procedure with the team and inspect the area before work resumes.",
     }
 
@@ -71,6 +71,7 @@ def main():
     for i in range(12):  # 12 reports -> more than one page
         report = fake_report(i)
         report["importance_score"] = _calculate_importance_score(report)
+        report["mom_reportable"], report["deadline"] = _check_mom_reporting(report)
         ok, message = data_manager.save_record(report)
         if not ok:
             print(message)
