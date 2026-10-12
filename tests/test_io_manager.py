@@ -45,13 +45,13 @@ def test_page_count_exact_multiple():
     """Test page calculation when the row count perfectly divides by PAGE_SIZE."""
     # Assuming PAGE_SIZE is 5, a 10-row table should be exactly 2 pages
     dummy_table = pd.DataFrame([{"id": i} for i in range(10)])
-    assert io._page_count(dummy_table) == 2
+    assert io._page_count(dummy_table) == -(-10 // io.PAGE_SIZE)
 
 def test_page_count_with_remainder():
     """Test page calculation when the row count spills over into a new page."""
     # A 12-row table should be 3 pages
     dummy_table = pd.DataFrame([{"id": i} for i in range(12)])
-    assert io._page_count(dummy_table) == 3
+    assert io._page_count(dummy_table) == -(-12 // io.PAGE_SIZE)
 
 def test_page_count_empty_table():
     """Test that an empty table still registers as at least 1 page to prevent UI crashes."""

@@ -55,11 +55,11 @@ WELCOME = f"""
 
 MENU = f"""
 ========================================================================
-{CYAN}{BOLD}                    📋 Main Menu{RESET}
+{CYAN}{BOLD}                     Main Menu{RESET}
 ========================================================================
-      {GREEN}{BOLD}1{RESET}. 💬 Report a new incident (chatbot)
-      {GREEN}{BOLD}2{RESET}. 📂 View saved incident reports
-      {GREEN}{BOLD}3{RESET}. 🚪 Exit
+      {GREEN}{BOLD}1{RESET}.  Report a new incident (chatbot)
+      {GREEN}{BOLD}2{RESET}.  View saved incident reports
+      {GREEN}{BOLD}3{RESET}.  Exit
 """
 
 MIN_OPTION = 1
@@ -76,18 +76,17 @@ TABLE_COLUMNS = [
     ("Score", "importance_score", 7),
     ("Severity", "ai_severity", 9),
     ("Hosp.", "hospitalised", 6),
-    ("MOM?", "mom_reportable", 6),
-    ("Deadline", "deadline", 12),
+    ("MOM Due", "deadline", 12),
     ("Root Cause", "root_cause_category", 16),
     ("Location", "location", 14),
     ("Date", "incident_date", 12),
-    ("Reporter", "reporter_name", 10),
 ]
 
 # Full-Text Fields Printed Under Each Summary Row: (Label, Column Name in 'data.csv')
 # These Hold Whole Sentences, so They are Wrapped Instead of Squeezed into a Column
 # (a 200-Character Safety Recommendation Cut to 18 Characters is No Use to Anyone).
 DETAIL_FIELDS = [
+    ("Reported by", "reporter_name"),
     ("Injury", "injury_status"),
     ("What happened", "description"),
     ("Action taken", "immediate_action_taken"),
@@ -97,7 +96,7 @@ DETAIL_FIELDS = [
 # Layout of the Wrapped Detail Lines
 DETAIL_INDENT = 7        # Spaces Before the Label, so Details Sit Under their Row
 DETAIL_LABEL_WIDTH = 20  # Width of the "Label:" Part, Keeps the Text Lined Up
-DETAIL_TEXT_WIDTH = 64   # Characters per Line Before Wrapping (Ends Level with the Table)
+DETAIL_TEXT_WIDTH = 54   # Characters per Line Before Wrapping (Ends Level with the Table)
 
 # Values that Mean "Nothing Was Saved Here" - Detail Lines with These are Skipped
 EMPTY_VALUES = ("", "-", "nan", "none", "null")
@@ -150,16 +149,16 @@ YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury", "mom_repor
 
 PAGE_MENU = f"""
 ========================================================================
-{CYAN}{BOLD}                    📄 Page Options{RESET}
+{CYAN}{BOLD}                     Page Options{RESET}
 ========================================================================
-      {GREEN}{BOLD}1{RESET}. ➡️  Next page
-      {GREEN}{BOLD}2{RESET}. ⬅️  Previous page
-      {GREEN}{BOLD}3{RESET}. ↩️  Back to report options
+      {GREEN}{BOLD}1{RESET}.  Next page
+      {GREEN}{BOLD}2{RESET}.  Previous page
+      {GREEN}{BOLD}3{RESET}.  Back to report options
 """
 
 PAGE_MIN_OPTION = 1
 PAGE_MAX_OPTION = 3
-PAGE_SIZE = 5
+PAGE_SIZE = 3
 
 FILTER_COLUMNS = [
     ("Score", "importance_score"),
