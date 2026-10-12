@@ -60,14 +60,14 @@ def test_critical_electrical_hospitalised():
     assert_close(score(load_sample_report("critical_electrical.json")), 8.4)
 
 # Check the Score of a Near Miss Slip Incident
-# Low 1x0.30 + Slip or Trip 3x0.20 + Near Miss 2x0.10
+# Low 1x0.30 + Slip or Trip 3x0.20 + Not Hospitalised 1x0.20 + Near Miss 2x0.10 + No Lost Time 1x0.20
 def test_near_miss_slip():
-    assert_close(score(load_sample_report("near_miss_slip.json")), 1.1)
+    assert_close(score(load_sample_report("near_miss_slip.json")), 1.5)
 
 # Check the Score of a Medium Machinery Incident
-# Medium 4x0.30 + Machinery 7x0.20 + 2.5 Hours x0.05
+# Medium 4x0.30 + Machinery 7x0.20 + Not Hospitalised 1x0.20 + No Lost Time 1x0.20 + 2.5 Hours x0.05
 def test_medium_machinery_decimal_hours():
-    assert_close(score(load_sample_report("medium_machinery.json")), 2.73)
+    assert_close(score(load_sample_report("medium_machinery.json")), 3.13)
 
 # Check that the Scores are Ranked by Seriousness
 def test_scores_rank_by_seriousness():
@@ -112,12 +112,12 @@ def test_messy_values_do_not_crash():
 def test_non_numeric_hours_count_as_zero():
     report = load_sample_report("near_miss_slip.json")
     for hours in ("unknown (worker could not say)", None, ""):
-        assert_close(score(dict(report, work_stoppage_hours=hours)), 1.1)
+        assert_close(score(dict(report, work_stoppage_hours=hours)), 1.5)
 
 # Hours Sent as Text ("2.5") Still Count
 def test_numeric_text_hours_are_used():
     report = load_sample_report("near_miss_slip.json")
-    assert_close(score(dict(report, work_stoppage_hours="2.5")), 1.23)
+    assert_close(score(dict(report, work_stoppage_hours="2.5")), 1.63)
 
 # An Empty Report Scores 0 Instead of Crashing
 def test_empty_report_scores_zero():
@@ -251,4 +251,3 @@ def run_all_tests():
 
 if __name__ == "__main__":
     sys.exit(1 if run_all_tests() else 0)
-    
