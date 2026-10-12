@@ -43,7 +43,7 @@ NEAR_MISS_WEIGHTS = {
 # Weight for lost_time_injury (true/false)
 LOST_TIME_INJURY_WEIGHTS = {
     True: 8,
-    False: 2,
+    False: 1,
 }
 
 # The importance score is capped at this value
