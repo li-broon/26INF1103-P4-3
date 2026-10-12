@@ -64,6 +64,7 @@ MENU = f"""
 
 MIN_OPTION = 1
 MAX_OPTION = 3
+GOODBYE = f"{GREEN}Goodbye! Stay safe. {RESET}"
 
 # -------------------- #
 # Saved Report Display
@@ -626,17 +627,23 @@ def run_chatbot():
                     view_reports()
                 break
 
+#Display the main application loop. 
+#Exits cleanly on Ctrl+C
 def main():
     """
     The main application loop. Displays the main menu and routes user input to the core functions.
     """
-    while True:
-        choice = show_menu()  
+    try:
+        while True:
+            choice = show_menu()  
 
-        if choice == 1:
-            run_chatbot()
-        elif choice == 2:
-            view_reports()
-        else:
-            print(f"{GREEN}Goodbye! Stay safe. 👷{RESET}")
-            break
+            if choice == 1:
+                run_chatbot()
+            elif choice == 2:
+                view_reports()
+            else:
+             print(GOODBYE)
+             break
+
+    except (KeyboardInterrupt, EOFError):
+        print(f"\n{GOODBYE}")
