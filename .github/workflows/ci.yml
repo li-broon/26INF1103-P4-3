@@ -4,8 +4,16 @@ name: Workflow CI
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - '**.py'
+      - 'requirements.txt'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - '**.py'
+      - 'requirements.txt'
+      - '.github/workflows/**'
 
 jobs:
   build-and-test:
@@ -29,7 +37,7 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pandas
 
-    # 4. Run the data manager tests you already wrote
+    # 4. Run all test scripts under tests folder
     - name: Run Tests
       run: |
         pytest
