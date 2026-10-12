@@ -35,6 +35,17 @@ DATE_RANGES = {
     "Last 365 Days": 365,
 }
 
+DEADLINE_FIELD = "deadline"
+
+# Filter options for the MOM deadline column: (earliest, latest) in days from
+# today. None means no limit on that side. 0 is today, -1 is yesterday.
+DEADLINE_FILTERS = {
+    "Overdue": (None, -1),
+    "Due within 3 days": (0, 3),
+    "Due within 7 days": (0, 7),
+    "All upcoming": (0, None),
+}
+
 # Indicates the boundary for each threshold filter in the urgency column.
 SCORE_THRESHOLDS = ["0", "2", "4", "6", "8"]
 # Used for debugging to log warnings and errors instead of printing them to the console
@@ -246,6 +257,34 @@ def filter_by_date_range(data, column_name, value):
 
     return data[dates >= cutoff].reset_index(drop=True)
 
+def filter_by_deadline(data, column_name, value):
+    """
+    Keep the rows whose MOM deadline falls in the chosen window, counting from today.
+
+    Parameters:
+    data (pd.DataFrame): The data to filter.
+    column_name (str): The deadline column (YYYY-MM-DD text).
+    value (str): One of the labels in DEADLINE_FILTERS, e.g. "Overdue". Anything else gives an empty DataFrame.
+
+    Returns:
+    pd.DataFrame: The matching rows. Rows with no deadline (not reportable) or an invalid one are left out.
+    """
+    limits = DEADLINE_FILTERS.get(value)
+    if limits is None:
+        return pd.DataFrame()
+
+    earliest, latest = limits
+    today = pd.Timestamp.today().normalize()
+    deadlines = pd.to_datetime(data[column_name], format=DATE_FORMAT, errors="coerce")
+    days_left = (deadlines - today).dt.days
+
+    keep = days_left.notna()  # No valid deadline means no match
+    if earliest is not None:
+        keep &= days_left >= earliest
+    if latest is not None:
+        keep &= days_left <= latest
+
+    return data[keep].reset_index(drop=True)
 
 def filter_by_keyword(data, column_name, value):
     """
@@ -306,6 +345,9 @@ def filter_by_value(data, column_name, value):
     """
     if column_name not in data.columns:
         return pd.DataFrame()
+
+    if column_name == DEADLINE_FIELD:
+        return filter_by_deadline(data, column_name, value)
 
     if pd.api.types.is_numeric_dtype(data[column_name]):
         return filter_by_minimum(data, column_name, value)
@@ -459,7 +501,11 @@ def get_unique_values(column_name):
     if column_name == DATE_FIELD:
         return list(DATE_RANGES)
 
-    return sorted(table[column_name].astype(str).unique())
+    if column_name == DEADLINE_FIELD:
+        return list(DEADLINE_FILTERS)
+
+    return sorted(table[column_name].dropna().astype(str).unique())
+
 
 
 def load_matching_records(column_name, value, ascending=False):

@@ -166,6 +166,8 @@ FILTER_COLUMNS = [
     ("Location", "location"),
     ("Severity", "ai_severity"),
     ("Root Cause", "root_cause_category"),
+    ("MOM Reportable", "mom_reportable"),
+    ("MOM Deadline", "deadline"),
 ]
 
 # Dynamically calculate the back option number so it stays correct if columns are added later
