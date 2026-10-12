@@ -52,7 +52,7 @@ Users will type into the terminal similar to having a conversation with the AI. 
 
 ```bash
 docker build -t inf1103-p4 .
-docker run -it --rm -v "$(pwd)/data:/app/data" inf1103-p4
+docker run -it --rm --env-file <REPLACE_WITH_ENV_FILE> -v "$(pwd)/data:/app/data" inf1103-p4
 
 ```
 Command to run test cases in docker
