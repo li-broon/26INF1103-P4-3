@@ -44,7 +44,7 @@ def fake_report(i):
     return {
         "reporter_name": random.choice(NAMES),
         "location": random.choice(LOCATIONS),
-        "incident_date": (date.today() - timedelta(days=random.randint(0, 300))).strftime("%Y-%m-%d"),
+        "incident_date": (date.today() - timedelta(days=random.randint(0, 14))).strftime("%Y-%m-%d"),
         "incident_time": f"{random.randint(7, 19):02d}:{random.choice([0, 15, 30, 45]):02d}",
         "description": description,
         "injury_status": "None" if near_miss else random.choice(["Minor cut", "Burns on right hand", "Sprained ankle", "Fractured wrist"]),
