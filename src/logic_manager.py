@@ -30,8 +30,8 @@ ROOT_CAUSE_WEIGHTS = {
 
 # Weight for hospitalised (true/false)
 HOSPITALISED_WEIGHTS = {
-    True: 10,
-    False: 1,
+    True: 5,
+    False: 10,
 }
 
 # Weight for is_near_miss (true/false) 
@@ -43,7 +43,7 @@ NEAR_MISS_WEIGHTS = {
 # Weight for lost_time_injury (true/false)
 LOST_TIME_INJURY_WEIGHTS = {
     True: 8,
-    False: 1,
+    False: 2,
 }
 
 # The importance score is capped at this value
