@@ -30,8 +30,8 @@ ROOT_CAUSE_WEIGHTS = {
 
 # Weight for hospitalised (true/false)
 HOSPITALISED_WEIGHTS = {
-    True: 5,
-    False: 10,
+    True: 10,
+    False: 1,
 }
 
 # Weight for is_near_miss (true/false) 
@@ -43,7 +43,7 @@ NEAR_MISS_WEIGHTS = {
 # Weight for lost_time_injury (true/false)
 LOST_TIME_INJURY_WEIGHTS = {
     True: 8,
-    False: 2,
+    False: 1,
 }
 
 # The importance score is capped at this value
@@ -84,6 +84,10 @@ def _to_bool(value):
 
 # Work Out How Important the Report
 def _calculate_importance_score(report):
+    # An empty report has no data to score (missing fields would otherwise count as False)
+    if not report:
+        return 0
+
     score = 0
 
     score += SEVERITY_WEIGHTS.get(report.get("ai_severity"), 0) * FIELD_IMPORTANCE["ai_severity"]
