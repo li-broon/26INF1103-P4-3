@@ -97,8 +97,8 @@ def clean_record(record):
 
 def comparable(value):
     """
-    Convert a value into a standardized format for safe comparison.
-    Numeric strings are converted to floats; text is lowercased and stripped.
+    Convert a value into a standardised format for safe comparison.
+    Numeric strings are converted to floats, text is lowercased and stripped.
 
     Parameters:
     value (any): The data value to convert.
@@ -400,8 +400,8 @@ def save_record(record):
 
     # File exists but couldn't be read: keep a backup instead of overwriting it
     if existing_data.empty and os.path.exists(DATA_FILE) and os.path.getsize(DATA_FILE) > 0:
-        os.replace(DATA_FILE, DATA_FILE + ".bak")
-        logger.warning("Unreadable data file backed up to '%s.bak'.", DATA_FILE)
+        os.replace(DATA_FILE, DATA_FILE.replace(".csv", "_backup.csv"))
+        logger.warning("Unreadable data file backed up to '%s'.", DATA_FILE.replace(".csv", "_backup.csv"))
 
     if is_duplicate(existing_data, cleaned):
         return False, "Record rejected: an identical record already exists."
