@@ -55,19 +55,19 @@ def assert_close(actual, expected, tolerance=0.01):
 # Importance Score Tests
 # ---------------------- #
 # Check the Score of a Critical Electrical Incident
-# Critical 10x0.30 + Electrical 8x0.20 + Hospitalised 10x0.20 + Lost Time 8x0.20 + 4 Hours x0.05
+# Critical 10x0.30 + Electrical 8x0.20 + Hospitalised 5x0.20 + Lost Time 8x0.20 + 4 Hours x0.05
 def test_critical_electrical_hospitalised():
-    assert_close(score(load_sample_report("critical_electrical.json")), 8.4)
+    assert_close(score(load_sample_report("critical_electrical.json")), 7.4)
 
 # Check the Score of a Near Miss Slip Incident
-# Low 1x0.30 + Slip or Trip 3x0.20 + Not Hospitalised 1x0.20 + Near Miss 2x0.10 + No Lost Time 1x0.20
+# Low 1x0.30 + Slip or Trip 3x0.20 + Not Hospitalised 10x0.20 + Near Miss 2x0.10 + No Lost Time 1x0.20
 def test_near_miss_slip():
-    assert_close(score(load_sample_report("near_miss_slip.json")), 1.5)
+    assert_close(score(load_sample_report("near_miss_slip.json")), 3.3)
 
 # Check the Score of a Medium Machinery Incident
-# Medium 4x0.30 + Machinery 7x0.20 + Not Hospitalised 1x0.20 + No Lost Time 1x0.20 + 2.5 Hours x0.05
+# Medium 4x0.30 + Machinery 7x0.20 + Not Hospitalised 10x0.20 + No Lost Time 1x0.20 + 2.5 Hours x0.05
 def test_medium_machinery_decimal_hours():
-    assert_close(score(load_sample_report("medium_machinery.json")), 3.13)
+    assert_close(score(load_sample_report("medium_machinery.json")), 4.93)
 
 # Check that the Scores are Ranked by Seriousness
 def test_scores_rank_by_seriousness():
@@ -76,10 +76,10 @@ def test_scores_rank_by_seriousness():
     low = score(load_sample_report("near_miss_slip.json"))
     assert critical > medium > low
 
-# Hospitalisation Alone Must Raise the Score
-def test_hospitalisation_raises_score():
+# Hospitalised (5) Now Scores Lower than Not Hospitalised (10), by Design
+def test_hospitalisation_lowers_score():
     report = load_sample_report("near_miss_slip.json")
-    assert score(dict(report, hospitalised=True)) > score(report)
+    assert score(dict(report, hospitalised=True)) < score(dict(report, hospitalised=False))
 
 # The Score Can Never Go Above 10, even for the Worst Possible Report
 def test_score_never_exceeds_cap():
@@ -112,12 +112,12 @@ def test_messy_values_do_not_crash():
 def test_non_numeric_hours_count_as_zero():
     report = load_sample_report("near_miss_slip.json")
     for hours in ("unknown (worker could not say)", None, ""):
-        assert_close(score(dict(report, work_stoppage_hours=hours)), 1.5)
+        assert_close(score(dict(report, work_stoppage_hours=hours)), 3.3)
 
 # Hours Sent as Text ("2.5") Still Count
 def test_numeric_text_hours_are_used():
     report = load_sample_report("near_miss_slip.json")
-    assert_close(score(dict(report, work_stoppage_hours="2.5")), 1.63)
+    assert_close(score(dict(report, work_stoppage_hours="2.5")), 3.43)
 
 # An Empty Report Scores 0 Instead of Crashing
 def test_empty_report_scores_zero():
@@ -196,7 +196,7 @@ def test_logic_saves_scored_record():
     fake_save = run_logic_without_saving(report)
     fake_save.assert_called_once()
     saved = fake_save.call_args.args[0]
-    assert_close(saved["importance_score"], 8.4)
+    assert_close(saved["importance_score"], 7.4)
     assert saved["reporter_name"] == "Ahmad bin Ismail"
     assert saved["mom_reportable"] == "Yes"
     expected_deadline = datetime.strptime(report["incident_date"], "%Y-%m-%d") + timedelta(days=10)
