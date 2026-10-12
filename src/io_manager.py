@@ -28,15 +28,15 @@ WELCOME = f"""
 
 ========================================================================
 {CYAN}{BOLD} 
-            👷 Workplace Incident Reporting Assistant 🦺{RESET}
+            Workplace Incident Reporting Assistant {RESET}
 
 ========================================================================
 {BOLD}
-      👋 Hello! I'm here to help you report a workplace incident.{RESET}
+       Hello! I'm here to help you report a workplace incident.{RESET}
       Just tell me what happened, like you're talking to a friend.
           I'll ask a few questions if anything is missing. 📝
         
-        {GREEN}{BOLD}{UNDERLINE}🌏 Speak in YOUR language! Any language or a mix is OK.{RESET}
+        {GREEN}{BOLD}{UNDERLINE} Speak in YOUR language! Any language or a mix is OK.{RESET}
 
       🇬🇧  {GREEN}English{RESET}   : You can talk to me in your own language.
       🇲🇾  {GREEN}Melayu{RESET}    : Anda boleh bercakap dalam bahasa anda sendiri.
@@ -45,8 +45,8 @@ WELCOME = f"""
       🇮🇳  {GREEN}हिन्दी{RESET}     : आप अपनी भाषा में बात कर सकते हैं।
       🇧🇩  {GREEN}বাংলা{RESET}     : আপনি আপনার নিজের ভাষায় কথা বলতে পারেন।{RESET}
     
-{RED}{BOLD}🚨 If someone is still in danger, call 995 and your supervisor FIRST! 🚨{RESET}
-      {YELLOW}💬 Type your message below and press Enter to start. ⬇️{RESET}
+{RED}{BOLD} If someone is still in danger, call 995 and your supervisor FIRST! 🚨{RESET}
+      {YELLOW} Type your message below and press Enter to start. ⬇️{RESET}
 """
 
 # --------- #
@@ -110,11 +110,11 @@ VIEW_MENU = f"""
 ========================================================================
 {CYAN}{BOLD}                    📄 Report Options{RESET}
 ========================================================================
-      {GREEN}{BOLD}1{RESET}. ➡️  Next page
-      {GREEN}{BOLD}2{RESET}. ⬅️  Previous page
-      {GREEN}{BOLD}3{RESET}. 🔍 Filter these reports
-      {GREEN}{BOLD}4{RESET}. 📋 View a full report
-      {GREEN}{BOLD}5{RESET}. ↩️  Back to the main menu
+      {GREEN}{BOLD}1{RESET}.  Next page
+      {GREEN}{BOLD}2{RESET}.  Previous page
+      {GREEN}{BOLD}3{RESET}.  Filter these reports
+      {GREEN}{BOLD}4{RESET}.  View a full report
+      {GREEN}{BOLD}5{RESET}.  Back to the main menu
 """
 VIEW_MIN_OPTION = 1
 VIEW_MAX_OPTION = 5
@@ -618,7 +618,7 @@ def run_chatbot():
 
         # Catch API errors (like rate limits etc.) and allow the user to try again without losing their spot
         if "error" in result:
-            print(f"{RED}{BOLD}⚠️  Error Occurred:{RESET}")
+            print(f"{RED}{BOLD}  Error Occurred:{RESET}")
 
             if "error_code" in result:
                 print(f"   {BOLD}{RED}Code:{RESET}    {result['error_code']}")
