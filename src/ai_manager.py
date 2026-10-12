@@ -237,7 +237,6 @@ def find_missing_fields(report):
 
 # Send User Message to AI and Return AI Reply Dict
 def send_message(chat, user_text):
-    print("Thinking...\n")
     result = _ask_ai(chat, user_text)
 
     # Double-check the AI (if it says it is done but fields are missing, tell it what to fix, up to MAX_FIX_ATTEMPTS times)

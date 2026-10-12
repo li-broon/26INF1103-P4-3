@@ -612,8 +612,10 @@ def run_chatbot():
             if _ask_yes_no("Leave without finishing this report?"):
                 print(f"{YELLOW}Report cancelled. Nothing was saved.{RESET}\n")
                 return
-            continue 
+            continue
 
+        # Let the worker know the AI is working, since a reply can take a few seconds
+        print("Thinking...\n")
         result = send_message(chat, user_text)
 
         # Catch API errors (like rate limits etc.) and allow the user to try again without losing their spot
