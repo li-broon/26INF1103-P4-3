@@ -679,8 +679,8 @@ def main():
             elif choice == 2:
                 view_reports()
             else:
-             print(GOODBYE)
-             break
+                print(GOODBYE)
+                break
 
     except (KeyboardInterrupt, EOFError):
         print(f"\n{GOODBYE}")

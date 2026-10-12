@@ -115,6 +115,16 @@ def test_save_backs_up_unreadable_file_instead_of_overwriting():
         assert os.path.exists(dm.DATA_FILE.replace(".csv", "_backup.csv")) # Verifies backup was created
         assert len(pd.read_csv(dm.DATA_FILE)) == 1
 
+def test_duplicate_with_na_deadline_rejected():
+    """Test that a non-MOM report (deadline "N/A") is caught as a duplicate, and "N/A" survives a re-save."""
+    with temp_data_dir():
+        assert dm.save_record(make_record(deadline="N/A"))[0] is True
+        ok, message = dm.save_record(make_record(deadline="N/A"))
+        assert ok is False
+        assert "identical" in message
+        dm.save_record(make_record(name="Bob", deadline="N/A"))  # Rewrites the whole file
+        assert list(dm.load_records()["deadline"]) == ["N/A", "N/A"]
+
 
 # ------------------ #
 # Filtering & UI Helpers

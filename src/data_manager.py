@@ -161,7 +161,9 @@ def load_data_from_csv(file_path):
         return pd.DataFrame()
 
     try:
-        df = pd.read_csv(file_path)
+        # Only Blank Cells Count as Missing. By Default pandas Also Turns Text like "N/A" (the
+        # Deadline for Non-MOM Reports) into NaN, which Broke Duplicate Checks and Erased "N/A" on Re-Save.
+        df = pd.read_csv(file_path, keep_default_na=False, na_values=[""])
     except pd.errors.EmptyDataError:
         logger.warning("File '%s' is empty.", file_path)
         return pd.DataFrame()

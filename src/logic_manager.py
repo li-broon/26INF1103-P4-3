@@ -1,6 +1,5 @@
 # Imports
 
-import json
 from datetime import datetime, timedelta
 from src.data_manager import save_record
 
@@ -140,7 +139,6 @@ def _save_with_score(report, score, mom_reportable, deadline):
 
 # Score the Report, Save it, and Return the Outcome so 'io_manager' can Show it
 def logic(json_result):
-    print(json.dumps(json_result, indent=2, ensure_ascii=False))
     score = _calculate_importance_score(json_result)
     mom_reportable, deadline = _check_mom_reporting(json_result)
     saved, message = _save_with_score(json_result, score, mom_reportable, deadline)

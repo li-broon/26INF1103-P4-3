@@ -2,7 +2,7 @@
 # Imports
 # ------- #
 
-# Used to Capture logic()'s Debug Print, so Test Output is Clean
+# Used to Capture logic()'s Output, to Check it Prints Nothing
 import contextlib
 import io
 
@@ -47,8 +47,7 @@ def run_logic_without_saving(report):
 # Same, but the Fake save_record Returns 'save_result'. Returns (Fake, What logic() Returned).
 def run_logic_with_save_result(report, save_result=(True, "Record saved.")):
     with mock.patch.object(logic_manager, "save_record", return_value=save_result) as fake_save:
-        with contextlib.redirect_stdout(io.StringIO()):  # Hide logic()'s Debug Print
-            outcome = logic_manager.logic(report)
+        outcome = logic_manager.logic(report)
     return fake_save, outcome
 
 # Scores are Rounded Floats, so Compare with a Small Tolerance (e.g. 2.725 can Round to 2.72 or 2.73)
@@ -239,6 +238,12 @@ def test_logic_returns_failed_save():
     assert outcome["message"] == rejected[1]
     assert outcome["mom_reportable"] == "No"
     assert outcome["deadline"] == "N/A"
+
+# logic() Prints Nothing (Printing is 'io_manager's Job, Workers Should Never See Raw JSON)
+def test_logic_prints_nothing():
+    with contextlib.redirect_stdout(io.StringIO()) as output:
+        run_logic_without_saving(load_sample_report("critical_electrical.json"))
+    assert output.getvalue() == ""
 
 # Same Input Gives the Same Score Every Run
 def test_score_is_deterministic():
