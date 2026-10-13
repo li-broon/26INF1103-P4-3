@@ -148,7 +148,7 @@ BAD_JSON_MESSAGE = (
 )
 
 INCOMPLETE_MESSAGE = (
-    "The report is not finished yet. Still missing: {fields}. "
+    "The report is not finished yet. Still missing or unclear: {fields}. "
     "Please give these details (or say you do not know) in your next message."
 )
 
@@ -190,6 +190,15 @@ def _parse_reply(text):
         return None
     if "reply" not in data or "is_complete" not in data:
         return None
+
+    # The reply is printed to the worker and is_complete decides if the report is saved, so both must be the right type
+    if not isinstance(data["reply"], str) or not data["reply"].strip():
+        return None
+    if not isinstance(data["is_complete"], bool):
+        return None
+
+    # Keep Only Our Fields (Extra Keys from the AI would Otherwise become New Columns in data.csv)
+    data["report"] = {name: data["report"].get(name) for name in list(USER_FIELDS) + list(AI_FIELDS)}
     return data
 
 # Run a Gemini Call, Waiting and Trying Again while it is Busy (503)
@@ -228,7 +237,7 @@ def _ask_ai(chat, text):
         except Exception as error:
             return _error_result(f"Could not reach the AI: {error}")
 
-        result = _parse_reply(response.text)
+        result = _parse_reply(getattr(response, "text", None))
         if result is not None:
             return result
         message = BAD_JSON_MESSAGE
@@ -243,9 +252,12 @@ def _build_fix_message(missing):
     # User Details Missing, AI asks the User (or stores UNKNOWN_VALUE if they already said they don't know)
     if missing_user:
         fix = (
-            "Not complete yet. Set is_complete to false and ask the worker for: "
-            + ", ".join(missing_user) + ". If the worker already said twice that "
-            f"they do not know one of these, store \"{UNKNOWN_VALUE}\" for it instead."
+            "Not complete yet. These details are missing or not in the required format. "
+            "Correct them from what the worker already said if you can, otherwise set "
+            "is_complete to false and ask the worker for: "
+            + "; ".join(f"{name} ({USER_FIELDS[name]})" for name in missing_user)
+            + f". If the worker already said twice that they do not know one of these, "
+            f"store \"{UNKNOWN_VALUE}\" for it instead (the incident date must still be a real date)."
         )
 
     # Only Analysis Missing, AI Fills it in Itself.
@@ -265,6 +277,34 @@ def _is_valid_ai_value(name, value):
     if name in ("is_near_miss", "lost_time_injury"):
         return isinstance(value, bool)
     return isinstance(value, str) and value.strip() != ""
+
+# Check One Worker Detail is Usable (Dates/Times in the Right Format, Real true/false, Hours a Number, Text Non-Empty)
+def _is_valid_user_value(name, value):
+    if name == "incident_date":
+        try:
+            return datetime.strptime(value, "%Y-%m-%d") <= datetime.now()  # Must be a real date, not in the future
+        except (TypeError, ValueError):
+            return False
+    if name == "incident_time":
+        if value == UNKNOWN_VALUE:
+            return True
+        try:
+            datetime.strptime(value, "%H:%M")
+            return True
+        except (TypeError, ValueError):
+            return False
+    if name == "hospitalised":
+        return isinstance(value, bool)
+    if name == "work_stoppage_hours":
+        if value == UNKNOWN_VALUE:
+            return True
+        is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
+        return is_number and 0 <= value < float("inf")
+    return isinstance(value, str) and value.strip() != ""
+
+# List the Worker Details that are Missing or Not Valid
+def _invalid_user_fields(report):
+    return [name for name in USER_FIELDS if not _is_valid_user_value(name, report.get(name))]
 
 # List the AI Analysis Fields that are Missing or Not Valid
 def _invalid_ai_fields(report):
@@ -318,7 +358,7 @@ def _request_analysis(chat, report):
             )
         except Exception:  # API error or no connection: send_message tells the user to try again
             return None
-        analysis = _parse_analysis(response.text)
+        analysis = _parse_analysis(getattr(response, "text", None))
         if analysis is not None:
             return analysis
     return None
@@ -357,9 +397,9 @@ def find_missing_fields(report):
 def send_message(chat, user_text):
     result = _ask_ai(chat, user_text)
 
-    # AI says "complete" but Worker Details are Missing: tell it to ask the worker, up to MAX_FIX_ATTEMPTS times
+    # AI says "complete" but Worker Details are Missing or Wrongly Formatted: tell it to ask the worker, up to MAX_FIX_ATTEMPTS times
     for _ in range(MAX_FIX_ATTEMPTS):
-        missing_user = [name for name in find_missing_fields(result.get("report", {})) if name in USER_FIELDS]
+        missing_user = _invalid_user_fields(result.get("report", {}))
         if not (result.get("is_complete") and missing_user):
             break
         result = _ask_ai(chat, _build_fix_message(missing_user))
@@ -370,7 +410,7 @@ def send_message(chat, user_text):
 
     # AI still says "complete" with worker details missing: don't show its "all done" reply, tell the user what is missing
     report = result["report"]
-    missing_user = [name for name in find_missing_fields(report) if name in USER_FIELDS]
+    missing_user = _invalid_user_fields(report)
     if missing_user:
         return _error_result(INCOMPLETE_MESSAGE.format(fields=", ".join(missing_user).replace("_", " ")))
 

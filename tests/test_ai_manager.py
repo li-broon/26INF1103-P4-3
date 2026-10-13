@@ -197,6 +197,49 @@ def test_invalid_ai_fields_check():
         "is_near_miss", "root_cause_category"]
 
 
+# ------------------------------------------------- #
+# Stress-Test Regressions (Bad AI Values Found Offline)
+# ------------------------------------------------- #
+
+def test_parse_rejects_wrong_types_for_reply_and_is_complete():
+    report = '"report": {}'
+    assert am._parse_reply('{"reply": null, "is_complete": false, ' + report + '}') is None
+    assert am._parse_reply('{"reply": "", "is_complete": false, ' + report + '}') is None
+    assert am._parse_reply('{"reply": "Hi", "is_complete": "false", ' + report + '}') is None  # Text "false" is truthy
+
+def test_parse_drops_unknown_report_keys():
+    result = am._parse_reply('{"reply": "Hi", "is_complete": false, "report": {"location": "Bay 2", "witnesses": "Ali"}}')
+    assert "witnesses" not in result["report"]  # Would otherwise become a new column in data.csv
+    assert result["report"]["location"] == "Bay 2"
+
+def test_invalid_user_fields_check():
+    assert am._invalid_user_fields(FILLED_USER_DETAILS) == []
+    bad = dict(FILLED_USER_DETAILS, incident_date="13/10/2026", incident_time="25:99", hospitalised="no",
+               work_stoppage_hours=-1, reporter_name=["Muthu"])
+    assert sorted(am._invalid_user_fields(bad)) == sorted(
+        ["incident_date", "incident_time", "hospitalised", "work_stoppage_hours", "reporter_name"])
+
+def test_unknown_allowed_where_worker_may_not_know():
+    unknown = dict(FILLED_USER_DETAILS, location=am.UNKNOWN_VALUE, incident_time=am.UNKNOWN_VALUE,
+                   work_stoppage_hours=am.UNKNOWN_VALUE)
+    assert am._invalid_user_fields(unknown) == []
+    assert "incident_date" in am._invalid_user_fields(dict(FILLED_USER_DETAILS, incident_date=am.UNKNOWN_VALUE))
+
+def test_badly_formatted_date_is_never_marked_complete():
+    report = dict(FILLED_USER_DETAILS, incident_date="13/10/2026", **GOOD_ANALYSIS)
+    reply = json.dumps({"reply": "Done", "is_complete": True, "report": report})
+    client, _ = _fake_client()
+    with mock.patch.object(am, "_get_client", return_value=client):
+        result = am.send_message(_fake_chat(reply), "ok")
+    assert result["is_complete"] is False
+    assert "incident date" in result["error"]
+
+def test_response_without_text_does_not_crash():
+    chat = pytypes.SimpleNamespace(send_message=lambda message: pytypes.SimpleNamespace(), get_history=lambda: [])
+    result = am.send_message(chat, "hi")
+    assert "error" in result
+
+
 # ------------------ #
 # Mini runner
 # ------------------ #
