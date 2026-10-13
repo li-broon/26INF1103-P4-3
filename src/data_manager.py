@@ -5,15 +5,17 @@ import os
 import pandas as pd
 from datetime import timedelta
 
-# Get Correct Data Directory no Matter Where the App is Run From
+# Gets correct data directory no matter where application is launched from
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "data")
 DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
 
-# Sort by score means sorting by urgency 
+# Sorting by score means sorting by urgency 
 URGENCY_COLUMN = "importance_score"
 
-# Important fields that csv must contain
+# Important fields that csv must contain, or the csv is rejected
 REQUIRED_FIELDS = ["reporter_name", "incident_date", URGENCY_COLUMN]
+
+# The date column and its format (e.g. 2026-12-5)
 DATE_FIELD = "incident_date"
 DATE_FORMAT = "%Y-%m-%d"
 
@@ -41,26 +43,18 @@ DEADLINE_FILTERS = {
 }
 
 # Indicates the boundary for each threshold filter in the urgency column.
+# Ranges [0-2, 2-4, 4-6, 6-8, 8 and above]
 SCORE_THRESHOLDS = ["0", "2", "4", "6", "8"]
 # Used for debugging to log warnings and errors instead of printing them to the console
 logger = logging.getLogger(__name__)
 
-
 # CSV Cleaning
 def clean_record(record):
-    """
-    cleans each column of a dataset, ensuring that required fields are present and valid, 
-    and that text values are stripped of whitespace.
-
-    Parameters:
-    record (dict): The record to clean.
-
-    Returns:
-    dict | None: The cleaned record, or None if a required field is missing/invalid.
-    """
+    # If input is not a dictionary, rejects it
     if not isinstance(record, dict):
         return None
 
+    # Makes a copy so that the original is not affected
     cleaned = record.copy()
 
     # Strip whitespace from every text value
@@ -77,44 +71,29 @@ def clean_record(record):
             return None
 
     try:
+        # Converts date to exact YYYY-MM-DD format
         cleaned[DATE_FIELD] = pd.to_datetime(
             cleaned[DATE_FIELD], format=DATE_FORMAT
         ).strftime(DATE_FORMAT)
+        # Converts score to decimal number
         cleaned[URGENCY_COLUMN] = float(cleaned[URGENCY_COLUMN])
+    # If conversion fails, reject the input
     except (ValueError, TypeError):
         return None
 
+    # Returns cleaned copy
     return cleaned
 
-
+# Function purpose : converts value into a standardised format for fair comparison
+# Example : "5" and 5.0 count as equal, or lowercase and trims such that "Fire" and "fire" are equal
 def comparable(value):
-    """
-    Convert a value into a standardised format for safe comparison.
-    Numeric strings are converted to floats, text is lowercased and stripped.
-
-    Parameters:
-    value (any): The data value to convert.
-
-    Returns:
-    float | str: The processed value.
-    """
     try:
         return float(value)
     except (ValueError, TypeError):
         return str(value).strip().lower()
 
-
+# Function checks for duplicate records
 def is_duplicate(existing_data, record):
-    """
-    Return True if every field of 'record' matches an existing row exactly
-
-    Parameters:
-    existing_data (pd.DataFrame): The DataFrame to check against.
-    record (dict): The record to check for duplicates.
-
-    Returns:
-    bool: True if a duplicate is found, False otherwise.
-    """
     # If the existing data is empty, there can't be a duplicate
     if existing_data.empty:
         return False
@@ -131,21 +110,13 @@ def is_duplicate(existing_data, record):
         # If all fields matched, there's a duplicate
         if row_matches: 
             return True
-        
+    # Returns false, meaning the new record is a unique record    
     return False
 
-
+# Safe reading of the CSV file
 def load_data_from_csv(file_path):
-    """
-    Load data from a CSV file into a pandas DataFrame,
-    handling errors and missing required columns.
-
-    Parameters:
-    file_path (str): The path of the CSV file to load.
-
-    Returns:
-    pd.DataFrame: The loaded data, or an empty DataFrame if loading failed/empty.
-    """
+    # Checks if file exists and isn't empty
+    # Returns empty table if does not exist or is empty
     if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
         return pd.DataFrame()
 
@@ -153,6 +124,8 @@ def load_data_from_csv(file_path):
         # Only Blank Cells Count as Missing. By Default pandas Also Turns Text like "N/A" (the
         # Deadline for Non-MOM Reports) into NaN, which Broke Duplicate Checks and Erased "N/A" on Re-Save.
         df = pd.read_csv(file_path, keep_default_na=False, na_values=[""])
+
+    # Error handling, logs the error and returns empty table so application never crashes
     except pd.errors.EmptyDataError:
         logger.warning("File '%s' is empty.", file_path)
         return pd.DataFrame()
@@ -166,6 +139,7 @@ def load_data_from_csv(file_path):
         logger.error("Unexpected problem loading '%s': %s", file_path, e)
         return pd.DataFrame()
 
+    # Checks for required columns
     missing = [col for col in REQUIRED_FIELDS if col not in df.columns]
     if missing:
         logger.warning("File '%s' is missing required columns: %s", file_path, missing)
@@ -173,37 +147,20 @@ def load_data_from_csv(file_path):
 
     return df
 
-
 def sort_by_column(data, column_name, ascending=True):
-    """
-    Sort the given data by the specified column.
 
-    Parameters:
-    data (pd.DataFrame): The data to be sorted.
-    column_name (str): The name of the column to sort by.
-    ascending (bool): Sort direction.
-
-    Returns:
-    pd.DataFrame: The sorted data.
-    """
+    # Safety check : if column does not exist, return the data unchanged instead of crashing
     if column_name not in data.columns:
         return data
 
+    # Sort by the chosen column, rows with a blank value always go to the bottom
+    # Renumbers the rows in the new order starting with 0
     return data.sort_values(by=column_name, ascending=ascending, na_position="last").reset_index(drop=True)
 
-
+# Keeps the records whose score is within the chosen score band
+# Example : "2 to under 4" will then keep records with score of 2 up to (not including) 4
+# "8+" will keep every record from 8 upward
 def filter_by_minimum(data, column_name, value):
-    """
-    Keep the rows whose number in 'column_name' is at least 'value' (used for the score filter).
-
-    Parameters:
-    data (pd.DataFrame): The data to filter.
-    column_name (str): A numeric column.
-    value (str): The minimum, e.g. "20". Not a number gives an empty DataFrame.
-
-    Returns:
-    pd.DataFrame: The matching rows.
-    """
     try:
         # Extract the selected threshold from value which is the range (0-24 etc.)
         raw_value = str(value).split()[0].replace("+", "")
@@ -219,26 +176,17 @@ def filter_by_minimum(data, column_name, value):
         else:
             # No next threshold, so just filter by the minimum
             data = data[data[column_name] >= minimum]
-            
+
+    # Returns empty table if non-numeric value or value not found in table is found
     except ValueError:
         return pd.DataFrame()
 
     return data.reset_index(drop=True)
 
-
+# Keeps records from the last N days
 def filter_by_date_range(data, column_name, value):
-    """
-    Keep the rows dated within the chosen window, counting back from today.
-
-    Parameters:
-    data (pd.DataFrame): The data to filter.
-    column_name (str): The date column (YYYY-MM-DD text).
-    value (str): One of the labels in DATE_RANGES, e.g. "Last 7 Days". Anything else gives an empty DataFrame.
-
-    Returns:
-    pd.DataFrame: The matching rows. Rows with an invalid date are left out.
-    """
     days = DATE_RANGES.get(value)
+    # Returns empty table if unknown label
     if days is None:
         return pd.DataFrame()
 
@@ -248,18 +196,9 @@ def filter_by_date_range(data, column_name, value):
 
     return data[dates >= cutoff].reset_index(drop=True)
 
+# Keeps records whose MOM deadline fall within a window
 def filter_by_deadline(data, column_name, value):
-    """
-    Keep the rows whose MOM deadline falls in the chosen window, counting from today.
-
-    Parameters:
-    data (pd.DataFrame): The data to filter.
-    column_name (str): The deadline column (YYYY-MM-DD text).
-    value (str): One of the labels in DEADLINE_FILTERS, e.g. "Overdue". Anything else gives an empty DataFrame.
-
-    Returns:
-    pd.DataFrame: The matching rows. Rows with no deadline (not reportable) or an invalid one are left out.
-    """
+    # Deadline windows are gotten from DEADLINE_FILTERS
     limits = DEADLINE_FILTERS.get(value)
     if limits is None:
         return pd.DataFrame()
@@ -267,7 +206,7 @@ def filter_by_deadline(data, column_name, value):
     earliest, latest = limits
     today = pd.Timestamp.today().normalize()
     deadlines = pd.to_datetime(data[column_name], format=DATE_FORMAT, errors="coerce")
-    days_left = (deadlines - today).dt.days
+    days_left = (deadlines - today).dt.days # "N/A" or invalid deadlines become blanks
 
     keep = days_left.notna()  # No valid deadline means no match
     if earliest is not None:
@@ -277,63 +216,28 @@ def filter_by_deadline(data, column_name, value):
 
     return data[keep].reset_index(drop=True)
 
+# Keeps records containing the typed keyword, it is not case-sensitive, ignores extra spaces
 def filter_by_keyword(data, column_name, value):
-    """
-    Keep the rows whose text CONTAINS the keyword, ignoring case and extra spaces.
-    The keyword is matched as string, so symbols such as ( ) [ ] + . are safe to type.
-
-    Parameters:
-    data (pd.DataFrame): The data to filter.
-    column_name (str): The column to search.
-    value (str): The keyword, e.g. "warehouse". A blank keyword gives an empty DataFrame.
-
-    Returns:
-    pd.DataFrame: The matching rows.
-    """
     keyword = str(value).strip()
+    # Blank keyword returns empty table
     if keyword == "":
         return pd.DataFrame()
 
+    # Regex false means symbols like () + , are treated as plain characters, safe to type
     found = data[column_name].astype(str).str.contains(keyword, case=False, regex=False, na=False)
 
     return data[found].reset_index(drop=True)
 
-
+# Keeps records whose string matches the value exactly, it is not case-sensitive, ignores extra spaces
 def filter_by_text(data, column_name, value):
-    """
-    Keep the rows whose string matches 'value' exactly, ignoring case and extra spaces.
-
-    Parameters:
-    data (pd.DataFrame): The data to filter.
-    column_name (str): The column to check.
-    value (str): The text to match.
-
-    Returns:
-    pd.DataFrame: The matching rows.
-    """
     column_text = data[column_name].astype(str).str.strip().str.lower()
 
     return data[column_text == str(value).strip().lower()].reset_index(drop=True)
 
-
+# Acts as a manager for all other filter functions
+# Chooses the correct filter function for the column that the user chose
+# Returns the rows that match
 def filter_by_value(data, column_name, value):
-    """
-    Return the rows of data that match the chosen filter value. How the value is
-    matched depends on the column:
-      - number columns (e.g. score): the row's number is AT LEAST the value
-      - the date column: the row is dated within the chosen "Last N no. of days" window
-      - keyword columns (e.g. location): the text contains the keyword (ignoring case and extra spaces)
-      - every other column: the text matches exactly (ignoring case and extra spaces)
-
-    Parameters:
-    data (pd.DataFrame): The data to filter.
-    column_name (str): The column to check.
-    value (str): The value picked by the user.
-
-    Returns:
-    pd.DataFrame: The matching rows, or an empty DataFrame if the column doesn't
-    exist or the value is not valid for that column.
-    """
     if column_name not in data.columns:
         return pd.DataFrame()
 
@@ -351,41 +255,22 @@ def filter_by_value(data, column_name, value):
 
     return filter_by_text(data, column_name, value)
 
-
-# -------------------------- #
-# Specific Manager Functions
-# -------------------------- #
+# Converts score column into numbers, then sorts by it
+# Highest number is first by default
 def sort_by_urgency(table, ascending=False):
-    """
-    Sort a DataFrame by Urgency.
-    
-    Parameters:
-    table (pd.DataFrame): The DataFrame to sort.
-    ascending (bool): Whether to sort in ascending order (default is False, i.e., most urgent first).
-
-    Returns:
-    pd.DataFrame: The sorted DataFrame.
-    """
     if URGENCY_COLUMN in table.columns:
         table = table.copy()
         table[URGENCY_COLUMN] = pd.to_numeric(table[URGENCY_COLUMN], errors="coerce")
     return sort_by_column(table, URGENCY_COLUMN, ascending=ascending)
 
-
+# Adds one report to the CSV file
 def save_record(record):
-    """
-    Clean a dataset, reject duplicates, then add it to 'data.csv' sorted by urgency.
-
-    Parameters:
-    record (dict): The processed record to save.
-
-    Returns:
-    tuple[bool, str]: (success, message). 'io_manager' decides whether to print the message.
-    """
+    # Attempts to clean record
     cleaned = clean_record(record)
     if cleaned is None:
         return False, "Record rejected: missing or invalid required field."
 
+    # Makes sure data folder exists
     os.makedirs(DATA_FOLDER, exist_ok=True)
     existing_data = load_data_from_csv(DATA_FILE)
 
@@ -394,18 +279,18 @@ def save_record(record):
         os.replace(DATA_FILE, DATA_FILE.replace(".csv", "_backup.csv"))
         logger.warning("Unreadable data file backed up to '%s'.", DATA_FILE.replace(".csv", "_backup.csv"))
 
+    # Checks if record is a duplicate
     if is_duplicate(existing_data, cleaned):
         return False, "Record rejected: an identical record already exists."
 
     new_row = pd.DataFrame([cleaned])
 
     # Creates a new DataFrame with the new row if existing_data is empty, otherwise concatenates the new row to existing_data
-
     table = new_row if existing_data.empty else pd.concat([existing_data, new_row], ignore_index=True)
     # Sort the table by urgency before saving
     table = sort_by_urgency(table)
 
-    # Write a temporary file first to avoid data loss if the write fails, then replace the original
+    # Write a temporary file first to avoid data loss if the write fails, then replace the original if everything is good
     temp_file = DATA_FILE + ".tmp"
     try:
         table.to_csv(temp_file, index=False)
@@ -416,18 +301,10 @@ def save_record(record):
 
     return True, "Record saved."
 
-
+# Reads all reports for display
+# Loads the CSV file, cleans each row, drops invalid or duplicate rows
+# Returns result sorted by urgency, does not change original file 
 def load_records(ascending=False):
-    """
-    Read all saved records from 'data.csv', clean them, reject invalid rows, 
-    and return the valid dataset sorted by urgency.
-
-    Parameters:
-    ascending (bool): Sort direction based on the urgency column.
-
-    Returns:
-    pd.DataFrame: A cleaned and sorted DataFrame containing all valid incident reports.
-    """
     table = load_data_from_csv(DATA_FILE)
     if table.empty:
         return table
@@ -453,33 +330,20 @@ def load_records(ascending=False):
 
     return sort_by_urgency(clean_table, ascending=ascending)
 
-
+# Simple function to return all column headers in the CSV file
 def get_column_names():
-    """
-    Retrieve all column headers currently present in the saved CSV database.
-
-    Returns:
-    list: A list of strings representing the column names.
-    """
     return list(load_data_from_csv(DATA_FILE).columns)
 
-
+# This function builds the list of filter options the user sees in the I/O menu
+# For most columns, read the value from the file
+# For score, date and deadline specifically, fixed menu options are given
 def get_unique_values(column_name):
-    """
-    Extract distinct values from a specified column to populate user filter menus,
-    providing custom threshold options for date and numeric score columns.
-
-    Parameters:
-    column_name (str): The name of the column to extract data from.
-
-    Returns:
-    list: A sorted list of unique strings or predefined threshold options.
-    """
+    # Loads the saved CSV, returns empty list if file is empty/unreadable or doesn't exist
     table = load_data_from_csv(DATA_FILE)
     if column_name not in table.columns:
         return []
 
-    # score column shows predefined ranges
+    # Score column shows predefined ranges instead of showing every score in the file
     if column_name == URGENCY_COLUMN:
         ranges = []
         for i, threshold in enumerate(SCORE_THRESHOLDS):
@@ -489,30 +353,24 @@ def get_unique_values(column_name):
                 ranges.append(f"{threshold}+")
         return ranges           
 
+    # Fixed windows are offered instead of showing every date
     if column_name == DATE_FIELD:
         return list(DATE_RANGES)
 
+    # Fixed windows are offered instead of showing every date
     if column_name == DEADLINE_FIELD:
         return list(DEADLINE_FILTERS)
 
+    # For any other column, list each distinct saved value once in alphabetical order
     return sorted(table[column_name].dropna().astype(str).unique())
 
-
-
+# Function that io_manager calls once user has chosen a column and a value
+# Every filtered result shown to user is sorted by urgency
 def load_matching_records(column_name, value, ascending=False):
-    """
-    Retrieve a filtered subset of incident reports based on a specific column value or threshold.
-
-    Parameters:
-    column_name (str): The column to apply the filter against.
-    value (str): The exact value, numeric threshold, or date boundary to search for.
-    ascending (bool): Sort direction based on the urgency column.
-
-    Returns:
-    pd.DataFrame: A filtered and sorted DataFrame containing only the matching records.
-    """
+    # Loads all valid reports, already cleaned and sorted by urgency
     table = load_records(ascending=ascending)
-    if table.empty:
+    if table.empty: # Checks if empty, meaning if nothing is saved yet, so nothing to filter by
         return table
 
+    # Keeps only the rows that match the chosen filter, sort by urgency is preserved
     return filter_by_value(table, column_name, value)
