@@ -22,9 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src import data_manager as dm  # noqa: E402
 
 
-# ------------------ #
 # Helpers
-# ------------------ #
 @contextmanager
 def temp_data_dir():
     """Point data_manager at a temporary folder, then restore it afterwards."""
@@ -48,9 +46,7 @@ def write_raw(path, text):
         f.write(text)
 
 
-# ------------------ #
 # Spec / Constraint Checks
-# ------------------ #
 def test_no_print_calls_in_data_manager():
     """ Test that data_manager.py does not contain any print() calls"""
     with open(dm.__file__, encoding="utf-8") as f:
@@ -64,9 +60,7 @@ def test_no_class_definitions_in_data_manager():
     assert not re.search(r"^\s*class\s+\w+", source, re.MULTILINE), "class definition found"
 
 
-# ------------------ #
 # File I/O & Error Handling
-# ------------------ #
 def test_load_records_missing_file_returns_empty():
     """Test if load_records() handles a missing data.csv by returning an empty DataFrame."""
     with temp_data_dir():
@@ -126,9 +120,7 @@ def test_duplicate_with_na_deadline_rejected():
         assert list(dm.load_records()["deadline"]) == ["N/A", "N/A"]
 
 
-# ------------------ #
 # Filtering & UI Helpers
-# ------------------ #
 def test_get_column_names():
     """Test that get_column_names() returns the correct list of columns after saving a record."""
     with temp_data_dir():
@@ -163,9 +155,7 @@ def test_load_matching_records_no_match():
         assert matches.empty
 
 
-# ------------------ #
 # Mini runner
-# ------------------ #
 def run_all():
     tests = [(name, fn) for name, fn in sorted(globals().items())
              if name.startswith("test_") and callable(fn)]
