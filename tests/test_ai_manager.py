@@ -93,6 +93,110 @@ def test_build_fix_message_for_ai_analysis():
     assert "ai_severity" in message
 
 
+# ------------------------------------------- #
+# Separate Analysis Request Tests (Fake Gemini)
+# ------------------------------------------- #
+
+import json
+import types as pytypes
+from unittest import mock
+
+# Worker Details All Filled In (What the Chat Collects)
+FILLED_USER_DETAILS = {
+    "reporter_name": "Muthu", "location": "Tuas site, loading bay", "incident_date": "2026-10-13",
+    "incident_time": "10:00", "description": "Slipped on oil", "injury_status": "Bruised knee",
+    "hospitalised": False, "immediate_action_taken": "Cleared the area", "work_stoppage_hours": 1,
+}
+
+# A Valid Analysis (What the Separate Request Should Return)
+GOOD_ANALYSIS = {
+    "detected_language": "English", "ai_severity": "Low", "is_near_miss": False,
+    "root_cause_category": "Slip or Trip", "lost_time_injury": False,
+    "safety_recommendation": "Clean oil spills straight away.",
+}
+
+# Chat Reply that Says "complete" but Leaves the Analysis Empty (the Bug Seen in Testing)
+def _complete_reply_without_analysis():
+    report = dict(FILLED_USER_DETAILS, **{name: None for name in am.AI_FIELDS})
+    return json.dumps({"reply": "Thank you, your report is complete.", "is_complete": True, "report": report})
+
+# Fake Chat that Always Gives the Same Reply and Remembers What the Worker Typed
+def _fake_chat(reply_text):
+    sent = []
+    def send_message(message):
+        sent.append(message)
+        return pytypes.SimpleNamespace(text=reply_text)
+    def get_history():
+        return [pytypes.SimpleNamespace(role="user", parts=[pytypes.SimpleNamespace(text=m)]) for m in sent]
+    return pytypes.SimpleNamespace(send_message=send_message, get_history=get_history)
+
+# Fake Gemini Client whose Separate Analysis Request Returns the Given Texts in Order
+def _fake_client(*analysis_texts):
+    texts = iter(analysis_texts)
+    calls = []
+    def generate_content(model, contents, config):
+        calls.append(contents)
+        return pytypes.SimpleNamespace(text=next(texts))
+    return pytypes.SimpleNamespace(models=pytypes.SimpleNamespace(generate_content=generate_content)), calls
+
+def test_empty_analysis_is_filled_by_separate_request():
+    client, calls = _fake_client(json.dumps(GOOD_ANALYSIS))
+    with mock.patch.object(am, "_get_client", return_value=client):
+        result = am.send_message(_fake_chat(_complete_reply_without_analysis()), "cleared the area, stopped 1 hour")
+    assert "error" not in result
+    assert result["is_complete"] is True
+    assert result["report"]["ai_severity"] == "Low"
+    assert am.find_missing_fields(result["report"]) == []
+    assert len(calls) == 1
+    assert "cleared the area, stopped 1 hour" in calls[0]  # Worker's own words sent for language detection
+
+def test_invalid_analysis_is_retried():
+    bad = dict(GOOD_ANALYSIS, ai_severity="critical")  # Wrong casing is not an allowed value
+    client, calls = _fake_client(json.dumps(bad), "not json", json.dumps(GOOD_ANALYSIS))
+    with mock.patch.object(am, "_get_client", return_value=client):
+        result = am.send_message(_fake_chat(_complete_reply_without_analysis()), "ok")
+    assert result["is_complete"] is True
+    assert len(calls) == 3
+
+def test_analysis_failure_gives_clear_error():
+    client, _ = _fake_client("not json", "not json", "not json")
+    with mock.patch.object(am, "_get_client", return_value=client):
+        result = am.send_message(_fake_chat(_complete_reply_without_analysis()), "ok")
+    assert result["error"] == am.ANALYSIS_FAILED_MESSAGE
+    assert result["is_complete"] is False
+
+def test_analysis_api_error_does_not_crash():
+    def broken(model, contents, config):
+        raise ConnectionError("no internet")
+    client = pytypes.SimpleNamespace(models=pytypes.SimpleNamespace(generate_content=broken))
+    with mock.patch.object(am, "_get_client", return_value=client):
+        result = am.send_message(_fake_chat(_complete_reply_without_analysis()), "ok")
+    assert result["error"] == am.ANALYSIS_FAILED_MESSAGE
+
+def test_complete_report_needs_no_extra_request():
+    reply = json.dumps({"reply": "Done", "is_complete": True, "report": dict(FILLED_USER_DETAILS, **GOOD_ANALYSIS)})
+    client, calls = _fake_client()
+    with mock.patch.object(am, "_get_client", return_value=client):
+        result = am.send_message(_fake_chat(reply), "ok")
+    assert result["is_complete"] is True
+    assert calls == []
+
+def test_missing_worker_details_never_ask_worker_for_ai_fields():
+    report = dict(FILLED_USER_DETAILS, location=None, **{name: None for name in am.AI_FIELDS})
+    reply = json.dumps({"reply": "Done", "is_complete": True, "report": report})
+    client, calls = _fake_client()
+    with mock.patch.object(am, "_get_client", return_value=client):
+        result = am.send_message(_fake_chat(reply), "ok")
+    assert "location" in result["error"]
+    assert "severity" not in result["error"]
+    assert calls == []
+
+def test_invalid_ai_fields_check():
+    assert am._invalid_ai_fields(GOOD_ANALYSIS) == []
+    assert am._invalid_ai_fields(dict(GOOD_ANALYSIS, is_near_miss="false", root_cause_category="Cable")) == [
+        "is_near_miss", "root_cause_category"]
+
+
 # ------------------ #
 # Mini runner
 # ------------------ #
