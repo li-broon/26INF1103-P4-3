@@ -155,11 +155,12 @@ PAGE_MENU = f"""
 ========================================================================
       {GREEN}{BOLD}1{RESET}.  Next page
       {GREEN}{BOLD}2{RESET}.  Previous page
-      {GREEN}{BOLD}3{RESET}.  Back to report options
+      {GREEN}{BOLD}3{RESET}.  View a full report 
+      {GREEN}{BOLD}4{RESET}.  Back to report options 
 """
 
 PAGE_MIN_OPTION = 1
-PAGE_MAX_OPTION = 3
+PAGE_MAX_OPTION = 4
 PAGE_SIZE = 3
 
 FILTER_COLUMNS = [
@@ -545,6 +546,8 @@ def show_filter_menu():
 def browse_pages(table, title):
     """
     Manage the pagination loop, allowing a user to scroll through a table.
+    and open any row in full. Report numbers are counted against the table
+    passed in, so they stay corrected for a filtered subset. 
 
     Parameters:
     table (pd.DataFrame): The dataset to display.
@@ -559,15 +562,16 @@ def browse_pages(table, title):
         if show_page:
             _print_table(table, title, page)
 
-        # If everything fits on screen, skip the next/prev menu entirely
-        if pages == 1:
-            return
-
         choice = show_page_menu()
         if choice == 1:
             page, show_page = _go_next(page, pages)
         elif choice == 2:
             page, show_page = _go_previous(page)
+        elif choice == 3: 
+            number = _ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
+            _print_full_report(table, number)
+            # Keep the full report on screen instead of printing the table over it
+            show_page = False
         else:
             return
 
@@ -605,7 +609,7 @@ def view_reports():
             # Stop the main table from re-printing immediately after they finish viewing the filtered results
             show_page = False
         elif choice == 4:
-            number = _ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
+            number = _ask_number(f"Which report number, out of all {len(table)} saved reports?: (1-{len(table)}):", 1, len(table))
             _print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
