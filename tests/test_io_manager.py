@@ -18,10 +18,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src import io_manager as io
 
 
-# ------------------ #
-# _fit Tests
-# ------------------ #
 
+# _fit Tests
 def test_fit_pads_short_text():
     """Test that text shorter than the width is padded with spaces."""
     result = io._fit("Hello", 10)
@@ -41,10 +39,7 @@ def test_fit_handles_non_strings():
     assert result == "42.5  "
 
 
-# ------------------ #
 # Pagination Tests
-# ------------------ #
-
 def test_page_count_exact_multiple():
     """Test page calculation when the row count perfectly divides by PAGE_SIZE."""
     # Assuming PAGE_SIZE is 5, a 10-row table should be exactly 2 pages
@@ -87,10 +82,8 @@ def test_go_previous_blocked_at_start():
     assert changed is False
 
 
-# ------------------ #
-# Report Card Tests
-# ------------------ #
 
+# Report Card Tests
 REPORT = {
     "reporter_name": "Ahmad bin Ismail",
     "incident_date": "2026-10-08",
@@ -158,9 +151,8 @@ def test_full_report_from_table_uses_report_number():
     assert "Siti" in text
 
 
-# ------------------ #
+
 # Mini runner
-# ------------------ #
 def run_all():
     tests = [(name, fn) for name, fn in sorted(globals().items())
              if name.startswith("test_") and callable(fn)]
