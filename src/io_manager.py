@@ -13,10 +13,8 @@ from src.data_manager import (
     load_matching_records,
 )
 
-# --------------- #
-# Welcome Message
-# --------------- #
 
+# Welcome Message
 RESET = "\033[0m"
 BOLD = "\033[1m"
 UNDERLINE = "\033[4m"
@@ -50,10 +48,8 @@ WELCOME = f"""
       {YELLOW} Type your message below and press Enter to start. ⬇️{RESET}
 """
 
-# --------- #
-# Main Menu
-# --------- #
 
+# Main Menu
 MENU = f"""
 ========================================================================
 {CYAN}{BOLD}                     Main Menu{RESET}
@@ -68,12 +64,7 @@ MAX_OPTION = 3
 GOODBYE = f"{GREEN}Goodbye! Stay safe. {RESET}"
 CANCEL_WORDS = ("quit", "exit", "cancel")
 
-# -------------------- #
-# Saved Report Display
-# -------------------- #
-
-# Map UI headings to the exact column names and set their display width
-
+#Map UI headings to the exact column names and set their display width
 TABLE_COLUMNS = [
     ("Score", "importance_score", 7),
     ("Severity", "ai_severity", 9),
@@ -84,9 +75,9 @@ TABLE_COLUMNS = [
     ("Date", "incident_date", 12),
 ]
 
-# Full-Text Fields Printed Under Each Summary Row: (Label, Column Name in 'data.csv')
-# These Hold Whole Sentences, so They are Wrapped Instead of Squeezed into a Column
-# (a 200-Character Safety Recommendation Cut to 18 Characters is No Use to Anyone).
+#Full-Text Fields Printed Under Each Summary Row: (Label, Column Name in 'data.csv')
+#These Hold Whole Sentences, so They are Wrapped Instead of Squeezed into a Column
+#(a 200-Character Safety Recommendation Cut to 18 Characters is No Use to Anyone)
 DETAIL_FIELDS = [
     ("Reported by", "reporter_name"),
     ("Injury", "injury_status"),
@@ -103,10 +94,7 @@ DETAIL_TEXT_WIDTH = 54   # Characters per Line Before Wrapping (Ends Level with 
 # Values that Mean "Nothing Was Saved Here" - Detail Lines with These are Skipped
 EMPTY_VALUES = ("", "-", "nan", "none", "null")
 
-# ---------------------------- #
 # Saved Report Sub Menu
-# ---------------------------- #
-
 VIEW_MENU = f"""
 ========================================================================
 {CYAN}{BOLD}                    📄 Report Options{RESET}
@@ -145,10 +133,7 @@ FULL_REPORT_FIELDS = [
 # True/False Fields, Shown as YES/No in the Full Report
 YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury", "mom_reportable")
 
-# ------------- #
 # Filter Menu
-# ------------- #
-
 PAGE_MENU = f"""
 ========================================================================
 {CYAN}{BOLD}                     Page Options{RESET}
@@ -173,7 +158,7 @@ FILTER_COLUMNS = [
     ("MOM Deadline", "deadline"),
 ]
 
-# Dynamically calculate the back option number so it stays correct if columns are added later
+#Dynamically calculate the back option number so it stays correct if columns are added later
 FILTER_BACK_OPTION = len(FILTER_COLUMNS) + 1
 
 FILTER_HEADER = f"""
@@ -183,21 +168,11 @@ FILTER_HEADER = f"""
       Which column would you like to filter by?
 """
 
-# ---------------------------- #
-# io_manager Private Functions
-# ---------------------------- #
 
+#io_manager Private Functions
+#Prompt the user with a yes/no question until a valid response is given
+#Keep looping until they give a clear yes or no answer
 def _ask_yes_no(question):
-    """
-    Prompt the user with a yes/no question until a valid response is given.
-
-    Parameters:
-    question (str): The prompt to display.
-
-    Returns:
-    bool: True if the user answers 'yes'/'y', False if 'no'/'n'.
-    """
-    # Keep looping until they give a clear yes or no answer
     while True:
         answer = input(f"{question} (y/n): ").strip().lower()
         if answer in ("y", "yes"):
@@ -206,17 +181,11 @@ def _ask_yes_no(question):
             return False
         print(f"{YELLOW}Please type 'y' for yes or 'n' for no.{RESET}")
 
+#Format text to fit a specific column width, truncating or padding as needed
+#text (any):The data to format into a string
+#width (int):The exact character width of the output column
 def _fit(text, width):
-    """
-    Format text to fit a specific column width, truncating or padding as needed.
 
-    Parameters:
-    text (any): The data to format into a string.
-    width (int): The exact character width of the output column.
-
-    Returns:
-    str: The formatted string padded with spaces or truncated with an ellipsis '…'.
-    """
     text = str(text)
     # If the text is too long, cut it and add an ellipsis so it doesn't break the table layout
     if len(text) >= width:
@@ -275,18 +244,8 @@ def _build_row(number, report):
         row += _fit(value, width)
     return row
 
+#Ask the user to input a number within a specific range. Re-prompts on invalid input
 def _ask_number(prompt, low, high):
-    """
-    Ask the user to input a number within a specific range. Re-prompts on invalid input.
-
-    Parameters:
-    prompt (str): The message to display to the user.
-    low (int): The minimum acceptable integer.
-    high (int): The maximum acceptable integer.
-
-    Returns:
-    int: A valid integer choice within the specified bounds.
-    """
     while True:
         user_input = input(prompt).strip()
 
@@ -307,54 +266,31 @@ def _ask_number(prompt, low, high):
             return choice
         print(f"{YELLOW}{choice} is not an option. Please type a number from {low} to {high}.{RESET}")
 
+#Display a numbered list of values and return the user's selection
 def _choose_value(heading, values):
-    """
-    Display a numbered list of values and return the user's selection.
-
-    Parameters:
-    heading (str): The title for the list of values.
-    values (list): A list of unique strings/options to display.
-
-    Returns:
-    str | None: The selected value, or None if the user chooses the 'Back' option.
-    """
+  #The selected value, or None if the user chooses the 'Back' option.
     back_option = len(values) + 1
 
     print(f"\n{BOLD}Values saved under {heading}:{RESET}")
-    # Print out every available filter option as a numbered list
+    #Print out every available filter option as a numbered list
     for number, value in enumerate(values, start=1):
         print(f"      {GREEN}{BOLD}{number}{RESET}. {value}")
-    print(f"      {GREEN}{BOLD}{back_option}{RESET}. ↩️  Back")
+    print(f"      {GREEN}{BOLD}{back_option}{RESET}.   Back")
 
     choice = _ask_number(f"Choose a value (1-{back_option}): ", 1, back_option)
     if choice == back_option:
         return None
         
-    # Subtract 1 because our menu starts at 1, but python lists start at 0
+    #Subtract 1 because our menu starts at 1, but python lists start at 0
     return values[choice - 1]
 
+#Calculate the total number of pages required to display the data table.
 def _page_count(table):
-    """
-    Calculate the total number of pages required to display the data table.
-
-    Parameters:
-    table (pd.DataFrame): The data to be paginated.
-
-    Returns:
-    int: The total number of pages (minimum 1).
-    """
     pages = -(-len(table) // PAGE_SIZE)  # Divide and Round Up
     return max(pages, 1)
 
+#print one formatted page of the incident reports table
 def _print_table(table, title, page=1):
-    """
-    Print one formatted page of the incident reports table.
-
-    Parameters:
-    table (pd.DataFrame): The data to print.
-    title (str): The title to display above the table.
-    page (int): The current page number to render (default 1).
-    """
     total = len(table)
     # Figure out exactly which rows belong on the current page
     first = (page - 1) * PAGE_SIZE           
@@ -372,8 +308,8 @@ def _print_table(table, title, page=1):
     #.iloc to show position 0-4 in page 1 and 5-9 for page 2
     #fillna with - with empty cells and save the results to variable called rows
     rows = table.iloc[first:last].fillna("-")
-    # One Block per Report: a Summary Row, then its Full-Text Details Underneath
-    # (Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
+    #One Block per Report: a Summary Row, then its Full-Text Details Underneath
+    #(Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
     for number, report in enumerate(rows.to_dict("records"), start=first + 1):
         print(_build_row(number, report))
 
@@ -385,27 +321,15 @@ def _print_table(table, title, page=1):
 
     print(f"\n{CYAN}Page {page} of {_page_count(table)}  (showing {first + 1}-{last} of {total}){RESET}\n")
 
+#Print every field of one report in full, so long names and locations are not cut off
 def _print_full_report(table, number):
-    """
-    Print every field of one report in full, so long names and locations are not cut off.
-
-    Parameters:
-    table (pd.DataFrame): The data the report is in.
-    number (int): The report's 'No.' as shown in the table (starts at 1).
-    """
     # Subtract 1 because the table numbers start at 1, but rows start at 0
     report = table.iloc[number - 1].fillna("-").to_dict()
     _print_report_card(report, f"Report #{number}")
 
+#Print every field of one report under a title.Used for a saved report opened from
+#the table, and for the confirmation card the worker sees after submitting
 def _print_report_card(report, title):
-    """
-    Print every field of one report under a title. Used for a saved report opened from
-    the table, and for the confirmation card the worker sees after submitting.
-
-    Parameters:
-    report (dict): The report's fields, keyed by column name. Empty fields are skipped.
-    title (str): The heading shown above the fields.
-    """
     print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
     for label, column in FULL_REPORT_FIELDS:
         value = report.get(column, "-")
@@ -415,48 +339,25 @@ def _print_report_card(report, title):
             print(line)
     print()
 
+#Change of page index if exits 
 def _go_next(page, pages):
-    """
-    Increment the page index if a next page exists.
-
-    Parameters:
-    page (int): The current page number.
-    pages (int): The total number of pages available.
-
-    Returns:
-    tuple: (new_page_number, boolean indicating if the page changed)
-    """
     # Prevent the user from scrolling past the end of the data
     if page >= pages:
         print(f"{YELLOW}You are already on the last page.{RESET}")
         return page, False
     return page + 1, True
 
+#Change of page index if previous page exits
 def _go_previous(page):
-    """
-    Decrement the page index if a previous page exists.
-
-    Parameters:
-    page (int): The current page number.
-
-    Returns:
-    tuple: (new_page_number, boolean indicating if the page changed)
-    """
     # Prevent the user from scrolling into negative pages
     if page <= 1:
         print(f"{YELLOW}You are already on the first page.{RESET}")
         return page, False
     return page - 1, True
 
+#Tell the worker whether their report was really saved. If it was, show it back to them
+#as a confirmation card, with the score and MOM details the Logic Manager added.
 def _print_save_outcome(report, outcome):
-    """
-    Tell the worker whether their report was really saved. If it was, show it back to them
-    as a confirmation card, with the score and MOM details the Logic Manager added.
-
-    Parameters:
-    report (dict): The report the AI collected from the worker.
-    outcome (dict): The result from logic(): saved, message, importance_score, mom_reportable, deadline.
-    """
     # Only claim success when the Data Manager actually wrote the record
     if not outcome["saved"]:
         print(f"\n{RED}{BOLD} Your report was NOT saved.{RESET} {outcome['message']}")
@@ -465,7 +366,7 @@ def _print_save_outcome(report, outcome):
 
     print(f"\n{GREEN}{BOLD} Your report has been saved.{RESET}")
 
-    # The card shows what was saved: the worker's details plus the Logic Manager's results
+    #The card shows what was saved: the worker's details plus the Logic Manager's results
     card = dict(report)
     for column in ("importance_score", "mom_reportable", "deadline"):
         card[column] = outcome[column]
@@ -479,80 +380,41 @@ def _print_save_outcome(report, outcome):
         else:
             print(f"{RED}{BOLD}⚠️  This incident must be reported to MOM by {outcome['deadline']}.{RESET}\n")
 
+#Check whether a MOM deadline has already passed.A deadline of today is not overdue yet
 def _is_overdue(deadline, today=None):
-    """
-    Check whether a MOM deadline has already passed. A deadline of today is not overdue yet.
-
-    Parameters:
-    deadline (str): The deadline as YYYY-MM-DD.
-    today (date): The date to compare against (default: today). Lets tests pick the date.
-
-    Returns:
-    bool: True if the deadline is before today. False if it is today, later, or not a valid date.
-    """
     try:
         due = datetime.strptime(str(deadline), "%Y-%m-%d").date()
     except ValueError:
         return False  # e.g. "Check incident date": no real date to compare
     return due < (today or date.today())
 
-# ------------------------- #
-# io_manager Main Functions
-# ------------------------- #
 
+#io_manager Main Functions
+#Display the main menu and prompt the user for a selection
 def show_menu():
-    """
-    Display the main menu and prompt the user for a selection.
-
-    Returns:
-    int: The selected menu option.
-    """
     print(MENU)
     return _ask_number(f"Choose an option ({MIN_OPTION}-{MAX_OPTION}): ", MIN_OPTION, MAX_OPTION)
 
+# Display the sub-menu for viewing saved reports
 def show_view_menu():
-    """
-    Display the sub-menu for viewing saved reports.
-
-    Returns:
-    int: The selected menu option.
-    """
     print(VIEW_MENU)
     return _ask_number(f"Choose an option ({VIEW_MIN_OPTION}-{VIEW_MAX_OPTION}): ", VIEW_MIN_OPTION, VIEW_MAX_OPTION)
 
+#Display the pagination control menu
 def show_page_menu():
-    """
-    Display the pagination control menu.
-
-    Returns:
-    int: The selected menu option.
-    """
     print(PAGE_MENU)
     return _ask_number(f"Choose an option ({PAGE_MIN_OPTION}-{PAGE_MAX_OPTION}): ", PAGE_MIN_OPTION, PAGE_MAX_OPTION)
 
+#Display the available columns that can be used for filtering
 def show_filter_menu():
-    """
-    Display the available columns that can be used for filtering.
-
-    Returns:
-    int: The index of the selected column to filter by, or the 'Back' option.
-    """
     print(FILTER_HEADER)
     for number, (heading, column) in enumerate(FILTER_COLUMNS, start=1):
         print(f"      {GREEN}{BOLD}{number}{RESET}. {heading}")
     print(f"      {GREEN}{BOLD}{FILTER_BACK_OPTION}{RESET}. ↩️  Back")
     return _ask_number(f"Choose a column (1-{FILTER_BACK_OPTION}): ", 1, FILTER_BACK_OPTION)
 
+#Manage the pagination loop, allowing a user to scroll through a table
 def browse_pages(table, title):
-    """
-    Manage the pagination loop, allowing a user to scroll through a table.
-    and open any row in full. Report numbers are counted against the table
-    passed in, so they stay corrected for a filtered subset. 
-
-    Parameters:
-    table (pd.DataFrame): The dataset to display.
-    title (str): The title of the table view.
-    """
     pages = _page_count(table)
     page = 1
     show_page = True
@@ -575,14 +437,11 @@ def browse_pages(table, title):
         else:
             return
 
+#Retrieve saved reports from the Data Manager and initiate the viewing sequence
 def view_reports():
-    """
-    Retrieve saved reports from the Data Manager and initiate the viewing sequence.
-    Provides options to paginate, filter the full dataset, or open one report in full.
-    """
     table = load_records() # Load all saved data from the Data Manager
 
-    # Handle the empty dataframe gracefully without crashing
+    #Handle the empty dataframe gracefully without crashing
     if table.empty:
         print(f"{YELLOW}No incident reports have been saved yet.{RESET}")
         return
@@ -593,7 +452,7 @@ def view_reports():
     show_page = True  
 
     while True:
-        # Only print the table if the page has changed or it's the first display
+        #Only print the table if the page has changed or it's the first display
         if show_page: 
             _print_table(table, title, page)
 
@@ -616,45 +475,39 @@ def view_reports():
         else:
             break
 
+#Prompt the user to filter the dataset by a specific column and value
 def filter_reports():
-    """
-    Prompt the user to filter the dataset by a specific column and value.
-    Supports open keyword search for location fields and exact match/thresholds for others.
-    """
     choice = show_filter_menu()
     if choice == FILTER_BACK_OPTION:
         return
         
-    # Extract the selected column and its UI heading to run the filter
+    #Extract the selected column and its UI heading to run the filter
     heading, column = FILTER_COLUMNS[choice - 1]
 
-    # Open ended keyword search for location so users don't have to pick from a massive list
+    #Open ended keyword search for location so users don't have to pick from a massive list
     if column in ["location"]:
         value = input(f"\n{BOLD}Enter a keyword to search in {heading}:{RESET} ").strip()
         if not value:
             return
     else:
-        # Display a list of unique values or threshold options for the selected column
+        #Display a list of unique values or threshold options for the selected column
         value = _choose_value(heading, get_unique_values(column))
         if value is None:
             return
 
     matches = load_matching_records(column, value)
     
-    # Catch situations where the filter returned zero rows
+    #Catch situations where the filter returned zero rows
     if matches.empty:
         print(f"{YELLOW}No reports found where {heading} is '{value}'.{RESET}")
         return
 
-    # Pass the filtered subset into the pagination tool for viewing
+    #Pass the filtered subset into the pagination tool for viewing
     browse_pages(matches, f"Reports where {heading} matches '{value}' ({len(matches)} found, most urgent first)")
 
+#Initialize the AI incident reporting chatbot, handle the conversation loop
 def run_chatbot():
-    """
-    Initialize the AI incident reporting chatbot, handle the conversation loop,
-    and submit the finalized report to the Logic Manager.
-    """
-    # Verify we can connect to Gemini before starting the chatbot
+    #Verify we can connect to Gemini before starting the chatbot
     error = check_api_key()
     if error:
         print(f"{RED}{error}{RESET}")
@@ -665,7 +518,7 @@ def run_chatbot():
 
     while True:
         user_text = input("> ").strip()
-        # Reject blank input and ask again, instead of spending an API call on nothing
+        #Reject blank input and ask again, instead of spending an API call on nothing
         if user_text == "":
             print(f"{YELLOW}Please type something, or 'quit' to go back to the menu.{RESET}")
             continue
@@ -677,7 +530,7 @@ def run_chatbot():
                 return
             continue
 
-        # Let the worker know the AI is working, since a reply can take a few seconds
+        #Let the worker know the AI is working, since a reply can take a few seconds
         print("Thinking...\n")
         result = send_message(chat, user_text)
 
