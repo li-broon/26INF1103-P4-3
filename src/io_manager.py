@@ -459,11 +459,11 @@ def _print_save_outcome(report, outcome):
     """
     # Only claim success when the Data Manager actually wrote the record
     if not outcome["saved"]:
-        print(f"\n{RED}{BOLD}❌ Your report was NOT saved.{RESET} {outcome['message']}")
+        print(f"\n{RED}{BOLD} Your report was NOT saved.{RESET} {outcome['message']}")
         print(f"{YELLOW}Please tell your supervisor about this incident directly.{RESET}\n")
         return
 
-    print(f"\n{GREEN}{BOLD}✅ Your report has been saved.{RESET}")
+    print(f"\n{GREEN}{BOLD} Your report has been saved.{RESET}")
 
     # The card shows what was saved: the worker's details plus the Logic Manager's results
     card = dict(report)
