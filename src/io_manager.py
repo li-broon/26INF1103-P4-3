@@ -33,9 +33,9 @@ WELCOME = f"""
 
 ========================================================================
 {BOLD}
-       Hello! I'm here to help you report a workplace incident.{RESET}
-      Just tell me what happened, like you're talking to a friend.
-          I'll ask a few questions if anything is missing. 📝
+        Hello! I'm here to help you report a workplace incident.{RESET}
+        Just tell me what happened, like you're talking to a friend.
+        I'll ask a few questions if anything is missing. 📝
         
         {GREEN}{BOLD}{UNDERLINE} Speak in YOUR language! Any language or a mix is OK.{RESET}
 
