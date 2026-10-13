@@ -1,15 +1,9 @@
-# ------- #
 # Imports
-# ------- #
 import logging
 import os
 
 import pandas as pd
 from datetime import timedelta
-
-# ------------------ #
-# Data Configuration
-# ------------------ #
 
 # Get Correct Data Directory no Matter Where the App is Run From
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -52,9 +46,7 @@ SCORE_THRESHOLDS = ["0", "2", "4", "6", "8"]
 logger = logging.getLogger(__name__)
 
 
-# -------------------------- #
-# Cleaning (Runtime)
-# -------------------------- #
+# CSV Cleaning
 def clean_record(record):
     """
     cleans each column of a dataset, ensuring that required fields are present and valid, 
@@ -143,9 +135,6 @@ def is_duplicate(existing_data, record):
     return False
 
 
-# -------------------------- #
-# General Data Functions
-# -------------------------- #
 def load_data_from_csv(file_path):
     """
     Load data from a CSV file into a pandas DataFrame,
