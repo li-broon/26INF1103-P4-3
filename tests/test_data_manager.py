@@ -1,13 +1,4 @@
-"""
-Tests for the simplified data_manager.py
-
-Procedural on purpose (no classes, so no unittest.TestCase).
-Works two ways:
-    python test_data_manager.py     -> built-in mini runner
-    pytest test_data_manager.py     -> pytest picks up the test_* functions
-
-Every test runs against a throwaway temp folder, so your real data/data.csv is never touched.
-"""
+# Imports
 import os
 import re
 import shutil
@@ -23,9 +14,10 @@ from src import data_manager as dm  # noqa: E402
 
 
 # Helpers
+
+# Point data_manager at a temporary folder, then restore it afterwards.
 @contextmanager
 def temp_data_dir():
-    """Point data_manager at a temporary folder, then restore it afterwards."""
     tmp = tempfile.mkdtemp()
     old_folder, old_file = dm.DATA_FOLDER, dm.DATA_FILE
     dm.DATA_FOLDER = tmp
@@ -47,51 +39,53 @@ def write_raw(path, text):
 
 
 # Spec / Constraint Checks
+
+# Test that data_manager.py does not contain any print() calls
 def test_no_print_calls_in_data_manager():
-    """ Test that data_manager.py does not contain any print() calls"""
     with open(dm.__file__, encoding="utf-8") as f:
         source = f.read()
     assert not re.search(r"(?<![\w.])print\s*\(", source), "print() found in data_manager.py"
 
+# Test that data_manager.py does not contain any class definitions
 def test_no_class_definitions_in_data_manager():
-    """ Test that data_manager.py does not contain any class definitions"""
     with open(dm.__file__, encoding="utf-8") as f:
         source = f.read()
     assert not re.search(r"^\s*class\s+\w+", source, re.MULTILINE), "class definition found"
 
 
 # File I/O & Error Handling
+
+# Test if load_records() handles a missing data.csv by returning an empty DataFrame.
 def test_load_records_missing_file_returns_empty():
-    """Test if load_records() handles a missing data.csv by returning an empty DataFrame."""
     with temp_data_dir():
         assert dm.load_records().empty
 
+# Test that a corrupted file is caught and returns empty DataFrame instead of crashing.
 def test_load_records_binary_garbage_does_not_crash():
-    """Test that a corrupted file is caught and returns empty DataFrame instead of crashing."""
     with temp_data_dir() as tmp:
         path = os.path.join(tmp, "data.csv")
         with open(path, "wb") as f:
             f.write(b"\xff\xfe\x00\x01garbage\x80\x81")
         assert dm.load_records().empty
 
+# Test that saving a valid record creates the data.csv file.
 def test_save_valid_record_creates_file():
-    """Test that saving a valid record creates the data.csv file."""
     with temp_data_dir():
         ok, message = dm.save_record(make_record())
         assert ok is True
         assert os.path.exists(dm.DATA_FILE)
         assert len(pd.read_csv(dm.DATA_FILE)) == 1
 
+# Test that saving a record with missing required fields is rejected and does not create a file.
 def test_save_missing_required_fields_rejected():
-    """Test that saving a record with missing required fields is rejected and does not create a file."""
     with temp_data_dir():
         # Missing name and score (REQUIRED FIELDS ["reporter_name", "importance_score", "incident_date"])
         ok, message = dm.save_record({"incident_date": "2026-10-09"}) 
         assert ok is False
         assert not os.path.exists(dm.DATA_FILE)
 
+# Test that records are saved in the order of urgency (importance_score) descending, regardless of the order they were added.
 def test_save_keeps_file_sorted_by_urgency_desc():
-    """Test that records are saved in the order of urgency (importance_score) descending, regardless of the order they were added."""
     with temp_data_dir():
         dm.save_record(make_record(name="Low", score=2))
         dm.save_record(make_record(name="High", score=9))
@@ -99,8 +93,8 @@ def test_save_keeps_file_sorted_by_urgency_desc():
         scores = list(pd.read_csv(dm.DATA_FILE)["importance_score"])
         assert scores == [9, 5, 2]
 
+# Test that if the existing data.csv is corrupted, it is backed up before saving a new record.
 def test_save_backs_up_unreadable_file_instead_of_overwriting():
-    """Test that if the existing data.csv is corrupted, it is backed up before saving a new record."""
     with temp_data_dir():
         os.makedirs(dm.DATA_FOLDER, exist_ok=True)
         write_raw(dm.DATA_FILE, "a,b,c\n1,2,3,4,5\n") # Corrupted structure
@@ -109,8 +103,8 @@ def test_save_backs_up_unreadable_file_instead_of_overwriting():
         assert os.path.exists(dm.DATA_FILE.replace(".csv", "_backup.csv")) # Verifies backup was created
         assert len(pd.read_csv(dm.DATA_FILE)) == 1
 
+# Test that a non-MOM report (deadline "N/A") is caught as a duplicate, and "N/A" survives a re-save.
 def test_duplicate_with_na_deadline_rejected():
-    """Test that a non-MOM report (deadline "N/A") is caught as a duplicate, and "N/A" survives a re-save."""
     with temp_data_dir():
         assert dm.save_record(make_record(deadline="N/A"))[0] is True
         ok, message = dm.save_record(make_record(deadline="N/A"))
@@ -121,8 +115,9 @@ def test_duplicate_with_na_deadline_rejected():
 
 
 # Filtering & UI Helpers
+
+# Test that get_column_names() returns the correct list of columns after saving a record.
 def test_get_column_names():
-    """Test that get_column_names() returns the correct list of columns after saving a record."""
     with temp_data_dir():
         assert dm.get_column_names() == []
         dm.save_record(make_record(category="fire"))
@@ -136,8 +131,8 @@ def test_get_unique_values():
         assert dm.get_unique_values("reporter_name") == ["Alice", "Bob"]
         assert dm.get_unique_values("nope") == []
 
+# Test that load_matching_records() finds records with exact matches, ignoring case.
 def test_load_matching_records_exact_match_case_insensitive():
-    """Test that load_matching_records() finds records with exact matches, ignoring case."""
     with temp_data_dir():
         dm.save_record(make_record(name="Alice", score=3))
         dm.save_record(make_record(name="Bob", score=5))
@@ -147,8 +142,8 @@ def test_load_matching_records_exact_match_case_insensitive():
         assert len(matches) == 1
         assert matches.iloc[0]["reporter_name"] == "Alice"
 
+# Test that load_matching_records() returns an empty DataFrame when no matches are found.
 def test_load_matching_records_no_match():
-    """Test that load_matching_records() returns an empty DataFrame when no matches are found."""
     with temp_data_dir():
         dm.save_record(make_record(name="Alice", score=3))
         matches = dm.load_matching_records("reporter_name", "Zed")

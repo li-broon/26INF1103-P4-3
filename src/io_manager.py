@@ -558,12 +558,11 @@ def run_chatbot():
                     view_reports()
                 break
 
-#Display the main application loop. 
-#Exits cleanly on Ctrl+C
+# Display the main application loop. 
+# Exits cleanly on Ctrl+C
 def main():
-    """
-    The main application loop. Displays the main menu and routes user input to the core functions.
-    """
+
+    # The main application loop. Displays the main menu and routes user input to the core functions.
     try:
         while True:
             choice = show_menu()  

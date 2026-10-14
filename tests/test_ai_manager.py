@@ -1,15 +1,6 @@
-"""
-Tests for ai_manager.py
-
-Procedural testing for the AI response parsing and validation logic.
-Works two ways:
-    python test_ai_manager.py     -> built-in mini runner
-    pytest test_ai_manager.py     -> pytest picks up the test_* functions
-
-NOTE: These tests intentionally bypass the live Gemini API to ensure fast, 
-deterministic, and free execution in CI/CD pipelines.
-"""
-
+# ---------------- #
+# Import and Setup
+# ---------------- #
 import sys
 import os
 import traceback
@@ -22,44 +13,44 @@ from src import ai_manager as am
 # _parse_reply Tests
 # ------------------ #
 
+# Test that a perfectly formatted AI string is converted to a dictionary.
 def test_parse_valid_json():
-    """Test that a perfectly formatted AI string is converted to a dictionary."""
     valid_ai_text = '{"reply": "Hello", "is_complete": false, "report": {"location": "Sector A"}}'
     result = am._parse_reply(valid_ai_text)
     assert result is not None
     assert result["reply"] == "Hello"
     assert result["report"]["location"] == "Sector A"
 
+# Test that raw text or broken JSON is safely caught and returns None.
 def test_parse_invalid_json_format():
-    """Test that raw text or broken JSON is safely caught and returns None."""
     broken_json = 'Here is your report: {"reply": "Hello"'
     assert am._parse_reply(broken_json) is None
 
+# Test that valid JSON missing our strict structural keys (reply, is_complete, report) is rejected.
 def test_parse_missing_required_keys():
-    """Test that valid JSON missing our strict structural keys (reply, is_complete, report) is rejected."""
     # Missing 'is_complete'
     missing_keys = '{"reply": "Hello", "report": {}}'
     assert am._parse_reply(missing_keys) is None
 
+# Test that if the AI returns a string for the report instead of a dictionary, it is rejected.
 def test_parse_report_is_not_dict():
-    """Test that if the AI returns a string for the report instead of a dictionary, it is rejected."""
     bad_structure = '{"reply": "Hello", "is_complete": false, "report": "Sector A"}'
     assert am._parse_reply(bad_structure) is None
+    
 
-
-# ----------------------- #
+# ------------------------ #
 # find_missing_fields Tests
-# ----------------------- #
+# ------------------------ #
 
+# Test that a fully populated report returns an empty missing list.
 def test_find_missing_fields_all_present():
-    """Test that a fully populated report returns an empty missing list."""
     # Create a dummy report with all fields filled
     report = {field: "Filled" for field in list(am.USER_FIELDS) + list(am.AI_FIELDS)}
     missing = am.find_missing_fields(report)
     assert len(missing) == 0
 
+# Test that nulls, empty strings, and missing keys are all flagged as missing.
 def test_find_missing_fields_identifies_blanks():
-    """Test that nulls, empty strings, and missing keys are all flagged as missing."""
     report = {
         "reporter_name": "Alice",
         "location": "",           # Empty string
@@ -73,29 +64,29 @@ def test_find_missing_fields_identifies_blanks():
     assert "reporter_name" not in missing
 
 
-# ----------------------- #
+# ------------------------ #
 # _build_fix_message Tests
-# ----------------------- #
+# ------------------------ #
 
+# Test that the internal prompt directs the AI to ask the user for missing details.
 def test_build_fix_message_for_user_details():
-    """Test that the internal prompt directs the AI to ask the user for missing details."""
     missing = ["reporter_name", "location"]
     message = am._build_fix_message(missing)
     assert "ask the worker for:" in message
     assert "reporter_name" in message
     assert "location" in message
 
+# Test that the internal prompt directs the AI to fill in its own missing analysis.
 def test_build_fix_message_for_ai_analysis():
-    """Test that the internal prompt directs the AI to fill in its own missing analysis."""
     missing = ["ai_severity", "root_cause_category"]
     message = am._build_fix_message(missing)
     assert "Fill these in yourself" in message
     assert "ai_severity" in message
 
 
-# ------------------------------------------- #
+# -------------------------------------------- #
 # Separate Analysis Request Tests (Fake Gemini)
-# ------------------------------------------- #
+# -------------------------------------------- #
 
 import json
 import types as pytypes
@@ -197,9 +188,9 @@ def test_invalid_ai_fields_check():
         "is_near_miss", "root_cause_category"]
 
 
-# ------------------------------------------------- #
+# ---------------------------------------------------- #
 # Stress-Test Regressions (Bad AI Values Found Offline)
-# ------------------------------------------------- #
+# ---------------------------------------------------- #
 
 def test_parse_rejects_wrong_types_for_reply_and_is_complete():
     report = '"report": {}'
@@ -240,9 +231,10 @@ def test_response_without_text_does_not_crash():
     assert "error" in result
 
 
-# ------------------ #
-# Mini runner
-# ------------------ #
+# ----------- #
+# Main Test
+# ----------- #
+
 def run_all():
     tests = [(name, fn) for name, fn in sorted(globals().items())
              if name.startswith("test_") and callable(fn)]

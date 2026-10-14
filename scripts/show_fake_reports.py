@@ -1,11 +1,10 @@
-"""
-Fill a throwaway CSV with fake incident reports and open the "View Reports" screen,
-so you can see how the output table looks without chatting to the AI.
+# Fill a throwaway CSV with fake incident reports and open the "View Reports" screen,
+# so you can see how the output table looks without chatting to the AI.
+#
+# Run from the project root:
+#     python scripts/show_fake_reports.py          # uses a temp file, data/data.csv is untouched
+#     python scripts/show_fake_reports.py --real   # writes the fake reports into data/data.csv
 
-Run from the project root:
-    python scripts/show_fake_reports.py          # uses a temp file, data/data.csv is untouched
-    python scripts/show_fake_reports.py --real   # writes the fake reports into data/data.csv
-"""
 import os
 import random
 import sys
