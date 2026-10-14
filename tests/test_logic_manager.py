@@ -1,6 +1,4 @@
-# ------- #
 # Imports
-# ------- #
 
 # Used to Capture logic()'s Output, to Check it Prints Nothing
 import contextlib
@@ -20,16 +18,12 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")) # Let 'src' be Imported
 from src import logic_manager
 
-# ------------ #
 # Test Config.
-# ------------ #
 
 # Hardcoded AI Replies
 SAMPLES_FOLDER = "tests/samples"
 
-# ---------------- #
 # Helper Functions
-# ---------------- #
 
 # Load a Sample AI Reply and Return its Dict.
 def load_sample_report(file_name):
@@ -54,21 +48,17 @@ def run_logic_with_save_result(report, save_result=(True, "Record saved.")):
 def assert_close(actual, expected, tolerance=0.01):
     assert abs(actual - expected) <= tolerance, f"expected {expected}, got {actual}"
 
-# ---------------------- #
 # Importance Score Tests
-# ---------------------- #
+
 # Check the Score of a Critical Electrical Incident
-# Critical 10x0.30 + Electrical 8x0.20 + Hospitalised 5x0.20 + Lost Time 8x0.20 + 4 Hours x0.05
 def test_critical_electrical_hospitalised():
     assert_close(score(load_sample_report("critical_electrical.json")), 7.4)
 
 # Check the Score of a Near Miss Slip Incident
-# Low 1x0.30 + Slip or Trip 3x0.20 + Not Hospitalised 10x0.20 + Near Miss 2x0.10 + No Lost Time 1x0.20
 def test_near_miss_slip():
     assert_close(score(load_sample_report("near_miss_slip.json")), 3.3)
 
 # Check the Score of a Medium Machinery Incident
-# Medium 4x0.30 + Machinery 7x0.20 + Not Hospitalised 10x0.20 + No Lost Time 1x0.20 + 2.5 Hours x0.05
 def test_medium_machinery_decimal_hours():
     assert_close(score(load_sample_report("medium_machinery.json")), 4.93)
 
@@ -102,9 +92,8 @@ def test_stoppage_hours_are_capped():
 def test_negative_hours_do_not_lower_score():
     report = load_sample_report("near_miss_slip.json")
     assert score(dict(report, work_stoppage_hours=-5)) == score(report)
-# ------------------- #
+
 # Bad AI Output Tests
-# ------------------- #
 
 # Wrong Casing, Text Instead of True/False, Unknown Category, "unknown" Hours: Must Not Crash
 def test_messy_values_do_not_crash():
@@ -132,9 +121,7 @@ def test_text_booleans_are_converted():
     assert score(dict(report, hospitalised="true")) == score(dict(report, hospitalised=True))
     assert score(dict(report, hospitalised="false")) == score(dict(report, hospitalised=False))
 
-# ----------------- #
 # MOM Reporting Tests
-# ----------------- #
 
 # Hospitalised Incidents Must be Reported, 10 Days after the Incident
 def test_hospitalised_is_mom_reportable():
@@ -189,9 +176,7 @@ def test_deadline_crosses_month_end():
     )
     assert deadline == "2026-11-04"
 
-# ---------------------- #
 # logic() Pipeline Tests
-# ---------------------- #
 
 # logic() Saves Exactly One Record, with the Score and MOM Details Added
 def test_logic_saves_scored_record():
@@ -250,9 +235,7 @@ def test_score_is_deterministic():
     report = load_sample_report("medium_machinery.json")
     assert len({score(report) for _ in range(5)}) == 1
 
-# ---- #
 # Main
-# ---- #
 
 # Run Every Function Named test_*, Print PASS/FAIL for Each, and Return how Many Failed
 def run_all_tests():
