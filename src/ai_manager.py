@@ -5,29 +5,14 @@
 import json
 import os
 import time
+from abc import ABC, abstractmethod
 from datetime import datetime
 from google import genai
 from google.genai import errors, types
 
-#----------------------- #
-# Gemini AI Configuration
-#----------------------- #
-
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-3.5-flash-lite"
-
-# Details the AI Collect from User
-USER_FIELDS = {
-    "reporter_name": "full name of the person reporting",
-    "location": "site and exact area where it happened",
-    "incident_date": "date in YYYY-MM-DD",
-    "incident_time": "time in 24h HH:MM",
-    "description": "what happened, in clear English",
-    "injury_status": "who was hurt and how, or 'no injury'",
-    "hospitalised": "true if the injured person was sent to hospital, otherwise false",
-    "immediate_action_taken": "what was done straight after",
-    "work_stoppage_hours": "hours work was stopped, 0 if none",
-}
+# ---------------------- #
+# Shared Report Settings
+# ---------------------- #
 
 # Allowed Values for the AI's Severity and Root Cause (Must Match the Weights in 'logic_manager')
 SEVERITY_LEVELS = ["Low", "Medium", "High", "Critical"]
@@ -36,21 +21,300 @@ ROOT_CAUSES = [
     "Slip or Trip", "Fire", "Water", "Safety Procedure Breach", "Other",
 ]
 
-# Details the AI Creates once Report is Complete
-AI_FIELDS = {
-    "detected_language": "language(s) the worker wrote in",
-    "ai_severity": "one of " + ", ".join(SEVERITY_LEVELS),
-    "is_near_miss": "true if nobody was hurt and nothing was damaged",
-    "root_cause_category": "one of " + ", ".join(ROOT_CAUSES),
-    "lost_time_injury": "true if the injured person cannot work their next shift",
-    "safety_recommendation": "practical actions the safety officer should take",
-}
-
 # Value the AI Stores when the Worker Really Does Not Know a Detail (Counts as Filled)
 UNKNOWN_VALUE = "unknown (worker could not say)"
 
-# Gemini Prompt Template
-SYSTEM_PROMPT = """\
+# ------ #
+# Errors
+# ------ #
+
+# Raised by an AIService when the AI cannot be reached or replies with an error (code/status are None if there is no HTTP code)
+class AIServiceError(Exception):
+    def __init__(self, message: str, code: int = None, status: str = None):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.status = status
+
+# ------------- #
+# Report Fields
+# ------------- #
+
+# One Field of the Incident Report: its Name, what it Means (for the Prompt), and whether a Value is Valid
+class Field(ABC):
+    def __init__(self, name: str, description: str, allows_unknown: bool = False):
+        self._name = name
+        self._description = description
+        self._allows_unknown = allows_unknown
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def description(self) -> str:
+        return self._description
+
+    # Line Describing this Field in a Prompt (e.g. "- location: site and exact area")
+    def describe(self) -> str:
+        return f"- {self._name}: {self._description}"
+
+    # Shared Check for Every Field: "unknown" is Accepted Only if this Field Allows it, Everything Else is Checked by the Subclass
+    def is_valid(self, value) -> bool:
+        if self._allows_unknown and value == UNKNOWN_VALUE:
+            return True
+        return self._check(value)
+
+    # Each Kind of Field Decides what a Valid Value Looks Like
+    @abstractmethod
+    def _check(self, value) -> bool:
+        pass
+
+# Any Non-Empty Text
+class TextField(Field):
+    def _check(self, value) -> bool:
+        return isinstance(value, str) and value.strip() != ""
+
+# A Real Date in YYYY-MM-DD that is Not in the Future
+class DateField(Field):
+    def _check(self, value) -> bool:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d") <= datetime.now()
+        except (TypeError, ValueError):
+            return False
+
+# A Time in 24h HH:MM
+class TimeField(Field):
+    def _check(self, value) -> bool:
+        try:
+            datetime.strptime(value, "%H:%M")
+            return True
+        except (TypeError, ValueError):
+            return False
+
+# A Real true/false (Text like "yes" or "false" is Not Accepted)
+class BooleanField(Field):
+    def _check(self, value) -> bool:
+        return isinstance(value, bool)
+
+# A Number of 0 or More (True/False are Not Counted as Numbers)
+class NumberField(Field):
+    def _check(self, value) -> bool:
+        is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
+        return is_number and 0 <= value < float("inf")
+
+# One of a Fixed List of Choices (the Description is Built from the Choices)
+class ChoiceField(Field):
+    def __init__(self, name: str, choices: list):
+        super().__init__(name, "one of " + ", ".join(choices))
+        self._choices = choices
+
+    def _check(self, value) -> bool:
+        return value in self._choices
+
+# A Group of Fields Checked and Described Together (e.g. the Worker's Details, or the AI's Analysis)
+class FieldSet:
+    def __init__(self, fields: list):
+        self._fields = fields
+
+    def names(self) -> list:
+        return [field.name for field in self._fields]
+
+    # All Field Lines for a Prompt
+    def describe(self) -> str:
+        return "\n".join([field.describe() for field in self._fields])
+
+    # Fields in the Report that are Missing or Not Valid
+    def invalid(self, report: dict) -> list:
+        return [field for field in self._fields if not field.is_valid(report.get(field.name))]
+
+# --------- #
+# AI Replies
+# --------- #
+
+# What the Conversation Returns to 'io_manager' after Each Worker Message
+# (On Failure, 'error' Holds the Message, and error_code/error_status are Set for API Errors)
+class AIReply:
+    def __init__(self, reply: str = "", is_complete: bool = False, report: dict = None,
+                 error: str = None, error_code: int = None, error_status: str = None):
+        self.reply = reply
+        self.is_complete = is_complete
+        self.report = report if report is not None else {}
+        self.error = error
+        self.error_code = error_code
+        self.error_status = error_status
+
+# ----------- #
+# AI Services
+# ----------- #
+
+# Contract Every AI Provider Must Follow (Gemini in the App, a Fake in the Tests)
+class AIService(ABC):
+
+    # Start a Conversation that Follows the System Prompt and Replies in JSON. Returns the Chat Session.
+    @abstractmethod
+    def start_chat(self, system_prompt: str):
+        pass
+
+    # Send One Message in a Chat and Return the Reply Text. Raises AIServiceError on Failure.
+    @abstractmethod
+    def send_chat_message(self, chat, message: str) -> str:
+        pass
+
+    # One-Off Request that Must Return JSON Matching the Schema. Returns the Reply Text. Raises AIServiceError on Failure.
+    @abstractmethod
+    def generate_json(self, prompt: str, schema: dict) -> str:
+        pass
+
+# Talks to Google Gemini: Handles the API Key, Timeout, and Retries when Gemini is Busy or Rate Limited
+class GeminiService(AIService):
+    MODEL = "gemini-3.5-flash-lite"
+    TIMEOUT_MS = 60000          # Give Up on a Request after 60 Seconds (e.g. Stalled Connection)
+    RETRY_CODES = (429, 503)    # Rate Limited / Busy: Waiting Can Fix These
+    MAX_ATTEMPTS = 5            # Waits 3s, 6s, 9s, 12s between Attempts
+    WAIT_SECONDS = 3
+
+    MISSING_KEY_MESSAGE = """\
+GEMINI_API_KEY is missing.
+Create a file called '.env' in the project folder containing:
+    GEMINI_API_KEY=your-key
+Then run the program again. With Docker, pass the file in:
+    docker run -it --rm --env-file .env -v "$(pwd)/data:/app/data" inf1103-p4"""
+
+    # Raises AIServiceError if the API Key is Not Set (Checked Before Any Chat Starts)
+    def __init__(self):
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if not api_key:
+            raise AIServiceError(self.MISSING_KEY_MESSAGE)
+        self._client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=self.TIMEOUT_MS))
+
+    def start_chat(self, system_prompt: str):
+        config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            response_mime_type="application/json",
+            temperature=0,  # Same Output across Runs
+        )
+        return self._client.chats.create(model=self.MODEL, config=config)
+
+    # A Failed Call is Not Saved in the Chat History, so Retrying Does Not Affect the Conversation
+    def send_chat_message(self, chat, message: str) -> str:
+        attempt = 1
+        while True:
+            try:
+                return chat.send_message(message).text
+
+            # Busy or Rate Limited: Wait Longer Each Time and Try Again
+            except errors.APIError as error:
+                if error.code in self.RETRY_CODES and attempt < self.MAX_ATTEMPTS:
+                    time.sleep(self.WAIT_SECONDS * attempt)
+                    attempt += 1
+                    continue
+                raise AIServiceError(error.message, error.code, error.status)
+
+            # No Internet, Timeout, or Any Other Problem
+            except Exception as error:
+                raise AIServiceError(f"Could not reach the AI: {error}")
+
+    # Uses a Short-Lived Chat so it Shares the Same Retry and Error Handling as Chat Messages
+    def generate_json(self, prompt: str, schema: dict) -> str:
+        config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=schema,
+            temperature=0,
+        )
+        one_off_chat = self._client.chats.create(model=self.MODEL, config=config)
+        return self.send_chat_message(one_off_chat, prompt)
+
+# ----------- #
+# AI Analysis
+# ----------- #
+
+# Separate One-Off Request for the AI's Own Analysis
+# (Used when the Chat Finished the Worker's Details but Left the Analysis Empty or Invalid)
+class AnalysisTask:
+    MAX_ATTEMPTS = 3
+
+    PROMPT = """\
+You are a workplace safety analyst. A worker has finished reporting an
+incident. Using the report and the worker's own messages below, give your
+own judgement of the incident. Write in English, except "detected_language",
+which names the language(s) the worker wrote in.
+
+Incident report:
+{report}
+
+Worker's messages:
+{messages}
+
+Fields to return:
+{fields}
+
+Respond ONLY with a JSON object containing exactly these fields.
+"""
+
+    # Shape Gemini Must Follow (Forces the Allowed Values and Real true/false)
+    SCHEMA = {
+        "type": "OBJECT",
+        "properties": {
+            "detected_language": {"type": "STRING"},
+            "ai_severity": {"type": "STRING", "enum": SEVERITY_LEVELS},
+            "is_near_miss": {"type": "BOOLEAN"},
+            "root_cause_category": {"type": "STRING", "enum": ROOT_CAUSES},
+            "lost_time_injury": {"type": "BOOLEAN"},
+            "safety_recommendation": {"type": "STRING"},
+        },
+        "required": [
+            "detected_language", "ai_severity", "is_near_miss",
+            "root_cause_category", "lost_time_injury", "safety_recommendation",
+        ],
+    }
+
+    def __init__(self, service: AIService, worker_fields: FieldSet, analysis_fields: FieldSet):
+        self._service = service
+        self._worker_fields = worker_fields
+        self._analysis_fields = analysis_fields
+
+    # Returns the Analysis Fields as a Dict, or None if the AI Could Not Give a Valid Analysis
+    def run(self, report: dict, worker_messages: list):
+        worker_details = {name: report.get(name) for name in self._worker_fields.names()}
+        prompt = self.PROMPT.format(
+            report=json.dumps(worker_details, indent=2, ensure_ascii=False),
+            messages="\n".join([f"- {text}" for text in worker_messages]) or "- (not available)",
+            fields=self._analysis_fields.describe(),
+        )
+        for _ in range(self.MAX_ATTEMPTS):
+            try:
+                reply_text = self._service.generate_json(prompt, self.SCHEMA)
+            except AIServiceError:
+                return None  # The Conversation Tells the Worker to Try Again
+            analysis = self._parse(reply_text)
+            if analysis is not None:
+                return analysis
+        return None
+
+    # Turn the Reply into a Dict of the Analysis Fields (None if it is Not JSON or Any Field is Not Valid)
+    def _parse(self, text: str):
+        try:
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        if not isinstance(data, dict):
+            return None
+        analysis = {name: data.get(name) for name in self._analysis_fields.names()}
+        if self._analysis_fields.invalid(analysis):
+            return None
+        return analysis
+
+# ------------------ #
+# Incident Interview
+# ------------------ #
+
+# One Worker's Report being Collected through a Chat with the AI
+class IncidentConversation:
+    MAX_FORMAT_RETRIES = 2   # Times the AI is Asked to Resend a Reply that is Not in Our JSON Format
+    MAX_FIX_ATTEMPTS = 2     # Times the AI is Told to Fix a Report it Marked Complete Too Early
+
+    SYSTEM_PROMPT = """\
 You are a friendly workplace safety assistant helping a worker report an
 incident. The worker may write in any language or a mix of languages.
 
@@ -73,13 +337,13 @@ Each turn:
 - If someone is still in danger, first tell them to call 995 and their supervisor.
 
 Details to collect from the worker:
-{user_fields}
+{worker_fields}
 
 When ALL details above are filled, set "is_complete" to true, thank the
 worker, and in that SAME reply fill in every one of these analysis fields.
 They are your own judgement of the incident, so never ask the worker for
 them and never leave them null:
-{ai_fields}
+{analysis_fields}
 Until then, keep "is_complete" false and leave the analysis fields null.
 
 Respond ONLY with JSON in this exact format:
@@ -90,336 +354,150 @@ Respond ONLY with JSON in this exact format:
 }}
 """
 
-# Prompt for the Separate Analysis Request (Used when the Chat Finished the Report but Left the Analysis Empty)
-ANALYSIS_PROMPT = """\
-You are a workplace safety analyst. A worker has finished reporting an
-incident. Using the report and the worker's own messages below, give your
-own judgement of the incident. Write in English, except "detected_language",
-which names the language(s) the worker wrote in.
+    BAD_JSON_MESSAGE = (
+        "Your last reply was not valid JSON in the required format. "
+        "Send the same reply again using ONLY the JSON format with the "
+        "keys \"reply\", \"is_complete\" and \"report\"."
+    )
 
-Incident report:
-{report}
+    INCOMPLETE_MESSAGE = (
+        "The report is not finished yet. Still missing or unclear: {fields}. "
+        "Please give these details (or say you do not know) in your next message."
+    )
 
-Worker's messages:
-{messages}
+    ANALYSIS_FAILED_MESSAGE = (
+        "All your details are recorded, but the AI could not finish analysing the incident. "
+        "Please send any message (for example 'ok') to try again."
+    )
 
-Fields to return:
-{ai_fields}
+    def __init__(self, service: AIService, worker_fields: FieldSet, analysis_fields: FieldSet,
+                 analysis_task: AnalysisTask):
+        self._service = service
+        self._worker_fields = worker_fields
+        self._analysis_fields = analysis_fields
+        self._analysis_task = analysis_task
+        self._worker_messages = []  # What the Worker Typed, so the Analysis can Tell which Language they Used
+        system_prompt = self.SYSTEM_PROMPT.format(
+            unknown=UNKNOWN_VALUE,
+            today=datetime.now().strftime("%Y-%m-%d"),
+            worker_fields=worker_fields.describe(),
+            analysis_fields=analysis_fields.describe(),
+        )
+        self._chat = service.start_chat(system_prompt)
 
-Respond ONLY with a JSON object containing exactly these fields.
-"""
+    # Send One Worker Message and Return an AIReply (is_complete is Only True when Every Field is Valid)
+    def send(self, user_text: str) -> AIReply:
+        reply = self._ask(user_text)
+        if reply.error:
+            return reply  # The Worker Resends, so the Message is Not Recorded Yet
+        self._worker_messages.append(user_text)
 
-# Shape Gemini Must Follow for the Analysis (Forces the Allowed Values and Real true/false)
-ANALYSIS_SCHEMA = {
-    "type": "OBJECT",
-    "properties": {
-        "detected_language": {"type": "STRING"},
-        "ai_severity": {"type": "STRING", "enum": SEVERITY_LEVELS},
-        "is_near_miss": {"type": "BOOLEAN"},
-        "root_cause_category": {"type": "STRING", "enum": ROOT_CAUSES},
-        "lost_time_injury": {"type": "BOOLEAN"},
-        "safety_recommendation": {"type": "STRING"},
-    },
-    "required": list(AI_FIELDS),
-}
+        # AI Says "complete" but Worker Details are Missing or Wrongly Formatted: Tell it to Fix Them, up to MAX_FIX_ATTEMPTS Times
+        for _ in range(self.MAX_FIX_ATTEMPTS):
+            invalid = self._worker_fields.invalid(reply.report)
+            if not (reply.is_complete and invalid):
+                break
+            reply = self._ask(self._build_fix_message(invalid))
 
-# How many Times to Ask AI to Fix a Invalid JSON Reply
-MAX_JSON_RETRIES = 2
+        # Still Collecting Details (or an Error): Show the AI's Reply as Normal
+        if not reply.is_complete:
+            return reply
 
-# How many Times to Try when Gemini is Busy (503), and Seconds to Wait between Tries (waits 3s, 6s, 9s, 12s)
-MAX_BUSY_ATTEMPTS = 5
-BUSY_WAIT_SECONDS = 3
+        # AI Still Says "complete" with Worker Details Missing: Don't Show its "all done" Reply, Tell the Worker what is Missing
+        invalid = self._worker_fields.invalid(reply.report)
+        if invalid:
+            names = ", ".join([field.name.replace("_", " ") for field in invalid])
+            return AIReply(error=self.INCOMPLETE_MESSAGE.format(fields=names))
 
-# How many Times to Tell the AI to Fix a Report it Marked Complete while Fields are Missing
-MAX_FIX_ATTEMPTS = 2
+        # Worker Details Done, but the Analysis is Empty or Not Valid: Ask for it in a Separate Request
+        # (Asking Again Inside the Chat Tends to Repeat the Same Empty Fields)
+        if self._analysis_fields.invalid(reply.report):
+            analysis = self._analysis_task.run(reply.report, self._worker_messages)
+            if analysis is None:
+                return AIReply(error=self.ANALYSIS_FAILED_MESSAGE)
+            reply.report.update(analysis)
 
-# Error Messages
-MISSING_KEY_MESSAGE = """\
-GEMINI_API_KEY is missing.
-Create a file called '.env' in the project folder containing:
-    GEMINI_API_KEY=your-key
-Then run the program again. With Docker, pass the file in:
-    docker run -it --rm --env-file .env -v "$(pwd)/data:/app/data" inf1103-p4"""
+        return reply
 
-BAD_JSON_MESSAGE = (
-    "Your last reply was not valid JSON in the required format. "
-    "Send the same reply again using ONLY the JSON format with the "
-    "keys \"reply\", \"is_complete\" and \"report\"."
-)
+    # Send One Message and Return the Parsed Reply (If it is Not in Our JSON Format, Ask the AI to Resend, up to MAX_FORMAT_RETRIES Times)
+    def _ask(self, message: str) -> AIReply:
+        for _ in range(1 + self.MAX_FORMAT_RETRIES):
+            try:
+                reply_text = self._service.send_chat_message(self._chat, message)
+            except AIServiceError as error:
+                return AIReply(error=error.message, error_code=error.code, error_status=error.status)
+            reply = self._parse(reply_text)
+            if reply is not None:
+                return reply
+            message = self.BAD_JSON_MESSAGE
+        return AIReply(error="The AI kept replying in the wrong format.")
 
-INCOMPLETE_MESSAGE = (
-    "The report is not finished yet. Still missing or unclear: {fields}. "
-    "Please give these details (or say you do not know) in your next message."
-)
-
-ANALYSIS_FAILED_MESSAGE = (
-    "All your details are recorded, but the AI could not finish analysing the incident. "
-    "Please send any message (for example 'ok') to try again."
-)
-
-# Start of the Messages this File Sends to the AI Itself (Left Out when Collecting the Worker's Own Messages)
-OWN_MESSAGE_STARTS = ("Not complete yet.", "You set is_complete", BAD_JSON_MESSAGE)
-
-# ---------------------------- #
-# ai_manager Private Functions
-# ---------------------------- # 
-
-# Create Single Gemini Client for Whole App (so we don't have to re-authenticate every time)
-_client = None
-def _get_client():
-    global _client
-    if _client is None:
-        _client = genai.Client(api_key=GEMINI_API_KEY)
-    return _client
-
-# Format Fields for the AI Prompt (e.g. "- name: meaning")
-def _format_fields(fields):
-    return "\n".join(f"- {name}: {meaning}" for name, meaning in fields.items())
-
-# Build Error Reply Dict (same shape as a normal reply, plus "error")
-def _error_result(message):
-    return {"reply": "", "is_complete": False, "report": {}, "error": message}
-
-# Turn AI Reply Text into a Dict (Returns None if it is not in our JSON format)
-def _parse_reply(text):
-    try:
-        data = json.loads(text)
-    except (json.JSONDecodeError, TypeError):  # TypeError: AI reply was empty
-        return None
-    if not isinstance(data, dict) or not isinstance(data.get("report"), dict):
-        return None
-    if "reply" not in data or "is_complete" not in data:
-        return None
-
-    # The reply is printed to the worker and is_complete decides if the report is saved, so both must be the right type
-    if not isinstance(data["reply"], str) or not data["reply"].strip():
-        return None
-    if not isinstance(data["is_complete"], bool):
-        return None
-
-    # Keep Only Our Fields (Extra Keys from the AI would Otherwise become New Columns in data.csv)
-    data["report"] = {name: data["report"].get(name) for name in list(USER_FIELDS) + list(AI_FIELDS)}
-    return data
-
-# Run a Gemini Call, Waiting and Trying Again while it is Busy (503)
-def _call_with_busy_retry(call):
-    attempt = 1
-    while True:
+    # Turn the Reply Text into an AIReply (None if it is Not in Our JSON Format)
+    def _parse(self, text: str):
         try:
-            return call()
-        except errors.APIError as error:
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError):  # TypeError: AI Reply was Empty
+            return None
+        if not isinstance(data, dict) or not isinstance(data.get("report"), dict):
+            return None
 
-            # Not a busy error, or out of tries (the caller handles all other errors)
-            if error.code != 503 or attempt >= MAX_BUSY_ATTEMPTS:
-                raise
-            time.sleep(BUSY_WAIT_SECONDS * attempt)
-            attempt += 1
+        # The Reply is Shown to the Worker and is_complete Decides if the Report is Saved, so Both Must be the Right Type
+        reply = data.get("reply")
+        if not isinstance(reply, str) or not reply.strip():
+            return None
+        if not isinstance(data.get("is_complete"), bool):
+            return None
 
-# Send Message to Gemini Chat with Busy Retries (A failed call is not saved in the chat history, so the conversation is not affected)
-def _send_with_retry(chat, message):
-    return _call_with_busy_retry(lambda: chat.send_message(message))
+        # Keep Only Our Fields (Extra Keys from the AI would Otherwise become New Columns in data.csv)
+        names = self._worker_fields.names() + self._analysis_fields.names()
+        report = {name: data["report"].get(name) for name in names}
+        return AIReply(reply, data["is_complete"], report)
 
-# Send One Message to AI and Return JSON Reply as a Dict (If the reply is bad JSON, push it back to the AI to fix, up to MAX_JSON_RETRIES times)
-def _ask_ai(chat, text):
-    message = text
-    for _ in range(1 + MAX_JSON_RETRIES):
-        try:
-            response = _send_with_retry(chat, message)
-
-        # If API Replied with an Error, Return its Code and Status
-        except errors.APIError as error:
-            result = _error_result(error.message)
-            result["error_code"] = error.code
-            result["error_status"] = error.status
-            return result
-
-        # Ensure it Never Crash on Any Other Problem (e.g. no internet, no code/status)
-        except Exception as error:
-            return _error_result(f"Could not reach the AI: {error}")
-
-        result = _parse_reply(getattr(response, "text", None))
-        if result is not None:
-            return result
-        message = BAD_JSON_MESSAGE
-
-    return _error_result("The AI kept replying in the wrong format.")
-
-# Build the Message Telling the AI What to Fix when it Says "Complete" but Fields are Missing
-def _build_fix_message(missing):
-    missing_user = [name for name in missing if name in USER_FIELDS]
-    missing_ai = [name for name in missing if name in AI_FIELDS]
-
-    # User Details Missing, AI asks the User (or stores UNKNOWN_VALUE if they already said they don't know)
-    if missing_user:
-        fix = (
+    # Message Telling the AI which Worker Details to Correct or Ask For (Shows the Required Format of Each)
+    def _build_fix_message(self, invalid_fields: list) -> str:
+        details = "; ".join([f"{field.name} ({field.description})" for field in invalid_fields])
+        return (
             "Not complete yet. These details are missing or not in the required format. "
             "Correct them from what the worker already said if you can, otherwise set "
-            "is_complete to false and ask the worker for: "
-            + "; ".join(f"{name} ({USER_FIELDS[name]})" for name in missing_user)
-            + f". If the worker already said twice that they do not know one of these, "
-            f"store \"{UNKNOWN_VALUE}\" for it instead (the incident date must still be a real date)."
+            f"is_complete to false and ask the worker for: {details}. If the worker already said "
+            f"twice that they do not know one of these, store \"{UNKNOWN_VALUE}\" for it instead "
+            "(the incident date must still be a real date). Keep your reply to the worker in their language."
         )
 
-    # Only Analysis Missing, AI Fills it in Itself.
-    else:
-        fix = (
-            "You set is_complete to true but left your analysis fields empty. "
-            "Fill these in yourself now and keep is_complete true: " + ", ".join(missing_ai) + "."
-        )
-    return fix + " Keep your reply to the worker in their language."
+# ---------- #
+# AI Manager
+# ---------- #
 
-# Check One AI Analysis Value is Usable (Allowed Severity/Root Cause, Real true/false, Non-Empty Text)
-def _is_valid_ai_value(name, value):
-    if name == "ai_severity":
-        return value in SEVERITY_LEVELS
-    if name == "root_cause_category":
-        return value in ROOT_CAUSES
-    if name in ("is_near_miss", "lost_time_injury"):
-        return isinstance(value, bool)
-    return isinstance(value, str) and value.strip() != ""
+# Entry Point for 'io_manager': Owns the Report Field Definitions and the Analysis Task, and Starts Conversations
+class AIManager:
+    def __init__(self, service: AIService):
+        self._service = service
 
-# Check One Worker Detail is Usable (Dates/Times in the Right Format, Real true/false, Hours a Number, Text Non-Empty)
-def _is_valid_user_value(name, value):
-    if name == "incident_date":
-        try:
-            return datetime.strptime(value, "%Y-%m-%d") <= datetime.now()  # Must be a real date, not in the future
-        except (TypeError, ValueError):
-            return False
-    if name == "incident_time":
-        if value == UNKNOWN_VALUE:
-            return True
-        try:
-            datetime.strptime(value, "%H:%M")
-            return True
-        except (TypeError, ValueError):
-            return False
-    if name == "hospitalised":
-        return isinstance(value, bool)
-    if name == "work_stoppage_hours":
-        if value == UNKNOWN_VALUE:
-            return True
-        is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
-        return is_number and 0 <= value < float("inf")
-    return isinstance(value, str) and value.strip() != ""
+        # Details the AI Collects from the Worker
+        self._worker_fields = FieldSet([
+            TextField("reporter_name", "full name of the person reporting"),
+            TextField("location", "site and exact area where it happened"),
+            DateField("incident_date", "date in YYYY-MM-DD"),
+            TimeField("incident_time", "time in 24h HH:MM", allows_unknown=True),
+            TextField("description", "what happened, in clear English"),
+            TextField("injury_status", "who was hurt and how, or 'no injury'"),
+            BooleanField("hospitalised", "true if the injured person was sent to hospital, otherwise false"),
+            TextField("immediate_action_taken", "what was done straight after"),
+            NumberField("work_stoppage_hours", "hours work was stopped, 0 if none", allows_unknown=True),
+        ])
 
-# List the Worker Details that are Missing or Not Valid
-def _invalid_user_fields(report):
-    return [name for name in USER_FIELDS if not _is_valid_user_value(name, report.get(name))]
+        # Details the AI Works Out Itself once the Report is Complete
+        self._analysis_fields = FieldSet([
+            TextField("detected_language", "language(s) the worker wrote in"),
+            ChoiceField("ai_severity", SEVERITY_LEVELS),
+            BooleanField("is_near_miss", "true if nobody was hurt and nothing was damaged"),
+            ChoiceField("root_cause_category", ROOT_CAUSES),
+            BooleanField("lost_time_injury", "true if the injured person cannot work their next shift"),
+            TextField("safety_recommendation", "practical actions the safety officer should take"),
+        ])
 
-# List the AI Analysis Fields that are Missing or Not Valid
-def _invalid_ai_fields(report):
-    return [name for name in AI_FIELDS if not _is_valid_ai_value(name, report.get(name))]
+        self._analysis_task = AnalysisTask(service, self._worker_fields, self._analysis_fields)
 
-# Turn the Analysis Reply into a Dict of the AI Fields (Returns None if Anything is Missing or Not Valid)
-def _parse_analysis(text):
-    try:
-        data = json.loads(text)
-    except (json.JSONDecodeError, TypeError):
-        return None
-    if not isinstance(data, dict):
-        return None
-    analysis = {name: data.get(name) for name in AI_FIELDS}
-    if _invalid_ai_fields(analysis):
-        return None
-    return analysis
-
-# Get What the Worker Typed in this Chat (So the Analysis can Tell which Language they Used)
-def _worker_messages(chat):
-    try:
-        history = chat.get_history()
-    except Exception:
-        return []
-    messages = []
-    for content in history:
-        if content.role != "user":
-            continue
-        for part in content.parts or []:
-            if part.text and not part.text.startswith(OWN_MESSAGE_STARTS):
-                messages.append(part.text)
-    return messages
-
-# Ask Gemini for Only the Analysis Fields, in a Separate Request Outside the Chat (Returns None if it Fails)
-def _request_analysis(chat, report):
-    prompt = ANALYSIS_PROMPT.format(
-        report=json.dumps({name: report.get(name) for name in USER_FIELDS}, indent=2, ensure_ascii=False),
-        messages="\n".join(f"- {text}" for text in _worker_messages(chat)) or "- (not available)",
-        ai_fields=_format_fields(AI_FIELDS),
-    )
-    config = types.GenerateContentConfig(
-        response_mime_type="application/json",
-        response_schema=ANALYSIS_SCHEMA,
-        temperature=0,
-        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),  # No tools used, also stops a library warning printing in the chat
-    )
-    for _ in range(1 + MAX_JSON_RETRIES):
-        try:
-            response = _call_with_busy_retry(
-                lambda: _get_client().models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)
-            )
-        except Exception:  # API error or no connection: send_message tells the user to try again
-            return None
-        analysis = _parse_analysis(getattr(response, "text", None))
-        if analysis is not None:
-            return analysis
-    return None
-
-# ------------------------- #
-# ai_manager Main Functions
-# ------------------------- # 
-
-# Check API Key is Set (Call this before start_chat, it will fail without a key)
-def check_api_key():
-    if not GEMINI_API_KEY:
-        return MISSING_KEY_MESSAGE
-    return None
-
-# Start a New Conversation. Returns Gemini Chat Session.
-def start_chat():
-    prompt = SYSTEM_PROMPT.format(
-        today=datetime.now().strftime("%Y-%m-%d"),
-        unknown=UNKNOWN_VALUE,
-        user_fields=_format_fields(USER_FIELDS),
-        ai_fields=_format_fields(AI_FIELDS),
-    )
-    config = types.GenerateContentConfig(
-        system_instruction=prompt,
-        response_mime_type="application/json",
-        temperature=0,  # Same Output across Runs
-    )
-    return _get_client().chats.create(model=GEMINI_MODEL, config=config)
-
-# Check for Missing Fields in Report
-def find_missing_fields(report):
-    all_fields = list(USER_FIELDS) + list(AI_FIELDS)
-    return [name for name in all_fields if report.get(name) in (None, "")]
-
-# Send User Message to AI and Return AI Reply Dict
-def send_message(chat, user_text):
-    result = _ask_ai(chat, user_text)
-
-    # AI says "complete" but Worker Details are Missing or Wrongly Formatted: tell it to ask the worker, up to MAX_FIX_ATTEMPTS times
-    for _ in range(MAX_FIX_ATTEMPTS):
-        missing_user = _invalid_user_fields(result.get("report", {}))
-        if not (result.get("is_complete") and missing_user):
-            break
-        result = _ask_ai(chat, _build_fix_message(missing_user))
-
-    # Still Collecting Details (or an Error): show the AI's reply as normal
-    if not result.get("is_complete"):
-        return result
-
-    # AI still says "complete" with worker details missing: don't show its "all done" reply, tell the user what is missing
-    report = result["report"]
-    missing_user = _invalid_user_fields(report)
-    if missing_user:
-        return _error_result(INCOMPLETE_MESSAGE.format(fields=", ".join(missing_user).replace("_", " ")))
-
-    # Worker Details Done, but the Analysis is Empty or Not Valid: ask for it in a separate request
-    # (Asking again inside the chat tends to repeat the same empty fields)
-    if _invalid_ai_fields(report):
-        analysis = _request_analysis(chat, report)
-        if analysis is None:
-            return _error_result(ANALYSIS_FAILED_MESSAGE)
-        report.update(analysis)
-
-    return result
+    # Start a New Report Conversation (Each Conversation Shares the Same AI Service and Field Definitions)
+    def start_conversation(self) -> IncidentConversation:
+        return IncidentConversation(self._service, self._worker_fields, self._analysis_fields, self._analysis_task)
