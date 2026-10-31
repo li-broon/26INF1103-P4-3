@@ -14,21 +14,21 @@ from google.genai import errors, types
 # Shared Report Settings
 # ---------------------- #
 
-# Allowed Values for the AI's Severity and Root Cause (Must Match the Weights in 'logic_manager')
+# Allowed Values for the AI's Severity and Root Cause
 SEVERITY_LEVELS = ["Low", "Medium", "High", "Critical"]
 ROOT_CAUSES = [
     "Electrical", "Chemical", "Fall from Height", "Struck by Object", "Machinery",
     "Slip or Trip", "Fire", "Water", "Safety Procedure Breach", "Other",
 ]
 
-# Value the AI Stores when the Worker Really Does Not Know a Detail (Counts as Filled)
+# Value the AI Stores when the Worker Really Does Not Know a Detail
 UNKNOWN_VALUE = "unknown (worker could not say)"
 
 # ------ #
 # Errors
 # ------ #
 
-# Raised by an AIService when the AI cannot be reached or replies with an error (code/status are None if there is no HTTP code)
+# Raised by an AIService when the AI Cannot be Reached or Replies with Error
 class AIServiceError(Exception):
     def __init__(self, message: str, code: int = None, status: str = None):
         super().__init__(message)
@@ -40,7 +40,7 @@ class AIServiceError(Exception):
 # Report Fields
 # ------------- #
 
-# One Field of the Incident Report: its Name, what it Means (for the Prompt), and whether a Value is Valid
+# One Field of the Incident Report: its Name, what it Means, and Whether a Value is Valid
 class Field(ABC):
     def __init__(self, name: str, description: str, allows_unknown: bool = False):
         self._name = name
@@ -70,12 +70,12 @@ class Field(ABC):
     def _check(self, value) -> bool:
         pass
 
-# Any Non-Empty Text
+# Check for a Non-Empty String
 class TextField(Field):
     def _check(self, value) -> bool:
         return isinstance(value, str) and value.strip() != ""
 
-# A Real Date in YYYY-MM-DD that is Not in the Future
+# Check for a Real Date in YYYY-MM-DD that is Not in the Future
 class DateField(Field):
     def _check(self, value) -> bool:
         try:
@@ -83,7 +83,7 @@ class DateField(Field):
         except (TypeError, ValueError):
             return False
 
-# A Time in 24h HH:MM
+# Check for a Time in 24h HH:MM
 class TimeField(Field):
     def _check(self, value) -> bool:
         try:
@@ -92,12 +92,12 @@ class TimeField(Field):
         except (TypeError, ValueError):
             return False
 
-# A Real true/false (Text like "yes" or "false" is Not Accepted)
+# Check for a Real True/ False
 class BooleanField(Field):
     def _check(self, value) -> bool:
         return isinstance(value, bool)
 
-# A Number of 0 or More (True/False are Not Counted as Numbers)
+# Check for a Number of 0 or More
 class NumberField(Field):
     def _check(self, value) -> bool:
         is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
@@ -128,9 +128,9 @@ class FieldSet:
     def invalid(self, report: dict) -> list:
         return [field for field in self._fields if not field.is_valid(report.get(field.name))]
 
-# --------- #
+# ---------- #
 # AI Replies
-# --------- #
+# ---------- #
 
 # What the Conversation Returns to 'io_manager' after Each Worker Message
 # (On Failure, 'error' Holds the Message, and error_code/error_status are Set for API Errors)
@@ -181,7 +181,7 @@ Create a file called '.env' in the project folder containing:
 Then run the program again. With Docker, pass the file in:
     docker run -it --rm --env-file .env -v "$(pwd)/data:/app/data" inf1103-p4"""
 
-    # Raises AIServiceError if the API Key is Not Set (Checked Before Any Chat Starts)
+    # Raise AIServiceError if API Key is Not Set
     def __init__(self):
         api_key = os.environ.get("GEMINI_API_KEY", "")
         if not api_key:
@@ -286,7 +286,7 @@ Respond ONLY with a JSON object containing exactly these fields.
             try:
                 reply_text = self._service.generate_json(prompt, self.SCHEMA)
             except AIServiceError:
-                return None  # The Conversation Tells the Worker to Try Again
+                return None
             analysis = self._parse(reply_text)
             if analysis is not None:
                 return analysis
@@ -305,11 +305,11 @@ Respond ONLY with a JSON object containing exactly these fields.
             return None
         return analysis
 
-# ------------------ #
-# Incident Interview
-# ------------------ #
+# --------------- #
+# Incident Report
+# --------------- #
 
-# One Worker's Report being Collected through a Chat with the AI
+# Class that Manages the Conversation with the Worker, Collects Their Details, and Gets the AI's Analysis
 class IncidentConversation:
     MAX_FORMAT_RETRIES = 2   # Times the AI is Asked to Resend a Reply that is Not in Our JSON Format
     MAX_FIX_ATTEMPTS = 2     # Times the AI is Told to Fix a Report it Marked Complete Too Early
@@ -376,7 +376,7 @@ Respond ONLY with JSON in this exact format:
         self._worker_fields = worker_fields
         self._analysis_fields = analysis_fields
         self._analysis_task = analysis_task
-        self._worker_messages = []  # What the Worker Typed, so the Analysis can Tell which Language they Used
+        self._worker_messages = []
         system_prompt = self.SYSTEM_PROMPT.format(
             unknown=UNKNOWN_VALUE,
             today=datetime.now().strftime("%Y-%m-%d"),
@@ -389,10 +389,10 @@ Respond ONLY with JSON in this exact format:
     def send(self, user_text: str) -> AIReply:
         reply = self._ask(user_text)
         if reply.error:
-            return reply  # The Worker Resends, so the Message is Not Recorded Yet
+            return reply
         self._worker_messages.append(user_text)
 
-        # AI Says "complete" but Worker Details are Missing or Wrongly Formatted: Tell it to Fix Them, up to MAX_FIX_ATTEMPTS Times
+        # If AI Says "complete" but Worker Details are Missing or Wrongly Formatted,  Tell it to Fix Them, up to MAX_FIX_ATTEMPTS Times
         for _ in range(self.MAX_FIX_ATTEMPTS):
             invalid = self._worker_fields.invalid(reply.report)
             if not (reply.is_complete and invalid):
@@ -403,14 +403,13 @@ Respond ONLY with JSON in this exact format:
         if not reply.is_complete:
             return reply
 
-        # AI Still Says "complete" with Worker Details Missing: Don't Show its "all done" Reply, Tell the Worker what is Missing
+        # If AI Still Says "complete" with Worker Details Missing, Don't Show its "all done" Reply, Tell the Worker what is Missing
         invalid = self._worker_fields.invalid(reply.report)
         if invalid:
             names = ", ".join([field.name.replace("_", " ") for field in invalid])
             return AIReply(error=self.INCOMPLETE_MESSAGE.format(fields=names))
 
-        # Worker Details Done, but the Analysis is Empty or Not Valid: Ask for it in a Separate Request
-        # (Asking Again Inside the Chat Tends to Repeat the Same Empty Fields)
+        # If Worker Details Done, but the Analysis is Empty or Not Valid, Ask for it in a Separate Request
         if self._analysis_fields.invalid(reply.report):
             analysis = self._analysis_task.run(reply.report, self._worker_messages)
             if analysis is None:
@@ -432,11 +431,13 @@ Respond ONLY with JSON in this exact format:
             message = self.BAD_JSON_MESSAGE
         return AIReply(error="The AI kept replying in the wrong format.")
 
-    # Turn the Reply Text into an AIReply (None if it is Not in Our JSON Format)
+    # Turn the Reply Text into an AIReply
     def _parse(self, text: str):
         try:
             data = json.loads(text)
-        except (json.JSONDecodeError, TypeError):  # TypeError: AI Reply was Empty
+            
+        # If the Reply is Not JSON or Not a Dict with the Right Keys, Return None so the AI is Asked to Resend
+        except (json.JSONDecodeError, TypeError):
             return None
         if not isinstance(data, dict) or not isinstance(data.get("report"), dict):
             return None
@@ -464,11 +465,11 @@ Respond ONLY with JSON in this exact format:
             "(the incident date must still be a real date). Keep your reply to the worker in their language."
         )
 
-# ---------- #
-# AI Manager
-# ---------- #
+# --------------- #
+# AI Manager Main
+# --------------- #
 
-# Entry Point for 'io_manager': Owns the Report Field Definitions and the Analysis Task, and Starts Conversations
+# Class that Creates a New IncidentConversation for Each Worker, and Holds the AIService and Field Definitions
 class AIManager:
     def __init__(self, service: AIService):
         self._service = service
@@ -498,6 +499,6 @@ class AIManager:
 
         self._analysis_task = AnalysisTask(service, self._worker_fields, self._analysis_fields)
 
-    # Start a New Report Conversation (Each Conversation Shares the Same AI Service and Field Definitions)
+    # Start a New Report Conversation
     def start_conversation(self) -> IncidentConversation:
         return IncidentConversation(self._service, self._worker_fields, self._analysis_fields, self._analysis_task)

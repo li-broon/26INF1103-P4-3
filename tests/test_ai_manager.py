@@ -11,10 +11,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from google.genai import errors
 from src import ai_manager as am
 
-
-# ------------------- #
+# -------------------- #
 # Test Helpers (Fakes)
-# ------------------- #
+# -------------------- #
 
 # Fake AI Provider used Instead of Gemini, so Tests Run Without a Live API.
 # It Follows the Same AIService Contract, so the Conversation Cannot Tell the Difference.
@@ -66,7 +65,6 @@ def chat_reply(report, is_complete=True, reply="Thank you!"):
 # Start a Conversation that Talks to the Fake Service
 def new_conversation(service):
     return am.AIManager(service).start_conversation()
-
 
 # ------------------ #
 # Report Field Tests
@@ -126,7 +124,6 @@ def test_field_set_lists_invalid_fields():
     assert [field.name for field in invalid] == ["incident_date", "hospitalised"]
     assert fields.names() == ["reporter_name", "incident_date", "hospitalised"]
 
-
 # ------------------------ #
 # Conversation Reply Tests
 # ------------------------ #
@@ -185,10 +182,9 @@ def test_api_error_becomes_error_reply():
     assert reply.error_code == 429 and reply.error_status == "RESOURCE_EXHAUSTED"
     assert reply.is_complete is False
 
-
-# ------------------------- #
+# ---------------------- #
 # Completed Report Tests
-# ------------------------- #
+# ---------------------- #
 
 # A Fully Valid Report is Complete with No Extra Requests
 def test_complete_report_needs_no_extra_request():
@@ -241,7 +237,6 @@ def test_analysis_failure_gives_clear_error():
         reply = new_conversation(service).send("ok")
         assert reply.error == am.IncidentConversation.ANALYSIS_FAILED_MESSAGE
         assert reply.is_complete is False
-
 
 # ------------------------------------ #
 # Gemini Service Tests (No Live Calls)
@@ -320,10 +315,9 @@ def test_connection_problem_becomes_service_error():
         assert "Could not reach the AI" in error.message
         assert error.code is None
 
-
-# ----------- #
+# --------- #
 # Main Test
-# ----------- #
+# --------- #
 
 def run_all():
     tests = [(name, fn) for name, fn in sorted(globals().items())
