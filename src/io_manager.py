@@ -5,7 +5,7 @@
 import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
 from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
-from src.ai_manager import start_chat, send_message, check_api_key
+from src.ai_manager import AIManager, GeminiService, AIServiceError
 from src.logic_manager import logic
 from src.data_manager import ( 
     load_records,
@@ -507,13 +507,13 @@ def filter_reports():
 
 #Initialize the AI incident reporting chatbot, handle the conversation loop
 def run_chatbot():
-    #Verify we can connect to Gemini before starting the chatbot
-    error = check_api_key()
-    if error:
-        print(f"{RED}{error}{RESET}")
+    #Set up Gemini before starting the chatbot (fails here if the API key is missing)
+    try:
+        conversation = AIManager(GeminiService()).start_conversation()
+    except AIServiceError as error:
+        print(f"{RED}{error.message}{RESET}")
         return
 
-    chat = start_chat()
     print(WELCOME)
 
     while True:
@@ -532,27 +532,27 @@ def run_chatbot():
 
         #Let the worker know the AI is working, since a reply can take a few seconds
         print("Thinking...\n")
-        result = send_message(chat, user_text)
+        result = conversation.send(user_text)
 
         # Catch API errors (like rate limits etc.) and allow the user to try again without losing their spot
-        if "error" in result:
+        if result.error:
             print(f"{RED}{BOLD}  Error Occurred:{RESET}")
 
-            if "error_code" in result:
-                print(f"   {BOLD}{RED}Code:{RESET}    {result['error_code']}")
-                print(f"   {BOLD}{RED}Status:{RESET}  {result['error_status']}")
+            if result.error_code is not None:
+                print(f"   {BOLD}{RED}Code:{RESET}    {result.error_code}")
+                print(f"   {BOLD}{RED}Status:{RESET}  {result.error_status}")
 
-            print(f"   {BOLD}{RED}Message:{RESET} {result['error']}")
+            print(f"   {BOLD}{RED}Message:{RESET} {result.error}")
             print(f"{BOLD}{RED}Please resend your last message to try again!{RESET}\n")
 
         else:
             # Print the AI's translated response to the terminal
-            print(result["reply"])
+            print(result.reply)
 
             # If all required fields are collected, push the payload to the Logic Manager for scoring
-            if result["is_complete"]:
-                outcome = logic(result["report"])
-                _print_save_outcome(result["report"], outcome)
+            if result.is_complete:
+                outcome = logic(result.report)
+                _print_save_outcome(result.report, outcome)
 
                 if _ask_yes_no("Would you like to view all saved reports now?"):
                     view_reports()
