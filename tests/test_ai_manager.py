@@ -294,6 +294,18 @@ def test_other_api_errors_are_not_retried():
         assert error.code == 400 and error.status == "INVALID_ARGUMENT"
     assert chat.attempts == 1
 
+# An API Error with No Message Still Reaches the Worker as an Error (Not a Blank "Success")
+def test_api_error_without_message_still_shows_error():
+    chat = FakeGeminiChat([errors.APIError(500, {})])
+    try:
+        dummy_gemini_service().send_chat_message(chat, "hi")
+        assert False, "Expected AIServiceError"
+    except am.AIServiceError as error:
+        assert error.message == "Gemini returned an error with no details (code 500)."
+        reply = new_conversation(FakeAIService([error])).send("hi")
+        assert reply.error == error.message
+        assert reply.is_complete is False
+
 # Gives Up after MAX_ATTEMPTS when Gemini Stays Busy
 def test_gives_up_when_always_busy():
     chat = FakeGeminiChat([api_error(503, "UNAVAILABLE")] * 10)
