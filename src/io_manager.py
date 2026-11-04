@@ -5,14 +5,13 @@
 import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
 from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
-from src.ai_manager import AIManager, GeminiService, AIServiceError
-from src.logic_manager import logic
-from src.data_manager import ( 
-    load_records,
+from src.ai_manager import AIManager, AIServiceError, GeminiService
+from src.data_manager import (
     get_unique_values,
     load_matching_records,
+    load_records,
 )
-
+from src.logic_manager import logic
 
 # Welcome Message
 RESET = "\033[0m"
@@ -193,7 +192,7 @@ def _fit(text, width):
     # Otherwise, add spaces to pad the column so everything lines up nicely
     return text.ljust(width)
 
-# Show True/False as YES/No (Safety Officers Scan this Column First for Hospital Cases)
+# Turn a True/False Value from data.csv into Readable Text for the Table and Report Card
 def _yes_no(value):
     text = str(value).strip().lower()
     if text in ("true", "yes", "1", "1.0"):
@@ -339,7 +338,8 @@ def _print_report_card(report, title):
             print(line)
     print()
 
-#Change of page index if exits 
+# Move to the Next Page, or Warn if Already on the Last One
+# Returns (new page number, True if the page changed)
 def _go_next(page, pages):
     # Prevent the user from scrolling past the end of the data
     if page >= pages:
