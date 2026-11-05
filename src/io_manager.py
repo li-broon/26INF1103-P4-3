@@ -2,7 +2,11 @@
 # Imports
 # ------- #
 
-import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
+import textwrap
+from abc import (  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
+    ABC,
+    abstractmethod,
+)
 from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
@@ -301,6 +305,43 @@ class Pager:
         self._page -= 1
         return True
 
+#A Numbered Menu: Shows a Title and Options, then Asks the User to Pick One
+#Each Child Menu Only Says WHAT its Title and Options Are, the Parent Does the Showing and Asking
+class Menu(ABC):
+    def __init__(self, prompter: Prompter):
+        self._prompter = prompter   # The shared Prompter, passed in (the menu uses it but doesn't own it)
+
+    # Every child menu MUST say what its title is
+    @abstractmethod
+    def title(self) -> str:
+        pass
+
+    # Every child menu MUST list its options, in order
+    @abstractmethod
+    def options(self) -> list:
+        pass
+
+    # Same for every menu: print the title box and numbered options, then ask for a valid number
+    def show(self) -> int:
+        line = "=" * 72
+        print(f"\n{line}\n{CYAN}{BOLD}{self.title().center(72)}{RESET}\n{line}")
+        options = self.options()
+        for number, label in enumerate(options, start=1):
+            print(f"      {GREEN}{BOLD}{number}{RESET}.  {label}")
+        return self._prompter.ask_number(f"Choose an option (1-{len(options)}): ", 1, len(options))
+
+
+#child class of menu
+class MainMenu(Menu):
+    def title(self) -> str:
+        return "Main Menu"
+
+    def options(self) -> list:
+        return [
+            "Report a new incident (chatbot)",
+            "View saved incident reports",
+            "Exit",
+        ]
     
 #Display a numbered list of values and return the user's selection
 def _choose_value(heading, values):
@@ -442,7 +483,7 @@ def browse_pages(table, title):
             if not show_page:
                 print(f"{YELLOW} You are already on the last page. {RESET}")
         elif choice == 2:
-            show_page = pager, previous()
+            show_page = pager.previous()
             if not show_page:
                 print(f"{YELLOW}You are already on the first page. {RESET}")
             elif choice == 3:
