@@ -122,12 +122,6 @@ FILTER_COLUMNS = [
 #Dynamically calculate the back option number so it stays correct if columns are added later
 FILTER_BACK_OPTION = len(FILTER_COLUMNS) + 1
 
-FILTER_HEADER = f"""
-========================================================================
-{CYAN}{BOLD}                    🔍 Filter Reports{RESET}
-========================================================================
-      Which column would you like to filter by?
-"""
 
 
 #Asks the User for Input and Keeps Asking Until the Answer is Valid
@@ -449,14 +443,6 @@ def _is_overdue(deadline, today=None):
     except ValueError:
         return False  # e.g. "Check incident date": no real date to compare
     return due < (today or date.today())
-
-#Display the available columns that can be used for filtering
-def show_filter_menu():
-    print(FILTER_HEADER)
-    for number, (heading, column) in enumerate(FILTER_COLUMNS, start=1):
-        print(f"      {GREEN}{BOLD}{number}{RESET}. {heading}")
-    print(f"      {GREEN}{BOLD}{FILTER_BACK_OPTION}{RESET}. ↩️  Back")
-    return _prompter.ask_number(f"Choose a column (1-{FILTER_BACK_OPTION}): ", 1, FILTER_BACK_OPTION)
 
 #Manage the pagination loop, allowing a user to scroll through a table
 def browse_pages(table, title):

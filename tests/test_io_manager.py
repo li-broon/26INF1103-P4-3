@@ -40,6 +40,7 @@ def test_menus_accept_their_own_last_option():
         (io.MainMenu, 3),
         (io.ViewMenu, 5),
         (io.PageMenu, 4),
+        (io.FilterMenu, 8),
     ]
     for menu_class, last_option in menus:
         menu = menu_class(io.Prompter(read=fake_input(str(last_option + 1), str(last_option))))
@@ -47,7 +48,7 @@ def test_menus_accept_their_own_last_option():
             choice = menu.show()
         assert choice == last_option                                     # the last real option is accepted
         assert f"{last_option + 1} is not an option" in out.getvalue()   # one past the end is rejected
-
+ 
 
 # Pager Tests
 
