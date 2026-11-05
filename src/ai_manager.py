@@ -30,7 +30,7 @@ UNKNOWN_VALUE = "unknown (worker could not say)"
 
 # Raised by an AIService when the AI Cannot be Reached or Replies with Error
 class AIServiceError(Exception):
-    def __init__(self, message: str, code: int = None, status: str = None):
+    def __init__(self, message: str, code: int | None = None, status: str | None = None):
         super().__init__(message)
         self.message = message
         self.code = code
@@ -48,36 +48,36 @@ class Field(ABC):
         self._allows_unknown = allows_unknown
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def description(self):
+    def description(self) -> str:
         return self._description
 
     # Line Describing this Field in a Prompt (e.g. "- location: site and exact area")
-    def describe(self):
+    def describe(self) -> str:
         return f"- {self._name}: {self._description}"
 
     # Shared Check for Every Field: "unknown" is Accepted Only if this Field Allows it, Everything Else is Checked by the Subclass
-    def is_valid(self, value):
+    def is_valid(self, value) -> bool:
         if self._allows_unknown and value == UNKNOWN_VALUE:
             return True
         return self._check(value)
 
     # Each Kind of Field Decides what a Valid Value Looks Like
     @abstractmethod
-    def _check(self, value):
+    def _check(self, value) -> bool:
         pass
 
 # Check for a Non-Empty String
 class TextField(Field):
-    def _check(self, value):
+    def _check(self, value) -> bool:
         return isinstance(value, str) and value.strip() != ""
 
 # Check for a Real Date in YYYY-MM-DD that is Not in the Future
 class DateField(Field):
-    def _check(self, value):
+    def _check(self, value) -> bool:
         try:
             return datetime.strptime(value, "%Y-%m-%d") <= datetime.now()
         except (TypeError, ValueError):
@@ -85,7 +85,7 @@ class DateField(Field):
 
 # Check for a Time in 24h HH:MM
 class TimeField(Field):
-    def _check(self, value):
+    def _check(self, value) -> bool:
         try:
             datetime.strptime(value, "%H:%M")
             return True
@@ -94,38 +94,38 @@ class TimeField(Field):
 
 # Check for a Real True/ False
 class BooleanField(Field):
-    def _check(self, value):
+    def _check(self, value) -> bool:
         return isinstance(value, bool)
 
 # Check for a Number of 0 or More
 class NumberField(Field):
-    def _check(self, value):
+    def _check(self, value) -> bool:
         is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
         return is_number and 0 <= value < float("inf")
 
 # One of a Fixed List of Choices (the Description is Built from the Choices)
 class ChoiceField(Field):
-    def __init__(self, name: str, choices: list):
+    def __init__(self, name: str, choices: list[str]):
         super().__init__(name, "one of " + ", ".join(choices))
         self._choices = choices
 
-    def _check(self, value):
+    def _check(self, value) -> bool:
         return value in self._choices
 
 # A Group of Fields Checked and Described Together (e.g. the Worker's Details, or the AI's Analysis)
 class FieldSet:
-    def __init__(self, fields: list):
+    def __init__(self, fields: list[Field]):
         self._fields = fields
 
-    def names(self):
+    def names(self) -> list[str]:
         return [field.name for field in self._fields]
 
     # All Field Lines for a Prompt
-    def describe(self):
+    def describe(self) -> str:
         return "\n".join([field.describe() for field in self._fields])
 
     # Fields in the Report that are Missing or Not Valid
-    def invalid(self, report: dict):
+    def invalid(self, report: dict) -> list[Field]:
         return [field for field in self._fields if not field.is_valid(report.get(field.name))]
 
 # ---------- #
@@ -135,8 +135,8 @@ class FieldSet:
 # What the Conversation Returns to 'io_manager' after Each Worker Message
 # (On Failure, 'error' Holds the Message, and error_code/error_status are Set for API Errors)
 class AIReply:
-    def __init__(self, reply: str = "", is_complete: bool = False, report: dict = None,
-                 error: str = None, error_code: int = None, error_status: str = None):
+    def __init__(self, reply: str = "", is_complete: bool = False, report: dict | None = None,
+                 error: str | None = None, error_code: int | None = None, error_status: str | None = None):
         self.reply = reply
         self.is_complete = is_complete
         self.report = report if report is not None else {}
@@ -158,12 +158,12 @@ class AIService(ABC):
 
     # Send One Message in a Chat and Return the Reply Text. Raises AIServiceError on Failure.
     @abstractmethod
-    def send_chat_message(self, chat, message: str):
+    def send_chat_message(self, chat, message: str) -> str:
         pass
 
     # One-Off Request that Must Return JSON Matching the Schema. Returns the Reply Text. Raises AIServiceError on Failure.
     @abstractmethod
-    def generate_json(self, prompt: str, schema: dict):
+    def generate_json(self, prompt: str, schema: dict) -> str:
         pass
 
 # Talks to Google Gemini: Handles the API Key, Timeout, and Retries when Gemini is Busy or Rate Limited
@@ -197,7 +197,7 @@ Then run the program again. With Docker, pass the file in:
         return self._client.chats.create(model=self.MODEL, config=config)
 
     # A Failed Call is Not Saved in the Chat History, so Retrying Does Not Affect the Conversation
-    def send_chat_message(self, chat, message: str):
+    def send_chat_message(self, chat, message: str) -> str:
         attempt = 1
         while True:
             try:
@@ -218,7 +218,7 @@ Then run the program again. With Docker, pass the file in:
                 raise AIServiceError(f"Could not reach the AI: {error}")
 
     # Uses a Short-Lived Chat so it Shares the Same Retry and Error Handling as Chat Messages
-    def generate_json(self, prompt: str, schema: dict):
+    def generate_json(self, prompt: str, schema: dict) -> str:
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=schema,
@@ -277,7 +277,7 @@ Respond ONLY with a JSON object containing exactly these fields.
         self._analysis_fields = analysis_fields
 
     # Returns the Analysis Fields as a Dict, or None if the AI Could Not Give a Valid Analysis
-    def run(self, report: dict, worker_messages: list):
+    def run(self, report: dict, worker_messages: list[str]) -> dict | None:
         worker_details = {name: report.get(name) for name in self._worker_fields.names()}
         prompt = self.PROMPT.format(
             report=json.dumps(worker_details, indent=2, ensure_ascii=False),
@@ -295,7 +295,7 @@ Respond ONLY with a JSON object containing exactly these fields.
         return None
 
     # Turn the Reply into a Dict of the Analysis Fields (None if it is Not JSON or Any Field is Not Valid)
-    def _parse(self, text: str):
+    def _parse(self, text: str) -> dict | None:
         try:
             data = json.loads(text)
         except (json.JSONDecodeError, TypeError):
@@ -388,7 +388,7 @@ Respond ONLY with JSON in this exact format:
         self._chat = service.start_chat(system_prompt)
 
     # Send One Worker Message and Return an AIReply (is_complete is Only True when Every Field is Valid)
-    def send(self, user_text: str):
+    def send(self, user_text: str) -> AIReply:
         reply = self._ask(user_text)
         if reply.error:
             return reply
@@ -421,7 +421,7 @@ Respond ONLY with JSON in this exact format:
         return reply
 
     # Send One Message and Return the Parsed Reply (If it is Not in Our JSON Format, Ask the AI to Resend, up to MAX_FORMAT_RETRIES Times)
-    def _ask(self, message: str):
+    def _ask(self, message: str) -> AIReply:
         for _ in range(1 + self.MAX_FORMAT_RETRIES):
             try:
                 reply_text = self._service.send_chat_message(self._chat, message)
@@ -434,7 +434,7 @@ Respond ONLY with JSON in this exact format:
         return AIReply(error="The AI kept replying in the wrong format.")
 
     # Turn the Reply Text into an AIReply
-    def _parse(self, text: str):
+    def _parse(self, text: str) -> AIReply | None:
         try:
             data = json.loads(text)
             
@@ -457,7 +457,7 @@ Respond ONLY with JSON in this exact format:
         return AIReply(reply, data["is_complete"], report)
 
     # Message Telling the AI which Worker Details to Correct or Ask For (Shows the Required Format of Each)
-    def _build_fix_message(self, invalid_fields: list):
+    def _build_fix_message(self, invalid_fields: list[Field]) -> str:
         details = "; ".join([f"{field.name} ({field.description})" for field in invalid_fields])
         return (
             "Not complete yet. These details are missing or not in the required format. "
@@ -502,5 +502,5 @@ class AIManager:
         self._analysis_task = AnalysisTask(service, self._worker_fields, self._analysis_fields)
 
     # Start a New Report Conversation
-    def start_conversation(self):
+    def start_conversation(self) -> IncidentConversation:
         return IncidentConversation(self._service, self._worker_fields, self._analysis_fields, self._analysis_task)
