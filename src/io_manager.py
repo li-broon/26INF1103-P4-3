@@ -277,10 +277,17 @@ class Menu(ABC):
     def options(self) -> list:
         pass
 
+    # a child menu that needs one overrides this method
+    def subtitle(self) -> str:
+        return ""
     # Same for every menu: print the title box and numbered options, then ask for a valid number
     def show(self) -> int:
         line = "=" * 72
         print(f"\n{line}\n{CYAN}{BOLD}{self.title().center(72)}{RESET}\n{line}")
+
+        if self.subtitle():
+            print(f"      {self.subtitle()}")
+
         options = self.options()
         for number, label in enumerate(options, start=1):
             print(f"      {GREEN}{BOLD}{number}{RESET}.  {label}")
@@ -327,10 +334,22 @@ class PageMenu(Menu):
             "Back to report options",
         ]
 
+#The Menu Asking Which Column to Filter By; its Options Come from FILTER_COLUMNS, Plus Back
+class FilterMenu(Menu):
+    def title(self) -> str:
+        return "🔍 Filter Reports"
+
+    def subtitle(self) -> str:
+        return "Which column would you like to filter by?"
+
+    def options(self) -> list:
+        return [heading for heading, column in FILTER_COLUMNS] + ["↩️  Back"]
+
 # One Object per Menu, Sharing the One Prompter (Moves into the IOManager Class Later)
 _main_menu = MainMenu(_prompter)
 _view_menu = ViewMenu(_prompter)
 _page_menu = PageMenu(_prompter) 
+_filter_menu = FilterMenu(_prompter)
 
 #Display a numbered list of values and return the user's selection
 def _choose_value(heading, values):
@@ -509,7 +528,7 @@ def view_reports():
 
 #Prompt the user to filter the dataset by a specific column and value
 def filter_reports():
-    choice = show_filter_menu()
+    choice = _filter_menu.show()
     if choice == FILTER_BACK_OPTION:
         return
         
