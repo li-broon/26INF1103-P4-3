@@ -2,11 +2,8 @@
 # Imports
 # ------- #
 
-import textwrap
-from abc import (  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
-    ABC,
-    abstractmethod,
-)
+import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
+from abc import ABC, abstractmethod  # Abstract Base Classes, for the Menu Contract
 from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
@@ -486,9 +483,9 @@ def browse_pages(table, title):
             show_page = pager.previous()
             if not show_page:
                 print(f"{YELLOW}You are already on the first page. {RESET}")
-            elif choice == 3:
-                number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
-                _print_full_report(table, number)
+        elif choice == 3:
+            number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
+            print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
         else:
