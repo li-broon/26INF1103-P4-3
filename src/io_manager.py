@@ -168,18 +168,44 @@ FILTER_HEADER = f"""
 """
 
 
-#io_manager Private Functions
-#Prompt the user with a yes/no question until a valid response is given
-#Keep looping until they give a clear yes or no answer
-def _ask_yes_no(question):
-    while True:
-        answer = input(f"{question} (y/n): ").strip().lower()
-        if answer in ("y", "yes"):
-            return True
-        if answer in ("n", "no"):
-            return False
-        print(f"{YELLOW}Please type 'y' for yes or 'n' for no.{RESET}")
+#Asks the User for Input and Keeps Asking Until the Answer is Valid
+class Prompter:
+    def __init__(self, read=input, cancel_words=CANCEL_WORDS):
+        self._read=read
+        self._cancel_words= cancel_words
 
+    def ask_yes_no(self, question: str):
+        while True:
+            answer = self._read(f"{question} (y/n):").strip().lower()
+            if answer in ("y", "yes"):
+                return True
+            if answer in ("n", "no"):
+                return False
+            print(f"{YELLOW}Please type 'y' for yes or 'n' for no.{RESET}")
+
+    def ask_number(self,prompt:str, low:int, high: int): 
+        while True: 
+            user_input = self._read(prompt).strip()
+
+            #rejects blank input
+            if user_input =="":
+              print(f"{YELLOW}This can't be left blank. Please type a number.{RESET}")
+              continue 
+            
+            try:
+                choice= int(user_input)
+            except ValueError:
+                print(f"{YELLOW}'{user_input}' is not a number. Please type a whole number.{RESET}")
+                continue
+            if low <= choice <= high:
+                return choice
+            print(f"{YELLOW}{choice} is not an option. Please type a number from {low} to {high}.{RESET}")
+
+# One Prompter Shared by the Whole App (Moves into the IOManager Class Later)
+_prompter = Prompter()
+
+
+#io_manager Private Functions
 #Format text to fit a specific column width, truncating or padding as needed
 #text (any):The data to format into a string
 #width (int):The exact character width of the output column
@@ -243,28 +269,6 @@ def _build_row(number, report):
         row += _fit(value, width)
     return row
 
-#Ask the user to input a number within a specific range. Re-prompts on invalid input
-def _ask_number(prompt, low, high):
-    while True:
-        user_input = input(prompt).strip()
-
-        # Reject blank input
-        if user_input == "":
-            print(f"{YELLOW}This can't be left blank. Please type a number.{RESET}")
-            continue
-
-        # Make sure they actually typed a number, not text
-        try:
-            choice = int(user_input)
-        except ValueError:
-            print(f"{YELLOW}'{user_input}' is not a number. Please type a whole number.{RESET}")
-            continue
-
-        # Ensure the number is one of the valid menu options
-        if low <= choice <= high:
-            return choice
-        print(f"{YELLOW}{choice} is not an option. Please type a number from {low} to {high}.{RESET}")
-
 #Display a numbered list of values and return the user's selection
 def _choose_value(heading, values):
   #The selected value, or None if the user chooses the 'Back' option.
@@ -276,7 +280,7 @@ def _choose_value(heading, values):
         print(f"      {GREEN}{BOLD}{number}{RESET}. {value}")
     print(f"      {GREEN}{BOLD}{back_option}{RESET}.   Back")
 
-    choice = _ask_number(f"Choose a value (1-{back_option}): ", 1, back_option)
+    choice = _prompter.ask_number(f"Choose a value (1-{back_option}): ", 1, back_option)
     if choice == back_option:
         return None
         
@@ -393,17 +397,17 @@ def _is_overdue(deadline, today=None):
 #Display the main menu and prompt the user for a selection
 def show_menu():
     print(MENU)
-    return _ask_number(f"Choose an option ({MIN_OPTION}-{MAX_OPTION}): ", MIN_OPTION, MAX_OPTION)
+    return _prompter.ask_number(f"Choose an option ({MIN_OPTION}-{MAX_OPTION}): ", MIN_OPTION, MAX_OPTION)
 
 # Display the sub-menu for viewing saved reports
 def show_view_menu():
     print(VIEW_MENU)
-    return _ask_number(f"Choose an option ({VIEW_MIN_OPTION}-{VIEW_MAX_OPTION}): ", VIEW_MIN_OPTION, VIEW_MAX_OPTION)
+    return _prompter.ask_number(f"Choose an option ({VIEW_MIN_OPTION}-{VIEW_MAX_OPTION}): ", VIEW_MIN_OPTION, VIEW_MAX_OPTION)
 
 #Display the pagination control menu
 def show_page_menu():
     print(PAGE_MENU)
-    return _ask_number(f"Choose an option ({PAGE_MIN_OPTION}-{PAGE_MAX_OPTION}): ", PAGE_MIN_OPTION, PAGE_MAX_OPTION)
+    return _prompter.ask_number(f"Choose an option ({PAGE_MIN_OPTION}-{PAGE_MAX_OPTION}): ", PAGE_MIN_OPTION, PAGE_MAX_OPTION)
 
 #Display the available columns that can be used for filtering
 def show_filter_menu():
@@ -411,7 +415,7 @@ def show_filter_menu():
     for number, (heading, column) in enumerate(FILTER_COLUMNS, start=1):
         print(f"      {GREEN}{BOLD}{number}{RESET}. {heading}")
     print(f"      {GREEN}{BOLD}{FILTER_BACK_OPTION}{RESET}. ↩️  Back")
-    return _ask_number(f"Choose a column (1-{FILTER_BACK_OPTION}): ", 1, FILTER_BACK_OPTION)
+    return _prompter.ask_number(f"Choose a column (1-{FILTER_BACK_OPTION}): ", 1, FILTER_BACK_OPTION)
 
 #Manage the pagination loop, allowing a user to scroll through a table
 def browse_pages(table, title):
@@ -430,7 +434,7 @@ def browse_pages(table, title):
         elif choice == 2:
             page, show_page = _go_previous(page)
         elif choice == 3: 
-            number = _ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
+            number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
             _print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
@@ -468,7 +472,7 @@ def view_reports():
             # Stop the main table from re-printing immediately after they finish viewing the filtered results
             show_page = False
         elif choice == 4:
-            number = _ask_number(f"Which report number, out of all {len(table)} saved reports?: (1-{len(table)}):", 1, len(table))
+            number = _prompter.ask_number(f"Which report number, out of all {len(table)} saved reports?: (1-{len(table)}):", 1, len(table))
             _print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
@@ -525,7 +529,7 @@ def run_chatbot():
 
             #let the workers leave without finishing 
         if user_text.lower() in CANCEL_WORDS:
-            if _ask_yes_no("Leave without finishing this report?"):
+            if _prompter.ask_yes_no("Leave without finishing this report?"):
                 print(f"{YELLOW}Report cancelled. Nothing was saved.{RESET}\n")
                 return
             continue
@@ -554,7 +558,7 @@ def run_chatbot():
                 outcome = logic(result.report)
                 _print_save_outcome(result.report, outcome)
 
-                if _ask_yes_no("Would you like to view all saved reports now?"):
+                if _prompter.ask_yes_no("Would you like to view all saved reports now?"):
                     view_reports()
                 break
 
@@ -577,3 +581,10 @@ def main():
 
     except (KeyboardInterrupt, EOFError):
         print(f"\n{GOODBYE}")
+
+#Asks the user for input and keeps asking until the answer is valid
+
+        
+        
+       
+
