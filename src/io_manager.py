@@ -328,7 +328,7 @@ class Menu(ABC):
         return self._prompter.ask_number(f"Choose an option (1-{len(options)}): ", 1, len(options))
 
 
-#child class of menu
+#child class of Menu(Main Menu)
 class MainMenu(Menu):
     def title(self) -> str:
         return "Main Menu"
@@ -338,6 +338,34 @@ class MainMenu(Menu):
             "Report a new incident (chatbot)",
             "View saved incident reports",
             "Exit",
+        ]
+
+#Child Class of Menu (View Menu)
+class ViewMenu(Menu):
+    def title(self) -> str:
+        return "📄 Report Options"
+
+    def options(self) -> list:
+        return [
+            "Next page",
+            "Previous page",
+            "Filter these reports",
+            "View a full report",
+            "Back to the main menu",
+        ]
+
+
+#Child Class of Menu(PageMenu)
+class PageMenu(Menu):
+    def title(self) -> str:
+        return "Page Options"
+
+    def options(self) -> list:
+        return [
+            "Next page",
+            "Previous page",
+            "View a full report",
+            "Back to report options",
         ]
     
 #Display a numbered list of values and return the user's selection
