@@ -19,26 +19,26 @@ from src import ai_manager as am
 # It Follows the Same AIService Contract, so the Conversation Cannot Tell the Difference.
 # Each List Holds Reply Texts (or AIServiceErrors to Raise) Given Out in Order; the Last One Repeats.
 class FakeAIService(am.AIService):
-    def __init__(self, chat_replies, json_replies=None):
+    def __init__(self, chat_replies: list[str | am.AIServiceError], json_replies: list[str | am.AIServiceError] | None = None):
         self._chat_replies = list(chat_replies)
         self._json_replies = list(json_replies or [])
         self.system_prompt = None
         self.sent_messages = []
         self.json_prompts = []
 
-    def start_chat(self, system_prompt):
+    def start_chat(self, system_prompt: str) -> str:
         self.system_prompt = system_prompt
         return "fake-chat"
 
-    def send_chat_message(self, chat, message):
+    def send_chat_message(self, chat, message: str) -> str:
         self.sent_messages.append(message)
         return self._next(self._chat_replies)
 
-    def generate_json(self, prompt, schema):
+    def generate_json(self, prompt: str, schema: dict) -> str:
         self.json_prompts.append(prompt)
         return self._next(self._json_replies)
 
-    def _next(self, replies):
+    def _next(self, replies: list[str | am.AIServiceError]) -> str:
         item = replies.pop(0) if len(replies) > 1 else replies[0]
         if isinstance(item, am.AIServiceError):
             raise item
@@ -59,11 +59,11 @@ GOOD_ANALYSIS = {
 }
 
 # Build a Chat Reply in the JSON Format the AI is Told to Use
-def chat_reply(report, is_complete=True, reply="Thank you!"):
+def chat_reply(report: dict, is_complete: bool = True, reply: str = "Thank you!") -> str:
     return json.dumps({"reply": reply, "is_complete": is_complete, "report": report})
 
 # Start a Conversation that Talks to the Fake Service
-def new_conversation(service):
+def new_conversation(service: am.AIService) -> am.IncidentConversation:
     return am.AIManager(service).start_conversation()
 
 # ------------------ #
@@ -242,28 +242,29 @@ def test_analysis_failure_gives_clear_error():
 # Gemini Service Tests (No Live Calls)
 # ------------------------------------ #
 
+# Fake Gemini Reply (Only the .text the Service Reads)
+class FakeGeminiResponse:
+    def __init__(self, text: str):
+        self.text = text
+
 # Fake Gemini Chat Session: Raises the Given Errors in Order, then Replies "ok"
 class FakeGeminiChat:
-    def __init__(self, errors_to_raise):
+    def __init__(self, errors_to_raise: list[Exception]):
         self._errors = list(errors_to_raise)
         self.attempts = 0
 
-    def send_message(self, message):
+    def send_message(self, message: str) -> FakeGeminiResponse:
         self.attempts += 1
         if self._errors:
             raise self._errors.pop(0)
         return FakeGeminiResponse("ok")
 
-class FakeGeminiResponse:
-    def __init__(self, text):
-        self.text = text
-
 # Make a Gemini API Error with the Given HTTP Code
-def api_error(code, status):
+def api_error(code: int, status: str) -> errors.APIError:
     return errors.APIError(code, {"error": {"message": f"error {code}", "status": status}})
 
 # Build a GeminiService with a Dummy Key (Creating the Client Does Not Contact Google)
-def dummy_gemini_service():
+def dummy_gemini_service() -> am.GeminiService:
     with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
         return am.GeminiService()
 
@@ -331,7 +332,7 @@ def test_connection_problem_becomes_service_error():
 # Main Test
 # --------- #
 
-def run_all():
+def run_all() -> int:
     tests = [(name, fn) for name, fn in sorted(globals().items())
              if name.startswith("test_") and callable(fn)]
     failures = 0
