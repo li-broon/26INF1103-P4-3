@@ -73,6 +73,8 @@ TABLE_COLUMNS = [
     ("Location", "location", 14),
     ("Date", "incident_date", 12),
 ]
+# Yes/No Columns Shown in Red when the Value is YES
+ALERT_COLUMNS = ("hospitalised", "mom_reportable")
 
 #Full-Text Fields Printed Under Each Summary Row: (Label, Column Name in 'data.csv')
 #These Hold Whole Sentences, so They are Wrapped Instead of Squeezed into a Column
@@ -204,70 +206,64 @@ class Prompter:
 # One Prompter Shared by the Whole App (Moves into the IOManager Class Later)
 _prompter = Prompter()
 
+class ReportFormatter:
+    #The layout of the table does not change 
+    def __init__(self,columns=TABLE_COLUMNS, details= DETAIL_FIELDS):
+        self._columns = columns
+        self._details = details
 
-#io_manager Private Functions
-#Format text to fit a specific column width, truncating or padding as needed
-#text (any):The data to format into a string
-#width (int):The exact character width of the output column
-def _fit(text, width):
+    #cut the text to an exact column and width 
+    def fit_text(self, text, width)-> str:
+        text = str(text)
+        if len(text) >= width:
+            text = text[:width - 2] + "…"
+        return text.ljust(width)
+    
+    def wrap_detail(self, label, text) -> list:
+        text= str(text).strip()
+        if text.lower() in EMPTY_VALUES:
+            return []
+        indent = " " * DETAIL_INDENT
+        label_cell = f"{label}:".ljust(DETAIL_LABEL_WIDTH)
+        lines = textwrap.wrap(text, width=DETAIL_TEXT_WIDTH) or [text]
 
-    text = str(text)
-    # If the text is too long, cut it and add an ellipsis so it doesn't break the table layout
-    if len(text) >= width:
-        text = text[:width - 2] + "…"
-    # Otherwise, add spaces to pad the column so everything lines up nicely
-    return text.ljust(width)
+        # First Line Carries the Label, the Rest Line Up Underneath the Text
+        wrapped = [f"{indent}{CYAN}{label_cell}{RESET}{lines[0]}"]
+        wrapped += [f"{indent}{' ' * DETAIL_LABEL_WIDTH}{line}" for line in lines[1:]]
+        return wrapped
 
-# Turn a True/False Value from data.csv into Readable Text for the Table and Report Card
-def _yes_no(value):
-    text = str(value).strip().lower()
-    if text in ("true", "yes", "1", "1.0"):
-        return "YES"
-    if text in ("false", "no", "0", "0.0"):
-        return "No"
-    return "-"
+    def yes_no(self,value)->str:
+        text = str(value).strip().lower()
+        if text in("true", "yes", "1", "1.0"):
+            return "YES"
+        if text in ("false", "no", "0", "0.0"):
+            return "No"
+        return "-"
 
-# Turn One Long Field into Wrapped, Indented Lines (Returns [] if the Field is Empty)
-def _wrap_detail(label, text):
-    text = str(text).strip()
-    if text.lower() in EMPTY_VALUES:
-        return []
+    #build one summary row higlighting hospital and MOM cases in red 
+    def build_row(self, number, report):
+        row= self.fit_text(number, 5)
+        for heading, data_column, width, in self._columns:
+            value = report.get(data_column, "-")
 
-    indent = " " * DETAIL_INDENT
-    label_cell = f"{label}:".ljust(DETAIL_LABEL_WIDTH)
-    lines = textwrap.wrap(text, width=DETAIL_TEXT_WIDTH) or [text]
+            #Yes/No columns: YES is worht shouting about 
+            if data_column in ALERT_COLUMNS:
+                value=self.yes_no(value)
+                cell = self.fit_text(value,width )
+                row += f"{RED}{BOLD}{cell}{RESET}" if value == "YES" else cell
+                continue
 
-    # First Line Carries the Label, the Rest Line Up Underneath the Text
-    wrapped = [f"{indent}{CYAN}{label_cell}{RESET}{lines[0]}"]
-    wrapped += [f"{indent}{' ' * DETAIL_LABEL_WIDTH}{line}" for line in lines[1:]]
-    return wrapped
+            if data_column == "deadline":
+                cell =self.fit_text(value,width)
+                must_report = self.yes_no(report.get("mom_reportable")) == "YES"
+                row += f"{RED}{BOLD}{cell}{RESET}" if must_report else cell
+                continue
 
-# Build One Summary Row, Highlighting Hospital Cases in Red
-# Columns Shown in Red when the Value is YES
-ALERT_COLUMNS = ("hospitalised", "mom_reportable")
+            row += self.fit_text(value, width)
+        return row
 
-# Build One Summary Row, Highlighting Hospital and MOM Cases in Red
-def _build_row(number, report):
-    row = _fit(number, 5)
-    for heading, column, width in TABLE_COLUMNS:
-        value = report.get(column, "-")
-
-        # Yes/No Columns: YES is Worth Shouting About
-        if column in ALERT_COLUMNS:
-            value = _yes_no(value)
-            cell = _fit(value, width)  # Padded Before Colouring, so Columns Stay Lined Up
-            row += f"{RED}{BOLD}{cell}{RESET}" if value == "YES" else cell
-            continue
-
-        # The Deadline is Only Urgent when MOM Must be Told
-        if column == "deadline":
-            cell = _fit(value, width)
-            must_report = _yes_no(report.get("mom_reportable")) == "YES"
-            row += f"{RED}{BOLD}{cell}{RESET}" if must_report else cell
-            continue
-
-        row += _fit(value, width)
-    return row
+# One Formatter Shared by the Whole App (Moves into the IOManager Class Later)
+_formatter = ReportFormatter()
 
 #Display a numbered list of values and return the user's selection
 def _choose_value(heading, values):
@@ -302,9 +298,9 @@ def _print_table(table, title, page=1):
     print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
 
     # Build the header row using our fixed column widths
-    header = _fit("No.", 5)
+    header = _formatter.fit_text("No.", 5)
     for heading, column, width in TABLE_COLUMNS:
-        header += _fit(heading, width)
+        header += _formatter.fit_text(heading, width)
     print(f"{BOLD}{header}{RESET}")
     print("-" * len(header))
 
@@ -314,10 +310,10 @@ def _print_table(table, title, page=1):
     #One Block per Report: a Summary Row, then its Full-Text Details Underneath
     #(Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
     for number, report in enumerate(rows.to_dict("records"), start=first + 1):
-        print(_build_row(number, report))
+        print(_formatter.build_row(number, report))
 
         for label, column in DETAIL_FIELDS:
-            for line in _wrap_detail(label, report.get(column, "-")):
+            for line in _formatter.wrap_detail(label, report.get(column, "-")):
                 print(line)
         print()
 
@@ -337,8 +333,8 @@ def _print_report_card(report, title):
     for label, column in FULL_REPORT_FIELDS:
         value = report.get(column, "-")
         if column in YES_NO_COLUMNS:
-            value = _yes_no(value)
-        for line in _wrap_detail(label, value):
+            value = _formatter.yes_no(value)
+        for line in _formatter.wrap_detail(label, value):
             print(line)
     print()
 
@@ -582,60 +578,5 @@ def main():
     except (KeyboardInterrupt, EOFError):
         print(f"\n{GOODBYE}")
 
-class ReportFormatter:
-    #The layout of the table does not change 
-    def __init__(self,columns=TABLE_COLUMNS, details= DETAIL_FIELDS):
-        self._columns = columns
-        self._details = details
-
-    #cut the text to an exact column and width 
-    def fit_text(self, text, width)-> str:
-        text = str(text)
-        if len(text) >= width:
-            text = text[:width - 2] + "…"
-        return text.ljust(width)
-    
-    def wrap_detail(self, label, text) -> list:
-        text= str(text).strip()
-        if text.lower() in EMPTY_VALUES:
-            return []
-        indent = " " * DETAIL_INDENT
-        label_cell = f"{label}:".ljust(DETAIL_LABEL_WIDTH)
-        lines = textwrap.wrap(text, width=DETAIL_TEXT_WIDTH) or [text]
-
-        # First Line Carries the Label, the Rest Line Up Underneath the Text
-        wrapped = [f"{indent}{CYAN}{label_cell}{RESET}{lines[0]}"]
-        wrapped += [f"{indent}{' ' * DETAIL_LABEL_WIDTH}{line}" for line in lines[1:]]
-        return wrapped
-
-    def yes_no(self,value)->str:
-        text = str(value).strip().lower()
-        if text in("true", "yes", "1", "1.0"):
-            return "YES"
-        if text in ("false", "no", "0", "0.0"):
-            return "NO"
-        return "-"
-
-    #build one summary row higlighting hospital and MOM cases in red 
-    def build_row(self, number, report):
-        row= self.fit_text(number, 5)
-        for heading, data_column, width, in self._columns:
-            value = report.get(data_column, "-")
-
-            #Yes/No columns: YES is worht shouting about 
-            if data_column in ALERT_COLUMNS:
-                value=self.yes_no(value)
-                cell = self.fit_text(value,width )
-                row += f"{RED}{BOLD}{cell}{RESET}" if value == "YES" else cell
-                continue
-
-            if data_column == "deadline":
-                cell =self.fit_text(value,width)
-                must_report = self.yes_no(report.get("mom_reportable")) == "YES"
-                row += f"{RED}{BOLD}{cell}{RESET}" if must_report else cell
-                continue
-
-            row += self.fit_text(value, width)
-        return row
 
 

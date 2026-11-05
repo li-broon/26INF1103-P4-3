@@ -15,20 +15,20 @@ from src import io_manager as io
 
 # Test that text shorter than the width is padded with spaces
 def test_fit_pads_short_text():
-    result = io._fit("Hello", 10)
+    result = io.ReportFormatter().fit_text("Hello", 10)
     assert len(result) == 10
     assert result == "Hello     "
     
 # Test that text longer than the width is cut off and appended with an ellipsis.
 def test_fit_truncates_long_text():
-    result = io._fit("This is a very long location name", 15)
+    result = io.ReportFormatter().fit_text("This is a very long location name", 15)
     assert len(result) == 15
     assert result.endswith("… ")
     assert result == "This is a ver… "
 
 # Test that numeric or boolean inputs are safely converted to strings before fitting.
 def test_fit_handles_non_strings():
-    result = io._fit(42.5, 6)
+    result = io.ReportFormatter().fit_text(42.5, 6)
     assert result == "42.5  "
 
 
