@@ -96,21 +96,6 @@ def printed(fn, *args):
         fn(*args)
     return re.sub(r"\x1b\[[0-9;]*m", "", out.getvalue())
 
-# Prompter Tests
-# Build a fake 'input' that hands back the given answers one at a time
-def fake_input(*answers):
-    answers = iter(answers)
-    return lambda prompt: next(answers)
-
-# Test that blank, text and out-of-range answers are rejected before a valid one is accepted
-def test_prompter_ask_number_rejects_bad_input_then_accepts():
-    prompter = io.Prompter(read=fake_input("", "abc", "9", "2"))
-    with contextlib.redirect_stdout(StringIO()) as out:
-        result = prompter.ask_number("Choose (1-3): ", 1, 3)
-    assert result == 2
-    assert "can't be left blank" in out.getvalue()
-    assert "'abc' is not a number" in out.getvalue()
-    assert "9 is not an option" in out.getvalue()
 
 # Test that a saved report is shown back with the worker's details plus the score and MOM deadline.
 def test_confirmation_card_shows_report_and_logic_results():
@@ -165,6 +150,34 @@ def test_full_report_from_table_uses_report_number():
     text = printed(io._print_full_report, table, 2)
     assert "Report #2" in text
     assert "Siti" in text
+
+# Prompter Tests
+# Build a fake 'input' that hands back the given answers one at a time
+def fake_input(*answers):
+    answers = iter(answers)
+    return lambda prompt: next(answers)
+
+# Test that blank, text and out-of-range answers are rejected before a valid one is accepted
+def test_prompter_ask_number_rejects_bad_input_then_accepts():
+    prompter = io.Prompter(read=fake_input("", "abc", "9", "2"))
+    with contextlib.redirect_stdout(StringIO()) as out:
+        result = prompter.ask_number("Choose (1-3): ", 1, 3)
+    assert result == 2
+    assert "can't be left blank" in out.getvalue()
+    assert "'abc' is not a number" in out.getvalue()
+    assert "9 is not an option" in out.getvalue()
+
+    # The user types y, so ask_yes_no should give back True
+def test_prompter_yes():
+    prompter = io.Prompter(read=fake_input("y"))
+    result = prompter.ask_yes_no("Leave?")
+    assert result is True
+
+# The user types n, so ask_yes_no should give back False
+def test_prompter_no():
+    prompter = io.Prompter(read=fake_input("n"))
+    result = prompter.ask_yes_no("Leave?")
+    assert result is False
 
 
 # Mini runner
