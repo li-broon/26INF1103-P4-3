@@ -174,23 +174,23 @@ class Prompter:
         self._read=read
         self._cancel_words= cancel_words
 
-    def ask_yes_no(self, question: str):
+    def ask_yes_no(self, question: str) -> bool:
         while True:
-            answer = self._read(f"{question} (y/n):").strip().lower()
+            answer = self._read(f"{question} (y/n): ").strip().lower()
             if answer in ("y", "yes"):
                 return True
             if answer in ("n", "no"):
                 return False
             print(f"{YELLOW}Please type 'y' for yes or 'n' for no.{RESET}")
 
-    def ask_number(self,prompt:str, low:int, high: int): 
+    def ask_number(self,prompt:str, low:int, high: int) -> int: 
         while True: 
             user_input = self._read(prompt).strip()
 
             #rejects blank input
             if user_input =="":
-              print(f"{YELLOW}This can't be left blank. Please type a number.{RESET}")
-              continue 
+                print(f"{YELLOW}This can't be left blank. Please type a number.{RESET}")
+                continue 
             
             try:
                 choice= int(user_input)
