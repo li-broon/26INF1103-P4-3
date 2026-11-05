@@ -34,48 +34,53 @@ def test_fit_handles_non_strings():
 
 # Pagination Tests
 
-# Test page calculation when the row count perfectly divides by PAGE_SIZE.
+# Pager Tests
+
+# Test page count when the rows divide exactly: 10 rows at 5 per page = 2 pages
 def test_page_count_exact_multiple():
+    assert io.Pager(10, page_size=5).page_count() == 2
 
-    # Assuming PAGE_SIZE is 5, a 10-row table should be exactly 2 pages
-    dummy_table = pd.DataFrame([{"id": i} for i in range(10)])
-    assert io._page_count(dummy_table) == -(-10 // io.PAGE_SIZE)
-
-# Test page calculation when the row count spills over into a new page.
+# Test page count when rows spill onto an extra page: 12 rows at 5 per page = 3 pages
 def test_page_count_with_remainder():
-    
-    # A 12-row table should be 3 pages
-    dummy_table = pd.DataFrame([{"id": i} for i in range(12)])
-    assert io._page_count(dummy_table) == -(-12 // io.PAGE_SIZE)
+    assert io.Pager(12, page_size=5).page_count() == 3
 
-# Test that an empty table still registers as at least 1 page to prevent UI crashes.
+# Test that an empty table still has 1 page, so the screen never shows 'page 1 of 0'
 def test_page_count_empty_table():
-    dummy_table = pd.DataFrame()
-    assert io._page_count(dummy_table) == 1
+    assert io.Pager(0).page_count() == 1
 
-# Test that page increments correctly when not on the last page.
+# Test that next() moves forward and says it moved
 def test_go_next_success():
-    new_page, changed = io._go_next(page=1, pages=3)
-    assert new_page == 2
-    assert changed is True
+    pager = io.Pager(9, page_size=3)
+    assert pager.next() is True
+    assert pager.current_page() == 2
 
-# Test that scrolling past the last page is blocked.
+# Test that next() refuses to go past the last page and stays put
 def test_go_next_blocked_at_end():
-    new_page, changed = io._go_next(page=3, pages=3)
-    assert new_page == 3
-    assert changed is False
+    pager = io.Pager(9, page_size=3)
+    pager.next()
+    pager.next()                        # now on page 3, the last page
+    assert pager.next() is False
+    assert pager.current_page() == 3
 
-# Test that page decrements correctly.
+# Test that previous() moves back and says it moved
 def test_go_previous_success():
-    new_page, changed = io._go_previous(page=2)
-    assert new_page == 1
-    assert changed is True
+    pager = io.Pager(9, page_size=3)
+    pager.next()                        # page 2
+    assert pager.previous() is True
+    assert pager.current_page() == 1
 
-# Test that scrolling into negative pages is blocked.
+# Test that previous() refuses to go before page 1 and stays put
 def test_go_previous_blocked_at_start():
-    new_page, changed = io._go_previous(page=1)
-    assert new_page == 1
-    assert changed is False
+    pager = io.Pager(9, page_size=3)
+    assert pager.previous() is False
+    assert pager.current_page() == 1
+
+# Test that the last page only shows the leftover rows: 7 rows, page 3 = row 7 only
+def test_row_range_last_page():
+    pager = io.Pager(7, page_size=3)
+    pager.next()
+    pager.next()
+    assert pager.row_range() == (6, 7)
 
 
 

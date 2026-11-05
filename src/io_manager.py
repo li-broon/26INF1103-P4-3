@@ -265,6 +265,43 @@ class ReportFormatter:
 # One Formatter Shared by the Whole App (Moves into the IOManager Class Later)
 _formatter = ReportFormatter()
 
+#Which page of a table is showing and moves between pages (Never Prints)
+class Pager:
+    def __init__(self, total_rows: int, page_size: int =PAGE_SIZE):
+        self._total = total_rows #How many rows the table has
+        self._page_size = page_size # How many rows fit on one page 
+        self._page = 1 #Ensure the page starts at 1
+
+    #the page currently shown 
+    def current_page(self) -> int:
+        return self._page 
+
+    #How many pages the table needs so the table still has 1 empty table
+    def page_count(self) -> int:
+        # Divide and round UP: -(-7 // 3) = 3, because 7 rows need 3 pages (3 + 3 + 1)
+        return max(-(-self._total//self._page_size), 1)
+
+    # The first and last row positions on the current page, e.g. (0, 3) for page 1
+    def row_range(self) -> tuple:
+        first = (self._page - 1) * self._page_size
+        last = min(first + self._page_size, self._total)
+        return first, last
+
+    #Moves to the next page, Return flase if already on the last page
+    def next(self) -> bool:
+        if self._page >= self.page_count():
+            return False
+        self._page += 1 #the Pager now remembers it's on the next page
+        return True
+
+    #Moves to the previous page. return false if already on Page 1
+    def previous(self) -> bool:
+        if self._page <=1:
+            return False
+        self._page -= 1
+        return True
+
+    
 #Display a numbered list of values and return the user's selection
 def _choose_value(heading, values):
   #The selected value, or None if the user chooses the 'Back' option.
@@ -283,17 +320,10 @@ def _choose_value(heading, values):
     #Subtract 1 because our menu starts at 1, but python lists start at 0
     return values[choice - 1]
 
-#Calculate the total number of pages required to display the data table.
-def _page_count(table):
-    pages = -(-len(table) // PAGE_SIZE)  # Divide and Round Up
-    return max(pages, 1)
-
 #print one formatted page of the incident reports table
-def _print_table(table, title, page=1):
+def _print_table(table, title, pager):
     total = len(table)
-    # Figure out exactly which rows belong on the current page
-    first = (page - 1) * PAGE_SIZE           
-    last = min(first + PAGE_SIZE, total)     
+    first, last = pager.row_range()   
 
     print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
 
@@ -318,7 +348,7 @@ def _print_table(table, title, page=1):
         print()
 
 
-    print(f"\n{CYAN}Page {page} of {_page_count(table)}  (showing {first + 1}-{last} of {total}){RESET}\n")
+        print(f"\n{CYAN}Page {pager.current_page()} of {pager.page_count()}  (showing {first + 1}-{last} of {total}){RESET}\n")
 
 #Print every field of one report in full, so long names and locations are not cut off
 def _print_full_report(table, number):
@@ -337,23 +367,6 @@ def _print_report_card(report, title):
         for line in _formatter.wrap_detail(label, value):
             print(line)
     print()
-
-# Move to the Next Page, or Warn if Already on the Last One
-# Returns (new page number, True if the page changed)
-def _go_next(page, pages):
-    # Prevent the user from scrolling past the end of the data
-    if page >= pages:
-        print(f"{YELLOW}You are already on the last page.{RESET}")
-        return page, False
-    return page + 1, True
-
-#Change of page index if previous page exits
-def _go_previous(page):
-    # Prevent the user from scrolling into negative pages
-    if page <= 1:
-        print(f"{YELLOW}You are already on the first page.{RESET}")
-        return page, False
-    return page - 1, True
 
 #Tell the worker whether their report was really saved. If it was, show it back to them
 #as a confirmation card, with the score and MOM details the Logic Manager added.
@@ -415,23 +428,26 @@ def show_filter_menu():
 
 #Manage the pagination loop, allowing a user to scroll through a table
 def browse_pages(table, title):
-    pages = _page_count(table)
-    page = 1
+    pager = Pager(len(table))
     show_page = True
 
     # Keep the user in the page loop until they choose to exit
     while True:
         if show_page:
-            _print_table(table, title, page)
+            _print_table(table, title, pager)
 
         choice = show_page_menu()
         if choice == 1:
-            page, show_page = _go_next(page, pages)
+            show_page = pager.next()
+            if not show_page:
+                print(f"{YELLOW} You are already on the last page. {RESET}")
         elif choice == 2:
-            page, show_page = _go_previous(page)
-        elif choice == 3: 
-            number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
-            _print_full_report(table, number)
+            show_page = pager, previous()
+            if not show_page:
+                print(f"{YELLOW}You are already on the first page. {RESET}")
+            elif choice == 3:
+                number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
+                _print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
         else:
@@ -447,22 +463,25 @@ def view_reports():
         return
 
     title = f"Saved Incident Reports ({len(table)} total, most urgent first)"
-    pages = _page_count(table) # Calculate the total number of pages based on the dataset size
-    page = 1
-    show_page = True  
+    pager = Pager(len(table))  # Tracks which page is showing
+    show_page = True
 
     while True:
         #Only print the table if the page has changed or it's the first display
-        if show_page: 
-            _print_table(table, title, page)
+        if show_page:
+            _print_table(table, title, pager)
 
         # Show sub-menu options for navigating pages or filtering reports
         choice = show_view_menu()
 
         if choice == 1:
-            page, show_page = _go_next(page, pages)
+            show_page = pager.next()
+            if not show_page:
+                print(f"{YELLOW}You are already on the last page.{RESET}")
         elif choice == 2:
-            page, show_page = _go_previous(page)
+            show_page = pager.previous()
+            if not show_page:
+                print(f"{YELLOW}You are already on the first page.{RESET}")
         elif choice == 3:
             filter_reports()
             # Stop the main table from re-printing immediately after they finish viewing the filtered results
@@ -577,6 +596,4 @@ def main():
 
     except (KeyboardInterrupt, EOFError):
         print(f"\n{GOODBYE}")
-
-
 
