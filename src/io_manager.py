@@ -47,23 +47,11 @@ WELCOME = f"""
 {RED}{BOLD} If someone is still in danger, call 995 and your supervisor FIRST! 🚨{RESET}
       {YELLOW} Type your message below and press Enter to start. ⬇️{RESET}
 """
-
-
-# Main Menu
-MENU = f"""
-========================================================================
-{CYAN}{BOLD}                     Main Menu{RESET}
-========================================================================
-      {GREEN}{BOLD}1{RESET}.  Report a new incident (chatbot)
-      {GREEN}{BOLD}2{RESET}.  View saved incident reports
-      {GREEN}{BOLD}3{RESET}.  Exit
-"""
-
-MIN_OPTION = 1
-MAX_OPTION = 3
 GOODBYE = f"{GREEN}Goodbye! Stay safe. {RESET}"
-CANCEL_WORDS = ("quit", "exit", "cancel")
+CANCEL_WORDS = ("quit", "exit", "cancel")  # Typing one of these in the chatbot asks to leave
 
+# How Many Reports are Shown on Each Page of the Table
+PAGE_SIZE = 3
 #Map UI headings to the exact column names and set their display width
 TABLE_COLUMNS = [
     ("Score", "importance_score", 7),
@@ -96,20 +84,6 @@ DETAIL_TEXT_WIDTH = 54   # Characters per Line Before Wrapping (Ends Level with 
 # Values that Mean "Nothing Was Saved Here" - Detail Lines with These are Skipped
 EMPTY_VALUES = ("", "-", "nan", "none", "null")
 
-# Saved Report Sub Menu
-VIEW_MENU = f"""
-========================================================================
-{CYAN}{BOLD}                    📄 Report Options{RESET}
-========================================================================
-      {GREEN}{BOLD}1{RESET}.  Next page
-      {GREEN}{BOLD}2{RESET}.  Previous page
-      {GREEN}{BOLD}3{RESET}.  Filter these reports
-      {GREEN}{BOLD}4{RESET}.  View a full report
-      {GREEN}{BOLD}5{RESET}.  Back to the main menu
-"""
-VIEW_MIN_OPTION = 1
-VIEW_MAX_OPTION = 5
-
 # Every Field Shown when One Report is Opened in Full: (Label, Column Name in 'data.csv')
 FULL_REPORT_FIELDS = [
     ("Reporter", "reporter_name"),
@@ -134,21 +108,6 @@ FULL_REPORT_FIELDS = [
 
 # True/False Fields, Shown as YES/No in the Full Report
 YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury", "mom_reportable")
-
-# Filter Menu
-PAGE_MENU = f"""
-========================================================================
-{CYAN}{BOLD}                     Page Options{RESET}
-========================================================================
-      {GREEN}{BOLD}1{RESET}.  Next page
-      {GREEN}{BOLD}2{RESET}.  Previous page
-      {GREEN}{BOLD}3{RESET}.  View a full report 
-      {GREEN}{BOLD}4{RESET}.  Back to report options 
-"""
-
-PAGE_MIN_OPTION = 1
-PAGE_MAX_OPTION = 4
-PAGE_SIZE = 3
 
 FILTER_COLUMNS = [
     ("Score", "importance_score"),
@@ -367,7 +326,12 @@ class PageMenu(Menu):
             "View a full report",
             "Back to report options",
         ]
-    
+
+# One Object per Menu, Sharing the One Prompter (Moves into the IOManager Class Later)
+_main_menu = MainMenu(_prompter)
+_view_menu = ViewMenu(_prompter)
+_page_menu = PageMenu(_prompter) 
+
 #Display a numbered list of values and return the user's selection
 def _choose_value(heading, values):
   #The selected value, or None if the user chooses the 'Back' option.
@@ -467,23 +431,6 @@ def _is_overdue(deadline, today=None):
         return False  # e.g. "Check incident date": no real date to compare
     return due < (today or date.today())
 
-
-#io_manager Main Functions
-#Display the main menu and prompt the user for a selection
-def show_menu():
-    print(MENU)
-    return _prompter.ask_number(f"Choose an option ({MIN_OPTION}-{MAX_OPTION}): ", MIN_OPTION, MAX_OPTION)
-
-# Display the sub-menu for viewing saved reports
-def show_view_menu():
-    print(VIEW_MENU)
-    return _prompter.ask_number(f"Choose an option ({VIEW_MIN_OPTION}-{VIEW_MAX_OPTION}): ", VIEW_MIN_OPTION, VIEW_MAX_OPTION)
-
-#Display the pagination control menu
-def show_page_menu():
-    print(PAGE_MENU)
-    return _prompter.ask_number(f"Choose an option ({PAGE_MIN_OPTION}-{PAGE_MAX_OPTION}): ", PAGE_MIN_OPTION, PAGE_MAX_OPTION)
-
 #Display the available columns that can be used for filtering
 def show_filter_menu():
     print(FILTER_HEADER)
@@ -502,7 +449,7 @@ def browse_pages(table, title):
         if show_page:
             _print_table(table, title, pager)
 
-        choice = show_page_menu()
+        choice = _page_menu.show()
         if choice == 1:
             show_page = pager.next()
             if not show_page:
@@ -538,7 +485,7 @@ def view_reports():
             _print_table(table, title, pager)
 
         # Show sub-menu options for navigating pages or filtering reports
-        choice = show_view_menu()
+        choice = _view_menu.show()
 
         if choice == 1:
             show_page = pager.next()
@@ -650,7 +597,7 @@ def main():
     # The main application loop. Displays the main menu and routes user input to the core functions.
     try:
         while True:
-            choice = show_menu()  
+            choice = _main_menu.show()  
 
             if choice == 1:
                 run_chatbot()

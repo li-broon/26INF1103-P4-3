@@ -31,8 +31,23 @@ def test_fit_handles_non_strings():
     result = io.ReportFormatter().fit_text(42.5, 6)
     assert result == "42.5  "
 
+# Menu Tests
 
-# Pagination Tests
+# Test that every menu shares the same show() but has its own number of options:
+# the same code accepts 3 on the main menu, 5 on the view menu and 4 on the page menu
+def test_menus_accept_their_own_last_option():
+    menus = [
+        (io.MainMenu, 3),
+        (io.ViewMenu, 5),
+        (io.PageMenu, 4),
+    ]
+    for menu_class, last_option in menus:
+        menu = menu_class(io.Prompter(read=fake_input(str(last_option + 1), str(last_option))))
+        with contextlib.redirect_stdout(StringIO()) as out:
+            choice = menu.show()
+        assert choice == last_option                                     # the last real option is accepted
+        assert f"{last_option + 1} is not an option" in out.getvalue()   # one past the end is rejected
+
 
 # Pager Tests
 
