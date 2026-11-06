@@ -9,7 +9,18 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from google.genai import errors
-from src import ai_manager as am
+from src.ai_manager import AIManager, GeminiService, AIServiceError
+from src.ai_manager.constants import SEVERITY_LEVELS, UNKNOWN_VALUE
+from src.ai_manager.fields.text_field import TextField
+from src.ai_manager.fields.date_field import DateField
+from src.ai_manager.fields.time_field import TimeField
+from src.ai_manager.fields.boolean_field import BooleanField
+from src.ai_manager.fields.number_field import NumberField
+from src.ai_manager.fields.choice_field import ChoiceField
+from src.ai_manager.fields.field_set import FieldSet
+from src.ai_manager.services import gemini_service  # Its 'time' Module is Patched so Retry Waits are Skipped
+from src.ai_manager.services.ai_service import AIService
+from src.ai_manager.conversation.incident_conversation import IncidentConversation
 
 # -------------------- #
 # Test Helpers (Fakes)
@@ -18,8 +29,8 @@ from src import ai_manager as am
 # Fake AI Provider used Instead of Gemini, so Tests Run Without a Live API.
 # It Follows the Same AIService Contract, so the Conversation Cannot Tell the Difference.
 # Each List Holds Reply Texts (or AIServiceErrors to Raise) Given Out in Order; the Last One Repeats.
-class FakeAIService(am.AIService):
-    def __init__(self, chat_replies: list[str | am.AIServiceError], json_replies: list[str | am.AIServiceError] | None = None):
+class FakeAIService(AIService):
+    def __init__(self, chat_replies: list[str | AIServiceError], json_replies: list[str | AIServiceError] | None = None):
         self._chat_replies = list(chat_replies)
         self._json_replies = list(json_replies or [])
         self.system_prompt = None
@@ -38,9 +49,9 @@ class FakeAIService(am.AIService):
         self.json_prompts.append(prompt)
         return self._next(self._json_replies)
 
-    def _next(self, replies: list[str | am.AIServiceError]) -> str:
+    def _next(self, replies: list[str | AIServiceError]) -> str:
         item = replies.pop(0) if len(replies) > 1 else replies[0]
-        if isinstance(item, am.AIServiceError):
+        if isinstance(item, AIServiceError):
             raise item
         return item
 
@@ -63,8 +74,8 @@ def chat_reply(report: dict, is_complete: bool = True, reply: str = "Thank you!"
     return json.dumps({"reply": reply, "is_complete": is_complete, "report": report})
 
 # Start a Conversation that Talks to the Fake Service
-def new_conversation(service: am.AIService) -> am.IncidentConversation:
-    return am.AIManager(service).start_conversation()
+def new_conversation(service: AIService) -> IncidentConversation:
+    return AIManager(service).start_conversation()
 
 # ------------------ #
 # Report Field Tests
@@ -72,53 +83,53 @@ def new_conversation(service: am.AIService) -> am.IncidentConversation:
 
 # Text Must be Non-Empty Text (Lists, Numbers and Blank Strings are Rejected)
 def test_text_field():
-    field = am.TextField("location", "where it happened")
+    field = TextField("location", "where it happened")
     assert field.is_valid("Tuas site")
     for bad in ["", "   ", None, 5, ["Tuas"]]:
         assert not field.is_valid(bad), bad
 
 # Dates Must be Real YYYY-MM-DD Dates and Not in the Future; "unknown" is Not Allowed
 def test_date_field():
-    field = am.DateField("incident_date", "date in YYYY-MM-DD")
+    field = DateField("incident_date", "date in YYYY-MM-DD")
     assert field.is_valid("2026-10-13")
-    for bad in ["13/10/2026", "2026-13-45", "yesterday", "2999-01-01", am.UNKNOWN_VALUE, None]:
+    for bad in ["13/10/2026", "2026-13-45", "yesterday", "2999-01-01", UNKNOWN_VALUE, None]:
         assert not field.is_valid(bad), bad
 
 # "unknown" is Accepted Only by Fields Created with allows_unknown=True
 def test_unknown_only_where_allowed():
-    allows = am.TimeField("incident_time", "time", allows_unknown=True)
-    strict = am.TimeField("incident_time", "time")
-    assert allows.is_valid(am.UNKNOWN_VALUE)
-    assert not strict.is_valid(am.UNKNOWN_VALUE)
+    allows = TimeField("incident_time", "time", allows_unknown=True)
+    strict = TimeField("incident_time", "time")
+    assert allows.is_valid(UNKNOWN_VALUE)
+    assert not strict.is_valid(UNKNOWN_VALUE)
     assert allows.is_valid("00:00") and not allows.is_valid("25:99")
 
 # true/false Must be Real Booleans, Not Text
 def test_boolean_field():
-    field = am.BooleanField("hospitalised", "sent to hospital")
+    field = BooleanField("hospitalised", "sent to hospital")
     assert field.is_valid(True) and field.is_valid(False)
     for bad in ["true", "yes", "no", 1, None]:
         assert not field.is_valid(bad), bad
 
 # Numbers Must be 0 or More (True/False and Text are Not Numbers)
 def test_number_field():
-    field = am.NumberField("work_stoppage_hours", "hours")
+    field = NumberField("work_stoppage_hours", "hours")
     assert field.is_valid(0) and field.is_valid(2.5)
     for bad in [-1, "2", True, None, float("inf")]:
         assert not field.is_valid(bad), bad
 
 # Choice Fields Only Accept their Exact Choices, and Describe Them for the Prompt
 def test_choice_field():
-    field = am.ChoiceField("ai_severity", am.SEVERITY_LEVELS)
+    field = ChoiceField("ai_severity", SEVERITY_LEVELS)
     assert field.is_valid("Critical")
     assert not field.is_valid("critical")  # Wrong Casing would Score 0 in 'logic_manager'
     assert field.describe() == "- ai_severity: one of Low, Medium, High, Critical"
 
 # A FieldSet Checks Different Field Types Through the Same is_valid() Call (Polymorphism)
 def test_field_set_lists_invalid_fields():
-    fields = am.FieldSet([
-        am.TextField("reporter_name", "name"),
-        am.DateField("incident_date", "date"),
-        am.BooleanField("hospitalised", "hospital"),
+    fields = FieldSet([
+        TextField("reporter_name", "name"),
+        DateField("incident_date", "date"),
+        BooleanField("hospitalised", "hospital"),
     ])
     invalid = fields.invalid({"reporter_name": "Ravi", "incident_date": "13/10/2026", "hospitalised": "no"})
     assert [field.name for field in invalid] == ["incident_date", "hospitalised"]
@@ -149,14 +160,14 @@ def test_bad_json_is_retried():
     service = FakeAIService(["not json", chat_reply({}, is_complete=False, reply="Fixed")])
     reply = new_conversation(service).send("hi")
     assert reply.reply == "Fixed"
-    assert service.sent_messages[1] == am.IncidentConversation.BAD_JSON_MESSAGE
+    assert service.sent_messages[1] == IncidentConversation.BAD_JSON_MESSAGE
 
 # If the AI Never Sends Valid JSON, the Worker Gets an Error (Never a Crash)
 def test_bad_json_every_time_gives_error():
     service = FakeAIService(["not json"])
     reply = new_conversation(service).send("hi")
     assert reply.error == "The AI kept replying in the wrong format."
-    assert len(service.sent_messages) == 1 + am.IncidentConversation.MAX_FORMAT_RETRIES
+    assert len(service.sent_messages) == 1 + IncidentConversation.MAX_FORMAT_RETRIES
 
 # Wrong Types for reply / is_complete Count as the Wrong Format (Text "false" would Otherwise be Treated as True)
 def test_wrong_reply_types_are_rejected():
@@ -176,7 +187,7 @@ def test_unknown_report_keys_are_dropped():
 
 # API Errors Reach the Worker with their Code and Status
 def test_api_error_becomes_error_reply():
-    service = FakeAIService([am.AIServiceError("quota exceeded", 429, "RESOURCE_EXHAUSTED")])
+    service = FakeAIService([AIServiceError("quota exceeded", 429, "RESOURCE_EXHAUSTED")])
     reply = new_conversation(service).send("hi")
     assert reply.error == "quota exceeded"
     assert reply.error_code == 429 and reply.error_status == "RESOURCE_EXHAUSTED"
@@ -232,10 +243,10 @@ def test_invalid_analysis_is_retried():
 # If the Analysis Keeps Failing (or the API Fails), the Worker Gets a Clear Message to Try Again
 def test_analysis_failure_gives_clear_error():
     empty_analysis = {name: None for name in GOOD_ANALYSIS}
-    for analysis_replies in (["not json"], [am.AIServiceError("offline")]):
+    for analysis_replies in (["not json"], [AIServiceError("offline")]):
         service = FakeAIService([chat_reply({**GOOD_WORKER_DETAILS, **empty_analysis})], analysis_replies)
         reply = new_conversation(service).send("ok")
-        assert reply.error == am.IncidentConversation.ANALYSIS_FAILED_MESSAGE
+        assert reply.error == IncidentConversation.ANALYSIS_FAILED_MESSAGE
         assert reply.is_complete is False
 
 # ------------------------------------ #
@@ -264,23 +275,23 @@ def api_error(code: int, status: str) -> errors.APIError:
     return errors.APIError(code, {"error": {"message": f"error {code}", "status": status}})
 
 # Build a GeminiService with a Dummy Key (Creating the Client Does Not Contact Google)
-def dummy_gemini_service() -> am.GeminiService:
+def dummy_gemini_service() -> GeminiService:
     with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
-        return am.GeminiService()
+        return GeminiService()
 
 # A Missing API Key is Reported Before Any Chat Starts
 def test_missing_api_key_raises():
     with mock.patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
         try:
-            am.GeminiService()
+            GeminiService()
             assert False, "Expected AIServiceError"
-        except am.AIServiceError as error:
+        except AIServiceError as error:
             assert "GEMINI_API_KEY is missing" in error.message
 
 # Busy (503) and Rate Limited (429) Requests are Retried, then Succeed
 def test_busy_and_rate_limited_are_retried():
     chat = FakeGeminiChat([api_error(503, "UNAVAILABLE"), api_error(429, "RESOURCE_EXHAUSTED")])
-    with mock.patch.object(am.time, "sleep") as fake_sleep:
+    with mock.patch.object(gemini_service.time, "sleep") as fake_sleep:
         assert dummy_gemini_service().send_chat_message(chat, "hi") == "ok"
     assert chat.attempts == 3
     assert [call.args[0] for call in fake_sleep.call_args_list] == [3, 6]
@@ -291,7 +302,7 @@ def test_other_api_errors_are_not_retried():
     try:
         dummy_gemini_service().send_chat_message(chat, "hi")
         assert False, "Expected AIServiceError"
-    except am.AIServiceError as error:
+    except AIServiceError as error:
         assert error.code == 400 and error.status == "INVALID_ARGUMENT"
     assert chat.attempts == 1
 
@@ -301,7 +312,7 @@ def test_api_error_without_message_still_shows_error():
     try:
         dummy_gemini_service().send_chat_message(chat, "hi")
         assert False, "Expected AIServiceError"
-    except am.AIServiceError as error:
+    except AIServiceError as error:
         assert error.message == "Gemini returned an error with no details (code 500)."
         reply = new_conversation(FakeAIService([error])).send("hi")
         assert reply.error == error.message
@@ -310,13 +321,13 @@ def test_api_error_without_message_still_shows_error():
 # Gives Up after MAX_ATTEMPTS when Gemini Stays Busy
 def test_gives_up_when_always_busy():
     chat = FakeGeminiChat([api_error(503, "UNAVAILABLE")] * 10)
-    with mock.patch.object(am.time, "sleep"):
+    with mock.patch.object(gemini_service.time, "sleep"):
         try:
             dummy_gemini_service().send_chat_message(chat, "hi")
             assert False, "Expected AIServiceError"
-        except am.AIServiceError as error:
+        except AIServiceError as error:
             assert error.code == 503
-    assert chat.attempts == am.GeminiService.MAX_ATTEMPTS
+    assert chat.attempts == GeminiService.MAX_ATTEMPTS
 
 # No Internet or a Timeout Becomes an AIServiceError Instead of Crashing
 def test_connection_problem_becomes_service_error():
@@ -324,7 +335,7 @@ def test_connection_problem_becomes_service_error():
     try:
         dummy_gemini_service().send_chat_message(chat, "hi")
         assert False, "Expected AIServiceError"
-    except am.AIServiceError as error:
+    except AIServiceError as error:
         assert "Could not reach the AI" in error.message
         assert error.code is None
 
