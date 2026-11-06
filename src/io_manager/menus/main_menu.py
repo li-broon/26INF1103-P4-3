@@ -1,4 +1,4 @@
-from src.io_manager.menu.Menu import Menu
+from src.io_manager.menus.menu import Menu
 
 
 #child class of Menu(Main Menu)

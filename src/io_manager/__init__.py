@@ -35,11 +35,11 @@ from src.io_manager.constants import (
 )
 from src.io_manager.display.pager import Pager
 from src.io_manager.display.report_formatter import ReportFormatter
-from src.io_manager.menu.FilterMenu import FilterMenu
-from src.io_manager.menu.main_menu import MainMenu
-from src.io_manager.menu.Menu import Menu
-from src.io_manager.menu.PageMenu import PageMenu
-from src.io_manager.menu.ViewMenu import ViewMenu
+from src.io_manager.menus.filter_menu import FilterMenu
+from src.io_manager.menus.main_menu import MainMenu
+from src.io_manager.menus.menu import Menu
+from src.io_manager.menus.page_menu import PageMenu
+from src.io_manager.menus.view_menu import ViewMenu
 from src.io_manager.prompts.prompter import Prompter
 from src.logic_manager import logic
 
