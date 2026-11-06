@@ -1,9 +1,6 @@
 # ------- #
 # Imports
 # ------- #
-
-import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
-from abc import ABC, abstractmethod  # Abstract Base Classes, for the Menu Contract
 from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
@@ -38,103 +35,16 @@ from src.io_manager.constants import (
 )
 from src.io_manager.display.pager import Pager
 from src.io_manager.display.report_formatter import ReportFormatter
+from src.io_manager.menu.FilterMenu import FilterMenu
+from src.io_manager.menu.main_menu import MainMenu
+from src.io_manager.menu.Menu import Menu
+from src.io_manager.menu.PageMenu import PageMenu
+from src.io_manager.menu.ViewMenu import ViewMenu
 from src.io_manager.prompts.prompter import Prompter
 from src.logic_manager import logic
 
-# One Prompter Shared by the Whole App (Moves into the IOManager Class Later)
-_prompter = Prompter()
-
-
-
-# One Formatter Shared by the Whole App (Moves into the IOManager Class Later)
-_formatter = ReportFormatter()
-
-#Which page of a table is showing and moves between pages (Never Prints)
-
-#A Numbered Menu: Shows a Title and Options, then Asks the User to Pick One
-#Each Child Menu Only Says WHAT its Title and Options Are, the Parent Does the Showing and Asking
-class Menu(ABC):
-    def __init__(self, prompter: Prompter):
-        self._prompter = prompter   # The shared Prompter, passed in (the menu uses it but doesn't own it)
-
-    # Every child menu MUST say what its title is
-    @abstractmethod
-    def title(self) -> str:
-        pass
-
-    # Every child menu MUST list its options, in order
-    @abstractmethod
-    def options(self) -> list:
-        pass
-
-    # a child menu that needs one overrides this method
-    def subtitle(self) -> str:
-        return ""
-    # Same for every menu: print the title box and numbered options, then ask for a valid number
-    def show(self) -> int:
-        line = "=" * 72
-        print(f"\n{line}\n{CYAN}{BOLD}{self.title().center(72)}{RESET}\n{line}")
-
-        if self.subtitle():
-            print(f"      {self.subtitle()}")
-
-        options = self.options()
-        for number, label in enumerate(options, start=1):
-            print(f"      {GREEN}{BOLD}{number}{RESET}.  {label}")
-        return self._prompter.ask_number(f"Choose an option (1-{len(options)}): ", 1, len(options))
-
-
-#child class of Menu(Main Menu)
-class MainMenu(Menu):
-    def title(self) -> str:
-        return "Main Menu"
-
-    def options(self) -> list:
-        return [
-            "Report a new incident (chatbot)",
-            "View saved incident reports",
-            "Exit",
-        ]
-
-#Child Class of Menu (View Menu)
-class ViewMenu(Menu):
-    def title(self) -> str:
-        return "📄 Report Options"
-
-    def options(self) -> list:
-        return [
-            "Next page",
-            "Previous page",
-            "Filter these reports",
-            "View a full report",
-            "Back to the main menu",
-        ]
-
-
-#Child Class of Menu(PageMenu)
-class PageMenu(Menu):
-    def title(self) -> str:
-        return "Page Options"
-
-    def options(self) -> list:
-        return [
-            "Next page",
-            "Previous page",
-            "View a full report",
-            "Back to report options",
-        ]
-
-#The Menu Asking Which Column to Filter By; its Options Come from FILTER_COLUMNS, Plus Back
-class FilterMenu(Menu):
-    def title(self) -> str:
-        return "🔍 Filter Reports"
-
-    def subtitle(self) -> str:
-        return "Which column would you like to filter by?"
-
-    def options(self) -> list:
-        return [heading for heading, column in FILTER_COLUMNS] + ["↩️  Back"]
-
+_prompter= Prompter()
+_formatter= ReportFormatter()
 # One Object per Menu, Sharing the One Prompter (Moves into the IOManager Class Later)
 _main_menu = MainMenu(_prompter)
 _view_menu = ViewMenu(_prompter)
@@ -227,10 +137,10 @@ def _print_save_outcome(report, outcome):
     # A MOM-reportable incident has a legal deadline, so make it stand out
     if outcome["mom_reportable"] == "Yes":
         if _is_overdue(outcome["deadline"]):
-            print(f"{RED}{BOLD}⚠️  OVERDUE: this incident had to be reported to MOM by {outcome['deadline']}. "
+            print(f"{RED}{BOLD}  OVERDUE: this incident had to be reported to MOM by {outcome['deadline']}. "
                   f"Tell your supervisor now.{RESET}\n")
         else:
-            print(f"{RED}{BOLD}⚠️  This incident must be reported to MOM by {outcome['deadline']}.{RESET}\n")
+            print(f"{RED}{BOLD}  This incident must be reported to MOM by {outcome['deadline']}.{RESET}\n")
 
 #Check whether a MOM deadline has already passed.A deadline of today is not overdue yet
 def _is_overdue(deadline, today=None):
@@ -261,7 +171,7 @@ def browse_pages(table, title):
                 print(f"{YELLOW}You are already on the first page. {RESET}")
         elif choice == 3:
             number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
-            print_full_report(table, number)
+            _print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
         else:

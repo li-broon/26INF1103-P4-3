@@ -1,9 +1,19 @@
 import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
 
 from src.io_manager.constants import (
-    ALERT_COLUMNS, BOLD, CYAN, DETAIL_FIELDS, DETAIL_INDENT, DETAIL_LABEL_WIDTH,
-    DETAIL_TEXT_WIDTH, EMPTY_VALUES, RED, RESET, TABLE_COLUMNS,
+    ALERT_COLUMNS,
+    BOLD,
+    CYAN,
+    DETAIL_FIELDS,
+    DETAIL_INDENT,
+    DETAIL_LABEL_WIDTH,
+    DETAIL_TEXT_WIDTH,
+    EMPTY_VALUES,
+    RED,
+    RESET,
+    TABLE_COLUMNS,
 )
+
 
 class ReportFormatter:
     #The layout of the table does not change 
@@ -39,13 +49,13 @@ class ReportFormatter:
             return "No"
         return "-"
 
-    #build one summary row higlighting hospital and MOM cases in red 
-    def build_row(self, number, report):
+    #build one summary row highlighting hospital and MOM cases in red 
+    def build_row(self, number, report) -> str:
         row= self.fit_text(number, 5)
-        for heading, data_column, width, in self._columns:
+        for heading, data_column, width in self._columns:
             value = report.get(data_column, "-")
 
-            #Yes/No columns: YES is worht shouting about 
+            #Yes/No columns: YES is worth shouting about 
             if data_column in ALERT_COLUMNS:
                 value=self.yes_no(value)
                 cell = self.fit_text(value,width )

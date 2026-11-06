@@ -1,5 +1,7 @@
 from src.io_manager.constants import PAGE_SIZE
 
+
+#Which page of a table is showing and moves between pages (Never Prints)
 class Pager:
     def __init__(self, total_rows: int, page_size: int =PAGE_SIZE):
         self._total = total_rows #How many rows the table has
@@ -21,7 +23,7 @@ class Pager:
         last = min(first + self._page_size, self._total)
         return first, last
 
-    #Moves to the next page, Return flase if already on the last page
+    #Moves to the next page, Return false if already on the last page
     def next(self) -> bool:
         if self._page >= self.page_count():
             return False

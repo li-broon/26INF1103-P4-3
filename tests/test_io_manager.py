@@ -31,8 +31,15 @@ def test_fit_handles_non_strings():
     result = io.ReportFormatter().fit_text(42.5, 6)
     assert result == "42.5  "
 
-# Menu Tests
+# Test that Menu is abstract: Python must refuse to create a plain Menu
+def test_menu_is_abstract():
+    try:
+        io.Menu(io.Prompter())
+        assert False, "Menu should be abstract"
+    except TypeError:
+        pass
 
+# Menu Tests
 # Test that every menu shares the same show() but has its own number of options:
 # the same code accepts 3 on the main menu, 5 on the view menu and 4 on the page menu
 def test_menus_accept_their_own_last_option():
