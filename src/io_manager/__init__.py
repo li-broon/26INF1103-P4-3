@@ -41,45 +41,17 @@ from src.io_manager.menus.menu import Menu
 from src.io_manager.menus.page_menu import PageMenu
 from src.io_manager.menus.view_menu import ViewMenu
 from src.io_manager.prompts.prompter import Prompter
+from src.io_manager.display.report_table_view import ReportTableView
 from src.logic_manager import logic
 
 _prompter= Prompter()
 _formatter= ReportFormatter()
+_table_view = ReportTableView(_formatter)
 # One Object per Menu, Sharing the One Prompter (Moves into the IOManager Class Later)
 _main_menu = MainMenu(_prompter)
 _view_menu = ViewMenu(_prompter)
 _page_menu = PageMenu(_prompter) 
 _filter_menu = FilterMenu(_prompter)
-
-#print one formatted page of the incident reports table
-def _print_table(table, title, pager):
-    total = len(table)
-    first, last = pager.row_range()   
-
-    print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
-
-    # Build the header row using our fixed column widths
-    header = _formatter.fit_text("No.", 5)
-    for heading, column, width in TABLE_COLUMNS:
-        header += _formatter.fit_text(heading, width)
-    print(f"{BOLD}{header}{RESET}")
-    print("-" * len(header))
-
-    #.iloc to show position 0-4 in page 1 and 5-9 for page 2
-    #fillna with - with empty cells and save the results to variable called rows
-    rows = table.iloc[first:last].fillna("-")
-    #One Block per Report: a Summary Row, then its Full-Text Details Underneath
-    #(Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
-    for number, report in enumerate(rows.to_dict("records"), start=first + 1):
-        print(_formatter.build_row(number, report))
-
-        for label, column in DETAIL_FIELDS:
-            for line in _formatter.wrap_detail(label, report.get(column, "-")):
-                print(line)
-        print()
-
-
-    print(f"\n{CYAN}Page {pager.current_page()} of {pager.page_count()}  (showing {first + 1}-{last} of {total}){RESET}\n")
 
 #Print every field of one report in full, so long names and locations are not cut off
 def _print_full_report(table, number):
@@ -140,7 +112,7 @@ def browse_pages(table, title):
     # Keep the user in the page loop until they choose to exit
     while True:
         if show_page:
-            _print_table(table, title, pager)
+            _table_view.show(table, title, pager)
 
         choice = _page_menu.show()
         if choice == 1:
@@ -175,7 +147,7 @@ def view_reports():
     while True:
         #Only print the table if the page has changed or it's the first display
         if show_page:
-            _print_table(table, title, pager)
+            _table_view.show(table, title, pager)
 
         # Show sub-menu options for navigating pages or filtering reports
         choice = _view_menu.show()

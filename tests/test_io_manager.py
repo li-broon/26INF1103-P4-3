@@ -179,6 +179,15 @@ def test_full_report_from_table_uses_report_number():
     assert "Report #2" in text
     assert "Siti" in text
 
+# Test that one page shows the header, 3 reports, and the footer exactly once
+def test_table_view_shows_one_page():
+    table = pd.DataFrame([REPORT] * 4)
+    view = io.ReportTableView(io.ReportFormatter())
+    text = printed(view.show, table, "Saved Reports", io.Pager(len(table), page_size=3))
+    assert "Score" in text and "Severity" in text
+    assert text.count("Ahmad bin Ismail") == 3
+    assert text.count("Page 1 of 2") == 1
+
 # Prompter Tests
 # Build a fake 'input' that hands back the given answers one at a time
 def fake_input(*answers):
