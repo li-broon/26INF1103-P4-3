@@ -79,7 +79,7 @@ def _print_table(table, title, pager):
         print()
 
 
-        print(f"\n{CYAN}Page {pager.current_page()} of {pager.page_count()}  (showing {first + 1}-{last} of {total}){RESET}\n")
+    print(f"\n{CYAN}Page {pager.current_page()} of {pager.page_count()}  (showing {first + 1}-{last} of {total}){RESET}\n")
 
 #Print every field of one report in full, so long names and locations are not cut off
 def _print_full_report(table, number):
@@ -146,7 +146,7 @@ def browse_pages(table, title):
         if choice == 1:
             show_page = pager.next()
             if not show_page:
-                print(f"{YELLOW} You are already on the last page. {RESET}")
+                print(f"{YELLOW}You are already on the last page. {RESET}")
         elif choice == 2:
             show_page = pager.previous()
             if not show_page:
