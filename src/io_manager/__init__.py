@@ -1,7 +1,9 @@
 # ------- #
 # Imports
 # ------- #
-from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
+from types import (
+    SimpleNamespace,  # Turns logic()'s dict into an object, until IOManager uses LogicManager
+)
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
 from src.data_manager import (
@@ -34,75 +36,26 @@ from src.io_manager.constants import (
     YES_NO_COLUMNS,
 )
 from src.io_manager.display.pager import Pager
+from src.io_manager.display.report_card_view import ReportCardView
 from src.io_manager.display.report_formatter import ReportFormatter
+from src.io_manager.display.report_table_view import ReportTableView
 from src.io_manager.menus.filter_menu import FilterMenu
 from src.io_manager.menus.main_menu import MainMenu
 from src.io_manager.menus.menu import Menu
 from src.io_manager.menus.page_menu import PageMenu
 from src.io_manager.menus.view_menu import ViewMenu
 from src.io_manager.prompts.prompter import Prompter
-from src.io_manager.display.report_table_view import ReportTableView
 from src.logic_manager import logic
 
 _prompter= Prompter()
 _formatter= ReportFormatter()
 _table_view = ReportTableView(_formatter)
+_card_view = ReportCardView(_formatter)
 # One Object per Menu, Sharing the One Prompter (Moves into the IOManager Class Later)
 _main_menu = MainMenu(_prompter)
 _view_menu = ViewMenu(_prompter)
 _page_menu = PageMenu(_prompter) 
 _filter_menu = FilterMenu(_prompter)
-
-#Print every field of one report in full, so long names and locations are not cut off
-def _print_full_report(table, number):
-    # Subtract 1 because the table numbers start at 1, but rows start at 0
-    report = table.iloc[number - 1].fillna("-").to_dict()
-    _print_report_card(report, f"Report #{number}")
-
-#Print every field of one report under a title.Used for a saved report opened from
-#the table, and for the confirmation card the worker sees after submitting
-def _print_report_card(report, title):
-    print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
-    for label, column in FULL_REPORT_FIELDS:
-        value = report.get(column, "-")
-        if column in YES_NO_COLUMNS:
-            value = _formatter.yes_no(value)
-        for line in _formatter.wrap_detail(label, value):
-            print(line)
-    print()
-
-#Tell the worker whether their report was really saved. If it was, show it back to them
-#as a confirmation card, with the score and MOM details the Logic Manager added.
-def _print_save_outcome(report, outcome):
-    # Only claim success when the Data Manager actually wrote the record
-    if not outcome["saved"]:
-        print(f"\n{RED}{BOLD} Your report was NOT saved.{RESET} {outcome['message']}")
-        print(f"{YELLOW}Please tell your supervisor about this incident directly.{RESET}\n")
-        return
-
-    print(f"\n{GREEN}{BOLD} Your report has been saved.{RESET}")
-
-    #The card shows what was saved: the worker's details plus the Logic Manager's results
-    card = dict(report)
-    for column in ("importance_score", "mom_reportable", "deadline"):
-        card[column] = outcome[column]
-    _print_report_card(card, "Your Saved Report")
-
-    # A MOM-reportable incident has a legal deadline, so make it stand out
-    if outcome["mom_reportable"] == "Yes":
-        if _is_overdue(outcome["deadline"]):
-            print(f"{RED}{BOLD}  OVERDUE: this incident had to be reported to MOM by {outcome['deadline']}. "
-                  f"Tell your supervisor now.{RESET}\n")
-        else:
-            print(f"{RED}{BOLD}  This incident must be reported to MOM by {outcome['deadline']}.{RESET}\n")
-
-#Check whether a MOM deadline has already passed.A deadline of today is not overdue yet
-def _is_overdue(deadline, today=None):
-    try:
-        due = datetime.strptime(str(deadline), "%Y-%m-%d").date()
-    except ValueError:
-        return False  # e.g. "Check incident date": no real date to compare
-    return due < (today or date.today())
 
 #Manage the pagination loop, allowing a user to scroll through a table
 def browse_pages(table, title):
@@ -125,7 +78,7 @@ def browse_pages(table, title):
                 print(f"{YELLOW}You are already on the first page. {RESET}")
         elif choice == 3:
             number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
-            _print_full_report(table, number)
+            _card_view.show_from_table(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
         else:
@@ -166,7 +119,7 @@ def view_reports():
             show_page = False
         elif choice == 4:
             number = _prompter.ask_number(f"Which report number, out of all {len(table)} saved reports?: (1-{len(table)}):", 1, len(table))
-            _print_full_report(table, number)
+            _card_view.show_from_table(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
         else:
@@ -248,8 +201,8 @@ def run_chatbot():
 
             # If all required fields are collected, push the payload to the Logic Manager for scoring
             if result.is_complete:
-                outcome = logic(result.report)
-                _print_save_outcome(result.report, outcome)
+                outcome = SimpleNamespace(**logic(result.report))
+                _card_view.show_save_outcome(result.report, outcome)
 
                 if _prompter.ask_yes_no("Would you like to view all saved reports now?"):
                     view_reports()

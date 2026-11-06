@@ -5,6 +5,7 @@ import re
 import traceback
 import contextlib
 from datetime import date
+from types import SimpleNamespace
 from io import StringIO
 import pandas as pd
 
@@ -106,7 +107,6 @@ def test_row_range_last_page():
     assert pager.row_range() == (6, 7)
 
 
-
 # Report Card Tests
 REPORT = {
     "reporter_name": "Ahmad bin Ismail",
@@ -115,8 +115,16 @@ REPORT = {
     "is_near_miss": False,
     "injury_status": "",
 }
-SAVED = {"saved": True, "message": "Record saved.", "importance_score": 7.4,
-         "mom_reportable": "Yes", "deadline": "2099-12-31"}
+
+# A fake SaveOutcome: the same fields as the Logic Manager's real one
+SAVED = SimpleNamespace(saved=True, message="Record saved.", importance_score=7.4,
+                        mom_reportable="Yes", deadline="2099-12-31")
+
+# A copy of SAVED with some fields changed, e.g. outcome(deadline="2022-12-22")
+def outcome(**changes):
+    return SimpleNamespace(**{**vars(SAVED), **changes})
+
+card_view = io.ReportCardView(io.ReportFormatter())
 
 # Run fn and return what it printed, with colour codes removed.
 def printed(fn, *args):
@@ -127,7 +135,7 @@ def printed(fn, *args):
 
 # Test that a saved report is shown back with the worker's details plus the score and MOM deadline.
 def test_confirmation_card_shows_report_and_logic_results():
-    text = printed(io._print_save_outcome, REPORT, SAVED)
+    text = printed(card_view.show_save_outcome, REPORT, SAVED)
     assert "Your report has been saved" in text
     assert "Your Saved Report" in text
     assert "Ahmad bin Ismail" in text
@@ -139,8 +147,8 @@ def test_confirmation_card_shows_report_and_logic_results():
 
 # Test that a failed save shows the reason and no card, so the worker isn't told it was saved
 def test_confirmation_card_not_shown_when_save_fails():
-    failed = dict(SAVED, saved=False, message="Record rejected: an identical record already exists.")
-    text = printed(io._print_save_outcome, REPORT, failed)
+    failed = outcome(saved=False, message="Record rejected: an identical record already exists.")
+    text = printed(card_view.show_save_outcome, REPORT, failed)
     assert "NOT saved" in text
     assert "identical record" in text
     assert "Your Saved Report" not in text
@@ -148,34 +156,29 @@ def test_confirmation_card_not_shown_when_save_fails():
 
 # Test that a MOM deadline in the past is shown as OVERDUE.
 def test_confirmation_card_says_overdue_when_deadline_passed():
-    
-    text = printed(io._print_save_outcome, REPORT, dict(SAVED, deadline="2022-12-22"))
+    text = printed(card_view.show_save_outcome, REPORT, outcome(deadline="2022-12-22"))
     assert "OVERDUE" in text
     assert "2022-12-22" in text
 
 # Test that only deadlines before today count as overdue, and bad dates never do.
 def test_is_overdue():
-    
     today = date(2026, 10, 13)
-    assert io._is_overdue("2026-10-12", today) is True
-    assert io._is_overdue("2026-10-13", today) is False  # Due today is not overdue yet
-    assert io._is_overdue("2026-10-14", today) is False
-    assert io._is_overdue("Check incident date", today) is False
-    assert io._is_overdue("N/A", today) is False
+    assert card_view._is_overdue("2026-10-12", today) is True
+    assert card_view._is_overdue("2026-10-13", today) is False  # Due today is not overdue yet
+    assert card_view._is_overdue("2026-10-14", today) is False
+    assert card_view._is_overdue("Check incident date", today) is False
+    assert card_view._is_overdue("N/A", today) is False
 
 # Test that a non-MOM report shows N/A as its deadline and no MOM warning.
 def test_confirmation_card_no_mom_warning_when_not_reportable():
-    
-    not_reportable = dict(SAVED, mom_reportable="No", deadline="N/A")
-    text = printed(io._print_save_outcome, REPORT, not_reportable)
+    text = printed(card_view.show_save_outcome, REPORT, outcome(mom_reportable="No", deadline="N/A"))
     assert re.search(r"MOM reportable:\s+No", text)
     assert "must be reported" not in text
 
 # Test that opening a report from the table shows its number and its fields.
 def test_full_report_from_table_uses_report_number():
-    
     table = pd.DataFrame([REPORT, dict(REPORT, reporter_name="Siti")])
-    text = printed(io._print_full_report, table, 2)
+    text = printed(card_view.show_from_table, table, 2)
     assert "Report #2" in text
     assert "Siti" in text
 
