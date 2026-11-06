@@ -36,107 +36,20 @@ from src.io_manager.constants import (
     YELLOW,
     YES_NO_COLUMNS,
 )
+from src.io_manager.display.pager import Pager
+from src.io_manager.display.report_formatter import ReportFormatter
 from src.io_manager.prompts.prompter import Prompter
 from src.logic_manager import logic
-
 
 # One Prompter Shared by the Whole App (Moves into the IOManager Class Later)
 _prompter = Prompter()
 
-class ReportFormatter:
-    #The layout of the table does not change 
-    def __init__(self,columns=TABLE_COLUMNS, details= DETAIL_FIELDS):
-        self._columns = columns
-        self._details = details
 
-    #cut the text to an exact column and width 
-    def fit_text(self, text, width)-> str:
-        text = str(text)
-        if len(text) >= width:
-            text = text[:width - 2] + "…"
-        return text.ljust(width)
-    
-    def wrap_detail(self, label, text) -> list:
-        text= str(text).strip()
-        if text.lower() in EMPTY_VALUES:
-            return []
-        indent = " " * DETAIL_INDENT
-        label_cell = f"{label}:".ljust(DETAIL_LABEL_WIDTH)
-        lines = textwrap.wrap(text, width=DETAIL_TEXT_WIDTH) or [text]
-
-        # First Line Carries the Label, the Rest Line Up Underneath the Text
-        wrapped = [f"{indent}{CYAN}{label_cell}{RESET}{lines[0]}"]
-        wrapped += [f"{indent}{' ' * DETAIL_LABEL_WIDTH}{line}" for line in lines[1:]]
-        return wrapped
-
-    def yes_no(self,value)->str:
-        text = str(value).strip().lower()
-        if text in("true", "yes", "1", "1.0"):
-            return "YES"
-        if text in ("false", "no", "0", "0.0"):
-            return "No"
-        return "-"
-
-    #build one summary row higlighting hospital and MOM cases in red 
-    def build_row(self, number, report):
-        row= self.fit_text(number, 5)
-        for heading, data_column, width, in self._columns:
-            value = report.get(data_column, "-")
-
-            #Yes/No columns: YES is worht shouting about 
-            if data_column in ALERT_COLUMNS:
-                value=self.yes_no(value)
-                cell = self.fit_text(value,width )
-                row += f"{RED}{BOLD}{cell}{RESET}" if value == "YES" else cell
-                continue
-
-            if data_column == "deadline":
-                cell =self.fit_text(value,width)
-                must_report = self.yes_no(report.get("mom_reportable")) == "YES"
-                row += f"{RED}{BOLD}{cell}{RESET}" if must_report else cell
-                continue
-
-            row += self.fit_text(value, width)
-        return row
 
 # One Formatter Shared by the Whole App (Moves into the IOManager Class Later)
 _formatter = ReportFormatter()
 
 #Which page of a table is showing and moves between pages (Never Prints)
-class Pager:
-    def __init__(self, total_rows: int, page_size: int =PAGE_SIZE):
-        self._total = total_rows #How many rows the table has
-        self._page_size = page_size # How many rows fit on one page 
-        self._page = 1 #Ensure the page starts at 1
-
-    #the page currently shown 
-    def current_page(self) -> int:
-        return self._page 
-
-    #How many pages the table needs so the table still has 1 empty table
-    def page_count(self) -> int:
-        # Divide and round UP: -(-7 // 3) = 3, because 7 rows need 3 pages (3 + 3 + 1)
-        return max(-(-self._total//self._page_size), 1)
-
-    # The first and last row positions on the current page, e.g. (0, 3) for page 1
-    def row_range(self) -> tuple:
-        first = (self._page - 1) * self._page_size
-        last = min(first + self._page_size, self._total)
-        return first, last
-
-    #Moves to the next page, Return flase if already on the last page
-    def next(self) -> bool:
-        if self._page >= self.page_count():
-            return False
-        self._page += 1 #the Pager now remembers it's on the next page
-        return True
-
-    #Moves to the previous page. return false if already on Page 1
-    def previous(self) -> bool:
-        if self._page <=1:
-            return False
-        self._page -= 1
-        return True
 
 #A Numbered Menu: Shows a Title and Options, then Asks the User to Pick One
 #Each Child Menu Only Says WHAT its Title and Options Are, the Parent Does the Showing and Asking
