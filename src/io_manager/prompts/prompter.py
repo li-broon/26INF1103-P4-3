@@ -1,4 +1,4 @@
-from src.io_manager.constants import CANCEL_WORDS, RESET, YELLOW
+from src.io_manager.constants import BOLD, CANCEL_WORDS, GREEN, RESET, YELLOW
 
 
 #Asks the User for Input and Keeps Asking Until the Answer is Valid
@@ -33,3 +33,19 @@ class Prompter:
             if low <= choice <= high:
                 return choice
             print(f"{YELLOW}{choice} is not an option. Please type a number from {low} to {high}.{RESET}")
+
+    def choose_from(self, heading: str, values: list): #The selected value, or None if the user chooses the 'Back' option.
+        back_option = len(values) + 1
+
+        print(f"\n{BOLD}Values saved under {heading}:{RESET}")
+        #Print out every available filter option as a numbered list
+        for number, value in enumerate(values, start=1):
+            print(f"      {GREEN}{BOLD}{number}{RESET}. {value}")
+        print(f"      {GREEN}{BOLD}{back_option}{RESET}.   Back")
+
+        choice = self.ask_number(f"Choose a value (1-{back_option}): ", 1, back_option)
+        if choice == back_option:
+            return None
+            
+        #Subtract 1 because our menu starts at 1, but python lists start at 0
+        return values[choice - 1]

@@ -51,24 +51,6 @@ _view_menu = ViewMenu(_prompter)
 _page_menu = PageMenu(_prompter) 
 _filter_menu = FilterMenu(_prompter)
 
-#Display a numbered list of values and return the user's selection
-def _choose_value(heading, values):
-  #The selected value, or None if the user chooses the 'Back' option.
-    back_option = len(values) + 1
-
-    print(f"\n{BOLD}Values saved under {heading}:{RESET}")
-    #Print out every available filter option as a numbered list
-    for number, value in enumerate(values, start=1):
-        print(f"      {GREEN}{BOLD}{number}{RESET}. {value}")
-    print(f"      {GREEN}{BOLD}{back_option}{RESET}.   Back")
-
-    choice = _prompter.ask_number(f"Choose a value (1-{back_option}): ", 1, back_option)
-    if choice == back_option:
-        return None
-        
-    #Subtract 1 because our menu starts at 1, but python lists start at 0
-    return values[choice - 1]
-
 #print one formatted page of the incident reports table
 def _print_table(table, title, pager):
     total = len(table)
@@ -234,7 +216,7 @@ def filter_reports():
             return
     else:
         #Display a list of unique values or threshold options for the selected column
-        value = _choose_value(heading, get_unique_values(column))
+        value = _prompter.choose_from(heading, get_unique_values(column))
         if value is None:
             return
 

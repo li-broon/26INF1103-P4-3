@@ -207,6 +207,15 @@ def test_prompter_no():
     result = prompter.ask_yes_no("Leave?")
     assert result is False
 
+# Test that choose_from returns the picked value, and None when the user picks Back
+def test_prompter_choose_from():
+    values = ["Fall", "Fire", "Machinery"]
+    with contextlib.redirect_stdout(StringIO()):
+        picked = io.Prompter(read=fake_input("2")).choose_from("Root Cause", values)
+        back = io.Prompter(read=fake_input("4")).choose_from("Root Cause", values)
+    assert picked == "Fire"     # option 2 is the second value
+    assert back is None         # option 4 is Back (3 values + 1)
+
 
 # Mini runner
 def run_all():
