@@ -228,6 +228,17 @@ def test_prompter_choose_from():
     assert picked == "Fire"     # option 2 is the second value
     assert back is None         # option 4 is Back (3 values + 1)
 
+# Test that ask_text returns what was typed, without the spaces around it
+def test_prompter_ask_text_strips_spaces():
+    assert io.Prompter(read=fake_input("  Warehouse B  ")).ask_text("Keyword: ") == "Warehouse B"
+
+# Test that the cancel words work in any capitals, and normal text is not a cancel
+def test_prompter_is_cancel():
+    prompter = io.Prompter()
+    assert prompter.is_cancel("QUIT") is True
+    assert prompter.is_cancel(" exit ") is True
+    assert prompter.is_cancel("hello") is False
+
 
 # Mini runner
 def run_all():

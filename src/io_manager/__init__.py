@@ -14,7 +14,6 @@ from src.data_manager import (
 from src.io_manager.constants import (
     ALERT_COLUMNS,
     BOLD,
-    CANCEL_WORDS,
     CYAN,
     DETAIL_FIELDS,
     DETAIL_INDENT,
@@ -136,7 +135,7 @@ def filter_reports():
 
     #Open ended keyword search for location so users don't have to pick from a massive list
     if column in ["location"]:
-        value = input(f"\n{BOLD}Enter a keyword to search in {heading}:{RESET} ").strip()
+        value = _prompter.ask_text(f"\n{BOLD}Enter a keyword to search in {heading}:{RESET} ")
         if not value:
             return
     else:
@@ -167,14 +166,14 @@ def run_chatbot():
     print(WELCOME)
 
     while True:
-        user_text = input("> ").strip()
+        user_text = _prompter.ask_text("> ")
         #Reject blank input and ask again, instead of spending an API call on nothing
         if user_text == "":
             print(f"{YELLOW}Please type something, or 'quit' to go back to the menu.{RESET}")
             continue
 
             #let the workers leave without finishing 
-        if user_text.lower() in CANCEL_WORDS:
+        if _prompter.is_cancel(user_text):
             if _prompter.ask_yes_no("Leave without finishing this report?"):
                 print(f"{YELLOW}Report cancelled. Nothing was saved.{RESET}\n")
                 return
