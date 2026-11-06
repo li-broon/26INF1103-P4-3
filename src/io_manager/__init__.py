@@ -12,10 +12,8 @@ from src.data_manager import (
     load_matching_records,
     load_records,
 )
+from src.io_manager.constants import BOLD, CYAN, GREEN, RED, RESET, UNDERLINE, YELLOW
 from src.logic_manager import logic
-
-from .styles import BOLD, CYAN, GREEN, RED, RESET, UNDERLINE, YELLOW
-
 
 WELCOME = f"""
 
