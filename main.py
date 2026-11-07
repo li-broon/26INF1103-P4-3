@@ -3,10 +3,11 @@
 # -------- #
 from types import SimpleNamespace
 
-import src.data_manager as data_manager
 from src.ai_manager import AIManager, AIServiceError, GeminiService
 from src.io_manager import IOManager
 from src.logic_manager import logic
+from src.data_manager import CsvRecordStore, DataManager, create_default_filters
+from src.data_manager.constants import DATA_FILE
 
 
 # TEMPORARY (task 18 replaces this): until Akira's LogicManager is merged, wrap the old
@@ -34,8 +35,11 @@ class NoKeyAI:
 def main():
     try:
         ai_manager = AIManager(GeminiService())
+        
     except AIServiceError as error:
         ai_manager = NoKeyAI(error)
+
+    data_manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters())
     IOManager(ai_manager, OldLogicAdapter(), data_manager).run()
 
 
