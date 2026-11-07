@@ -3,16 +3,16 @@
 # ------- #
 
 import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
+from abc import ABC, abstractmethod  # Abstract Base Classes, for the Menu Contract
 from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
-from src.ai_manager import AIManager, GeminiService, AIServiceError
-from src.logic_manager import logic
-from src.data_manager import ( 
-    load_records,
+from src.ai_manager import AIManager, AIServiceError, GeminiService
+from src.data_manager import (
     get_unique_values,
     load_matching_records,
+    load_records,
 )
-
+from src.logic_manager import logic
 
 # Welcome Message
 RESET = "\033[0m"
@@ -47,23 +47,11 @@ WELCOME = f"""
 {RED}{BOLD} If someone is still in danger, call 995 and your supervisor FIRST! 🚨{RESET}
       {YELLOW} Type your message below and press Enter to start. ⬇️{RESET}
 """
-
-
-# Main Menu
-MENU = f"""
-========================================================================
-{CYAN}{BOLD}                     Main Menu{RESET}
-========================================================================
-      {GREEN}{BOLD}1{RESET}.  Report a new incident (chatbot)
-      {GREEN}{BOLD}2{RESET}.  View saved incident reports
-      {GREEN}{BOLD}3{RESET}.  Exit
-"""
-
-MIN_OPTION = 1
-MAX_OPTION = 3
 GOODBYE = f"{GREEN}Goodbye! Stay safe. {RESET}"
-CANCEL_WORDS = ("quit", "exit", "cancel")
+CANCEL_WORDS = ("quit", "exit", "cancel")  # Typing one of these in the chatbot asks to leave
 
+# How Many Reports are Shown on Each Page of the Table
+PAGE_SIZE = 3
 #Map UI headings to the exact column names and set their display width
 TABLE_COLUMNS = [
     ("Score", "importance_score", 7),
@@ -74,6 +62,8 @@ TABLE_COLUMNS = [
     ("Location", "location", 14),
     ("Date", "incident_date", 12),
 ]
+# Yes/No Columns Shown in Red when the Value is YES
+ALERT_COLUMNS = ("hospitalised", "mom_reportable")
 
 #Full-Text Fields Printed Under Each Summary Row: (Label, Column Name in 'data.csv')
 #These Hold Whole Sentences, so They are Wrapped Instead of Squeezed into a Column
@@ -93,20 +83,6 @@ DETAIL_TEXT_WIDTH = 54   # Characters per Line Before Wrapping (Ends Level with 
 
 # Values that Mean "Nothing Was Saved Here" - Detail Lines with These are Skipped
 EMPTY_VALUES = ("", "-", "nan", "none", "null")
-
-# Saved Report Sub Menu
-VIEW_MENU = f"""
-========================================================================
-{CYAN}{BOLD}                    📄 Report Options{RESET}
-========================================================================
-      {GREEN}{BOLD}1{RESET}.  Next page
-      {GREEN}{BOLD}2{RESET}.  Previous page
-      {GREEN}{BOLD}3{RESET}.  Filter these reports
-      {GREEN}{BOLD}4{RESET}.  View a full report
-      {GREEN}{BOLD}5{RESET}.  Back to the main menu
-"""
-VIEW_MIN_OPTION = 1
-VIEW_MAX_OPTION = 5
 
 # Every Field Shown when One Report is Opened in Full: (Label, Column Name in 'data.csv')
 FULL_REPORT_FIELDS = [
@@ -133,21 +109,6 @@ FULL_REPORT_FIELDS = [
 # True/False Fields, Shown as YES/No in the Full Report
 YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury", "mom_reportable")
 
-# Filter Menu
-PAGE_MENU = f"""
-========================================================================
-{CYAN}{BOLD}                     Page Options{RESET}
-========================================================================
-      {GREEN}{BOLD}1{RESET}.  Next page
-      {GREEN}{BOLD}2{RESET}.  Previous page
-      {GREEN}{BOLD}3{RESET}.  View a full report 
-      {GREEN}{BOLD}4{RESET}.  Back to report options 
-"""
-
-PAGE_MIN_OPTION = 1
-PAGE_MAX_OPTION = 4
-PAGE_SIZE = 3
-
 FILTER_COLUMNS = [
     ("Score", "importance_score"),
     ("Date", "incident_date"),
@@ -161,110 +122,228 @@ FILTER_COLUMNS = [
 #Dynamically calculate the back option number so it stays correct if columns are added later
 FILTER_BACK_OPTION = len(FILTER_COLUMNS) + 1
 
-FILTER_HEADER = f"""
-========================================================================
-{CYAN}{BOLD}                    🔍 Filter Reports{RESET}
-========================================================================
-      Which column would you like to filter by?
-"""
 
 
-#io_manager Private Functions
-#Prompt the user with a yes/no question until a valid response is given
-#Keep looping until they give a clear yes or no answer
-def _ask_yes_no(question):
-    while True:
-        answer = input(f"{question} (y/n): ").strip().lower()
-        if answer in ("y", "yes"):
-            return True
-        if answer in ("n", "no"):
+#Asks the User for Input and Keeps Asking Until the Answer is Valid
+class Prompter:
+    def __init__(self, read=input, cancel_words=CANCEL_WORDS):
+        self._read=read
+        self._cancel_words= cancel_words
+
+    def ask_yes_no(self, question: str) -> bool:
+        while True:
+            answer = self._read(f"{question} (y/n): ").strip().lower()
+            if answer in ("y", "yes"):
+                return True
+            if answer in ("n", "no"):
+                return False
+            print(f"{YELLOW}Please type 'y' for yes or 'n' for no.{RESET}")
+
+    def ask_number(self,prompt:str, low:int, high: int) -> int: 
+        while True: 
+            user_input = self._read(prompt).strip()
+
+            #rejects blank input
+            if user_input =="":
+                print(f"{YELLOW}This can't be left blank. Please type a number.{RESET}")
+                continue 
+            
+            try:
+                choice= int(user_input)
+            except ValueError:
+                print(f"{YELLOW}'{user_input}' is not a number. Please type a whole number.{RESET}")
+                continue
+            if low <= choice <= high:
+                return choice
+            print(f"{YELLOW}{choice} is not an option. Please type a number from {low} to {high}.{RESET}")
+
+# One Prompter Shared by the Whole App (Moves into the IOManager Class Later)
+_prompter = Prompter()
+
+class ReportFormatter:
+    #The layout of the table does not change 
+    def __init__(self,columns=TABLE_COLUMNS, details= DETAIL_FIELDS):
+        self._columns = columns
+        self._details = details
+
+    #cut the text to an exact column and width 
+    def fit_text(self, text, width)-> str:
+        text = str(text)
+        if len(text) >= width:
+            text = text[:width - 2] + "…"
+        return text.ljust(width)
+    
+    def wrap_detail(self, label, text) -> list:
+        text= str(text).strip()
+        if text.lower() in EMPTY_VALUES:
+            return []
+        indent = " " * DETAIL_INDENT
+        label_cell = f"{label}:".ljust(DETAIL_LABEL_WIDTH)
+        lines = textwrap.wrap(text, width=DETAIL_TEXT_WIDTH) or [text]
+
+        # First Line Carries the Label, the Rest Line Up Underneath the Text
+        wrapped = [f"{indent}{CYAN}{label_cell}{RESET}{lines[0]}"]
+        wrapped += [f"{indent}{' ' * DETAIL_LABEL_WIDTH}{line}" for line in lines[1:]]
+        return wrapped
+
+    def yes_no(self,value)->str:
+        text = str(value).strip().lower()
+        if text in("true", "yes", "1", "1.0"):
+            return "YES"
+        if text in ("false", "no", "0", "0.0"):
+            return "No"
+        return "-"
+
+    #build one summary row higlighting hospital and MOM cases in red 
+    def build_row(self, number, report):
+        row= self.fit_text(number, 5)
+        for heading, data_column, width, in self._columns:
+            value = report.get(data_column, "-")
+
+            #Yes/No columns: YES is worht shouting about 
+            if data_column in ALERT_COLUMNS:
+                value=self.yes_no(value)
+                cell = self.fit_text(value,width )
+                row += f"{RED}{BOLD}{cell}{RESET}" if value == "YES" else cell
+                continue
+
+            if data_column == "deadline":
+                cell =self.fit_text(value,width)
+                must_report = self.yes_no(report.get("mom_reportable")) == "YES"
+                row += f"{RED}{BOLD}{cell}{RESET}" if must_report else cell
+                continue
+
+            row += self.fit_text(value, width)
+        return row
+
+# One Formatter Shared by the Whole App (Moves into the IOManager Class Later)
+_formatter = ReportFormatter()
+
+#Which page of a table is showing and moves between pages (Never Prints)
+class Pager:
+    def __init__(self, total_rows: int, page_size: int =PAGE_SIZE):
+        self._total = total_rows #How many rows the table has
+        self._page_size = page_size # How many rows fit on one page 
+        self._page = 1 #Ensure the page starts at 1
+
+    #the page currently shown 
+    def current_page(self) -> int:
+        return self._page 
+
+    #How many pages the table needs so the table still has 1 empty table
+    def page_count(self) -> int:
+        # Divide and round UP: -(-7 // 3) = 3, because 7 rows need 3 pages (3 + 3 + 1)
+        return max(-(-self._total//self._page_size), 1)
+
+    # The first and last row positions on the current page, e.g. (0, 3) for page 1
+    def row_range(self) -> tuple:
+        first = (self._page - 1) * self._page_size
+        last = min(first + self._page_size, self._total)
+        return first, last
+
+    #Moves to the next page, Return flase if already on the last page
+    def next(self) -> bool:
+        if self._page >= self.page_count():
             return False
-        print(f"{YELLOW}Please type 'y' for yes or 'n' for no.{RESET}")
+        self._page += 1 #the Pager now remembers it's on the next page
+        return True
 
-#Format text to fit a specific column width, truncating or padding as needed
-#text (any):The data to format into a string
-#width (int):The exact character width of the output column
-def _fit(text, width):
+    #Moves to the previous page. return false if already on Page 1
+    def previous(self) -> bool:
+        if self._page <=1:
+            return False
+        self._page -= 1
+        return True
 
-    text = str(text)
-    # If the text is too long, cut it and add an ellipsis so it doesn't break the table layout
-    if len(text) >= width:
-        text = text[:width - 2] + "…"
-    # Otherwise, add spaces to pad the column so everything lines up nicely
-    return text.ljust(width)
+#A Numbered Menu: Shows a Title and Options, then Asks the User to Pick One
+#Each Child Menu Only Says WHAT its Title and Options Are, the Parent Does the Showing and Asking
+class Menu(ABC):
+    def __init__(self, prompter: Prompter):
+        self._prompter = prompter   # The shared Prompter, passed in (the menu uses it but doesn't own it)
 
-# Show True/False as YES/No (Safety Officers Scan this Column First for Hospital Cases)
-def _yes_no(value):
-    text = str(value).strip().lower()
-    if text in ("true", "yes", "1", "1.0"):
-        return "YES"
-    if text in ("false", "no", "0", "0.0"):
-        return "No"
-    return "-"
+    # Every child menu MUST say what its title is
+    @abstractmethod
+    def title(self) -> str:
+        pass
 
-# Turn One Long Field into Wrapped, Indented Lines (Returns [] if the Field is Empty)
-def _wrap_detail(label, text):
-    text = str(text).strip()
-    if text.lower() in EMPTY_VALUES:
-        return []
+    # Every child menu MUST list its options, in order
+    @abstractmethod
+    def options(self) -> list:
+        pass
 
-    indent = " " * DETAIL_INDENT
-    label_cell = f"{label}:".ljust(DETAIL_LABEL_WIDTH)
-    lines = textwrap.wrap(text, width=DETAIL_TEXT_WIDTH) or [text]
+    # a child menu that needs one overrides this method
+    def subtitle(self) -> str:
+        return ""
+    # Same for every menu: print the title box and numbered options, then ask for a valid number
+    def show(self) -> int:
+        line = "=" * 72
+        print(f"\n{line}\n{CYAN}{BOLD}{self.title().center(72)}{RESET}\n{line}")
 
-    # First Line Carries the Label, the Rest Line Up Underneath the Text
-    wrapped = [f"{indent}{CYAN}{label_cell}{RESET}{lines[0]}"]
-    wrapped += [f"{indent}{' ' * DETAIL_LABEL_WIDTH}{line}" for line in lines[1:]]
-    return wrapped
+        if self.subtitle():
+            print(f"      {self.subtitle()}")
 
-# Build One Summary Row, Highlighting Hospital Cases in Red
-# Columns Shown in Red when the Value is YES
-ALERT_COLUMNS = ("hospitalised", "mom_reportable")
+        options = self.options()
+        for number, label in enumerate(options, start=1):
+            print(f"      {GREEN}{BOLD}{number}{RESET}.  {label}")
+        return self._prompter.ask_number(f"Choose an option (1-{len(options)}): ", 1, len(options))
 
-# Build One Summary Row, Highlighting Hospital and MOM Cases in Red
-def _build_row(number, report):
-    row = _fit(number, 5)
-    for heading, column, width in TABLE_COLUMNS:
-        value = report.get(column, "-")
 
-        # Yes/No Columns: YES is Worth Shouting About
-        if column in ALERT_COLUMNS:
-            value = _yes_no(value)
-            cell = _fit(value, width)  # Padded Before Colouring, so Columns Stay Lined Up
-            row += f"{RED}{BOLD}{cell}{RESET}" if value == "YES" else cell
-            continue
+#child class of Menu(Main Menu)
+class MainMenu(Menu):
+    def title(self) -> str:
+        return "Main Menu"
 
-        # The Deadline is Only Urgent when MOM Must be Told
-        if column == "deadline":
-            cell = _fit(value, width)
-            must_report = _yes_no(report.get("mom_reportable")) == "YES"
-            row += f"{RED}{BOLD}{cell}{RESET}" if must_report else cell
-            continue
+    def options(self) -> list:
+        return [
+            "Report a new incident (chatbot)",
+            "View saved incident reports",
+            "Exit",
+        ]
 
-        row += _fit(value, width)
-    return row
+#Child Class of Menu (View Menu)
+class ViewMenu(Menu):
+    def title(self) -> str:
+        return "📄 Report Options"
 
-#Ask the user to input a number within a specific range. Re-prompts on invalid input
-def _ask_number(prompt, low, high):
-    while True:
-        user_input = input(prompt).strip()
+    def options(self) -> list:
+        return [
+            "Next page",
+            "Previous page",
+            "Filter these reports",
+            "View a full report",
+            "Back to the main menu",
+        ]
 
-        # Reject blank input
-        if user_input == "":
-            print(f"{YELLOW}This can't be left blank. Please type a number.{RESET}")
-            continue
 
-        # Make sure they actually typed a number, not text
-        try:
-            choice = int(user_input)
-        except ValueError:
-            print(f"{YELLOW}'{user_input}' is not a number. Please type a whole number.{RESET}")
-            continue
+#Child Class of Menu(PageMenu)
+class PageMenu(Menu):
+    def title(self) -> str:
+        return "Page Options"
 
-        # Ensure the number is one of the valid menu options
-        if low <= choice <= high:
-            return choice
-        print(f"{YELLOW}{choice} is not an option. Please type a number from {low} to {high}.{RESET}")
+    def options(self) -> list:
+        return [
+            "Next page",
+            "Previous page",
+            "View a full report",
+            "Back to report options",
+        ]
+
+#The Menu Asking Which Column to Filter By; its Options Come from FILTER_COLUMNS, Plus Back
+class FilterMenu(Menu):
+    def title(self) -> str:
+        return "🔍 Filter Reports"
+
+    def subtitle(self) -> str:
+        return "Which column would you like to filter by?"
+
+    def options(self) -> list:
+        return [heading for heading, column in FILTER_COLUMNS] + ["↩️  Back"]
+
+# One Object per Menu, Sharing the One Prompter (Moves into the IOManager Class Later)
+_main_menu = MainMenu(_prompter)
+_view_menu = ViewMenu(_prompter)
+_page_menu = PageMenu(_prompter) 
+_filter_menu = FilterMenu(_prompter)
 
 #Display a numbered list of values and return the user's selection
 def _choose_value(heading, values):
@@ -277,31 +356,24 @@ def _choose_value(heading, values):
         print(f"      {GREEN}{BOLD}{number}{RESET}. {value}")
     print(f"      {GREEN}{BOLD}{back_option}{RESET}.   Back")
 
-    choice = _ask_number(f"Choose a value (1-{back_option}): ", 1, back_option)
+    choice = _prompter.ask_number(f"Choose a value (1-{back_option}): ", 1, back_option)
     if choice == back_option:
         return None
         
     #Subtract 1 because our menu starts at 1, but python lists start at 0
     return values[choice - 1]
 
-#Calculate the total number of pages required to display the data table.
-def _page_count(table):
-    pages = -(-len(table) // PAGE_SIZE)  # Divide and Round Up
-    return max(pages, 1)
-
 #print one formatted page of the incident reports table
-def _print_table(table, title, page=1):
+def _print_table(table, title, pager):
     total = len(table)
-    # Figure out exactly which rows belong on the current page
-    first = (page - 1) * PAGE_SIZE           
-    last = min(first + PAGE_SIZE, total)     
+    first, last = pager.row_range()   
 
     print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
 
     # Build the header row using our fixed column widths
-    header = _fit("No.", 5)
+    header = _formatter.fit_text("No.", 5)
     for heading, column, width in TABLE_COLUMNS:
-        header += _fit(heading, width)
+        header += _formatter.fit_text(heading, width)
     print(f"{BOLD}{header}{RESET}")
     print("-" * len(header))
 
@@ -311,15 +383,15 @@ def _print_table(table, title, page=1):
     #One Block per Report: a Summary Row, then its Full-Text Details Underneath
     #(Empty Cells Shown as "-", Already Sorted by Urgency in 'data_manager')
     for number, report in enumerate(rows.to_dict("records"), start=first + 1):
-        print(_build_row(number, report))
+        print(_formatter.build_row(number, report))
 
         for label, column in DETAIL_FIELDS:
-            for line in _wrap_detail(label, report.get(column, "-")):
+            for line in _formatter.wrap_detail(label, report.get(column, "-")):
                 print(line)
         print()
 
 
-    print(f"\n{CYAN}Page {page} of {_page_count(table)}  (showing {first + 1}-{last} of {total}){RESET}\n")
+        print(f"\n{CYAN}Page {pager.current_page()} of {pager.page_count()}  (showing {first + 1}-{last} of {total}){RESET}\n")
 
 #Print every field of one report in full, so long names and locations are not cut off
 def _print_full_report(table, number):
@@ -334,26 +406,10 @@ def _print_report_card(report, title):
     for label, column in FULL_REPORT_FIELDS:
         value = report.get(column, "-")
         if column in YES_NO_COLUMNS:
-            value = _yes_no(value)
-        for line in _wrap_detail(label, value):
+            value = _formatter.yes_no(value)
+        for line in _formatter.wrap_detail(label, value):
             print(line)
     print()
-
-#Change of page index if exits 
-def _go_next(page, pages):
-    # Prevent the user from scrolling past the end of the data
-    if page >= pages:
-        print(f"{YELLOW}You are already on the last page.{RESET}")
-        return page, False
-    return page + 1, True
-
-#Change of page index if previous page exits
-def _go_previous(page):
-    # Prevent the user from scrolling into negative pages
-    if page <= 1:
-        print(f"{YELLOW}You are already on the first page.{RESET}")
-        return page, False
-    return page - 1, True
 
 #Tell the worker whether their report was really saved. If it was, show it back to them
 #as a confirmation card, with the score and MOM details the Logic Manager added.
@@ -388,50 +444,28 @@ def _is_overdue(deadline, today=None):
         return False  # e.g. "Check incident date": no real date to compare
     return due < (today or date.today())
 
-
-#io_manager Main Functions
-#Display the main menu and prompt the user for a selection
-def show_menu():
-    print(MENU)
-    return _ask_number(f"Choose an option ({MIN_OPTION}-{MAX_OPTION}): ", MIN_OPTION, MAX_OPTION)
-
-# Display the sub-menu for viewing saved reports
-def show_view_menu():
-    print(VIEW_MENU)
-    return _ask_number(f"Choose an option ({VIEW_MIN_OPTION}-{VIEW_MAX_OPTION}): ", VIEW_MIN_OPTION, VIEW_MAX_OPTION)
-
-#Display the pagination control menu
-def show_page_menu():
-    print(PAGE_MENU)
-    return _ask_number(f"Choose an option ({PAGE_MIN_OPTION}-{PAGE_MAX_OPTION}): ", PAGE_MIN_OPTION, PAGE_MAX_OPTION)
-
-#Display the available columns that can be used for filtering
-def show_filter_menu():
-    print(FILTER_HEADER)
-    for number, (heading, column) in enumerate(FILTER_COLUMNS, start=1):
-        print(f"      {GREEN}{BOLD}{number}{RESET}. {heading}")
-    print(f"      {GREEN}{BOLD}{FILTER_BACK_OPTION}{RESET}. ↩️  Back")
-    return _ask_number(f"Choose a column (1-{FILTER_BACK_OPTION}): ", 1, FILTER_BACK_OPTION)
-
 #Manage the pagination loop, allowing a user to scroll through a table
 def browse_pages(table, title):
-    pages = _page_count(table)
-    page = 1
+    pager = Pager(len(table))
     show_page = True
 
     # Keep the user in the page loop until they choose to exit
     while True:
         if show_page:
-            _print_table(table, title, page)
+            _print_table(table, title, pager)
 
-        choice = show_page_menu()
+        choice = _page_menu.show()
         if choice == 1:
-            page, show_page = _go_next(page, pages)
+            show_page = pager.next()
+            if not show_page:
+                print(f"{YELLOW} You are already on the last page. {RESET}")
         elif choice == 2:
-            page, show_page = _go_previous(page)
-        elif choice == 3: 
-            number = _ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
-            _print_full_report(table, number)
+            show_page = pager.previous()
+            if not show_page:
+                print(f"{YELLOW}You are already on the first page. {RESET}")
+        elif choice == 3:
+            number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
+            print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
         else:
@@ -447,28 +481,31 @@ def view_reports():
         return
 
     title = f"Saved Incident Reports ({len(table)} total, most urgent first)"
-    pages = _page_count(table) # Calculate the total number of pages based on the dataset size
-    page = 1
-    show_page = True  
+    pager = Pager(len(table))  # Tracks which page is showing
+    show_page = True
 
     while True:
         #Only print the table if the page has changed or it's the first display
-        if show_page: 
-            _print_table(table, title, page)
+        if show_page:
+            _print_table(table, title, pager)
 
         # Show sub-menu options for navigating pages or filtering reports
-        choice = show_view_menu()
+        choice = _view_menu.show()
 
         if choice == 1:
-            page, show_page = _go_next(page, pages)
+            show_page = pager.next()
+            if not show_page:
+                print(f"{YELLOW}You are already on the last page.{RESET}")
         elif choice == 2:
-            page, show_page = _go_previous(page)
+            show_page = pager.previous()
+            if not show_page:
+                print(f"{YELLOW}You are already on the first page.{RESET}")
         elif choice == 3:
             filter_reports()
             # Stop the main table from re-printing immediately after they finish viewing the filtered results
             show_page = False
         elif choice == 4:
-            number = _ask_number(f"Which report number, out of all {len(table)} saved reports?: (1-{len(table)}):", 1, len(table))
+            number = _prompter.ask_number(f"Which report number, out of all {len(table)} saved reports?: (1-{len(table)}):", 1, len(table))
             _print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
@@ -477,7 +514,7 @@ def view_reports():
 
 #Prompt the user to filter the dataset by a specific column and value
 def filter_reports():
-    choice = show_filter_menu()
+    choice = _filter_menu.show()
     if choice == FILTER_BACK_OPTION:
         return
         
@@ -525,7 +562,7 @@ def run_chatbot():
 
             #let the workers leave without finishing 
         if user_text.lower() in CANCEL_WORDS:
-            if _ask_yes_no("Leave without finishing this report?"):
+            if _prompter.ask_yes_no("Leave without finishing this report?"):
                 print(f"{YELLOW}Report cancelled. Nothing was saved.{RESET}\n")
                 return
             continue
@@ -554,7 +591,7 @@ def run_chatbot():
                 outcome = logic(result.report)
                 _print_save_outcome(result.report, outcome)
 
-                if _ask_yes_no("Would you like to view all saved reports now?"):
+                if _prompter.ask_yes_no("Would you like to view all saved reports now?"):
                     view_reports()
                 break
 
@@ -565,7 +602,7 @@ def main():
     # The main application loop. Displays the main menu and routes user input to the core functions.
     try:
         while True:
-            choice = show_menu()  
+            choice = _main_menu.show()  
 
             if choice == 1:
                 run_chatbot()
@@ -577,3 +614,4 @@ def main():
 
     except (KeyboardInterrupt, EOFError):
         print(f"\n{GOODBYE}")
+
