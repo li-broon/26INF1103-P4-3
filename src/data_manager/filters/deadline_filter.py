@@ -28,7 +28,7 @@ DEADLINE_FILTERS = {
 class DeadlineFilter(ReportFilter):
 
     # windows maps each choice shown to the user to (earliest, latest) days from today
-    def __init__(self, column: str = DEADLINE_FIELD, windows: dict = DEADLINE_FILTERS):
+    def __init__(self, column: str = DEADLINE_FIELD, windows: dict = DEADLINE_FILTERS) -> None:
         super().__init__(column)
         self._windows = dict(windows)
 

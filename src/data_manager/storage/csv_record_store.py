@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class CsvRecordStore(RecordStore):
 
     # data_file is the CSV file the reports are stored in
-    def __init__(self, data_file: str):
+    def __init__(self, data_file: str) -> None:
         self._data_file = data_file
         self._data_folder = os.path.dirname(data_file)
         self._cleaner = RecordCleaner()  # Created and owned by this store
@@ -99,7 +99,7 @@ class CsvRecordStore(RecordStore):
         return list(self._load_data_from_csv(self._data_file).columns)
 
     # Function checks for duplicate records
-    def _is_duplicate(self, existing_data, record):
+    def _is_duplicate(self, existing_data: pd.DataFrame, record: dict) -> bool:
         # If the existing data is empty, there can't be a duplicate
         if existing_data.empty:
             return False
@@ -120,7 +120,7 @@ class CsvRecordStore(RecordStore):
         return False
 
     # Safe reading of the CSV file
-    def _load_data_from_csv(self, file_path):
+    def _load_data_from_csv(self, file_path: str) -> pd.DataFrame:
         # Checks if file exists and isn't empty
         # Returns empty table if does not exist or is empty
         if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
@@ -153,7 +153,7 @@ class CsvRecordStore(RecordStore):
 
         return df
 
-    def _sort_by_column(self, data, column_name, ascending=True):
+    def _sort_by_column(self, data: pd.DataFrame, column_name: str, ascending: bool = True) -> pd.DataFrame:
 
         # Safety check : if column does not exist, return the data unchanged instead of crashing
         if column_name not in data.columns:
@@ -165,7 +165,7 @@ class CsvRecordStore(RecordStore):
 
     # Converts score column into numbers, then sorts by it
     # Highest number is first by default
-    def _sort_by_urgency(self, table, ascending=False):
+    def _sort_by_urgency(self, table: pd.DataFrame, ascending: bool = False) -> pd.DataFrame:
         if URGENCY_COLUMN in table.columns:
             table = table.copy()
             table[URGENCY_COLUMN] = pd.to_numeric(table[URGENCY_COLUMN], errors="coerce")

@@ -15,7 +15,7 @@ import pandas as pd
 class ReportFilter(ABC):
 
     # column is the column of the reports this filter works on
-    def __init__(self, column: str):
+    def __init__(self, column: str) -> None:
         self._column = column
 
     # The column this filter works on (read only)

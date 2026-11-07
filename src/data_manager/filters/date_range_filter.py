@@ -30,7 +30,7 @@ DATE_RANGES = {
 class DateRangeFilter(ReportFilter):
 
     # ranges maps each choice shown to the user to a number of days
-    def __init__(self, column: str = DATE_FIELD, ranges: dict = DATE_RANGES):
+    def __init__(self, column: str = DATE_FIELD, ranges: dict = DATE_RANGES) -> None:
         super().__init__(column)
         self._ranges = dict(ranges)
 

@@ -12,7 +12,7 @@ class DataManager:
     # store is where the reports are kept (a CSV file in the app)
     # filters says which filter to use for which column (e.g. "importance_score" -> a ScoreBandFilter)
     # They are passed in, not created here, so the DataManager can work with any RecordStore and any filters
-    def __init__(self, store: RecordStore, filters: dict[str, ReportFilter]):
+    def __init__(self, store: RecordStore, filters: dict[str, ReportFilter]) -> None:
         self._store = store
         self._filters = dict(filters)  # A copy, so changing the dictionary later changes nothing here
 

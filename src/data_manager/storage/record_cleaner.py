@@ -1,7 +1,16 @@
+# ------- #
 # Imports
+# ------- #
+
+from typing import Any
+
 import pandas as pd
 
-from src.data_manager.constants import *
+from src.data_manager.constants import DATE_FIELD, DATE_FORMAT, REQUIRED_FIELDS, URGENCY_COLUMN
+
+# ----- #
+# Class
+# ----- #
 
 
 # Checks and tidies one report before it is saved or shown
@@ -9,11 +18,11 @@ from src.data_manager.constants import *
 class RecordCleaner:
 
     # required_fields are the fields every report must have (defaults to REQUIRED_FIELDS)
-    def __init__(self, required_fields=REQUIRED_FIELDS):
+    def __init__(self, required_fields: list[str] = REQUIRED_FIELDS) -> None:
         self._required_fields = list(required_fields)
 
     # Returns a cleaned copy of the report, or None if it must be rejected
-    def clean(self, record):
+    def clean(self, record: dict) -> dict | None:
         # If input is not a dictionary, rejects it
         if not isinstance(record, dict):
             return None
@@ -50,7 +59,7 @@ class RecordCleaner:
 
     # Function purpose : converts value into a standardised format for fair comparison
     # Example : "5" and 5.0 count as equal, or lowercase and trims such that "Fire" and "fire" are equal
-    def comparable(self, value):
+    def comparable(self, value: Any) -> float | str:
         try:
             return float(value)
         except (ValueError, TypeError):

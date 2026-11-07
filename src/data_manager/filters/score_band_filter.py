@@ -23,7 +23,7 @@ SCORE_THRESHOLDS = ["0", "2", "4", "6", "8"]
 class ScoreBandFilter(ReportFilter):
 
     # thresholds are the start of each band, lowest first (each band ends where the next one starts)
-    def __init__(self, column: str = URGENCY_COLUMN, thresholds: list[str] = SCORE_THRESHOLDS):
+    def __init__(self, column: str = URGENCY_COLUMN, thresholds: list[str] = SCORE_THRESHOLDS) -> None:
         super().__init__(column)
         self._thresholds = list(thresholds)
 
