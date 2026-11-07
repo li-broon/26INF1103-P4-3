@@ -12,8 +12,7 @@ import traceback
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, PROJECT_ROOT)  # Let 'src' be Imported
 from src import data_manager
-from src.data_manager import DataManager, RecordStore
-from src.data_manager import data_manager as manager
+from src.data_manager import CsvRecordStore, DataManager, RecordStore, constants
 from src.data_manager.storage.record_cleaner import RecordCleaner
 
 PACKAGE_FOLDER = os.path.join(PROJECT_ROOT, "src", "data_manager")
@@ -44,7 +43,7 @@ def test_no_print_calls_in_the_data_manager():
 
 # The Names the Other Managers Import Still Work
 def test_public_names_are_exported():
-    for name in ("DataManager", "RecordStore", "save_record", "load_records",
+    for name in ("DataManager", "RecordStore", "CsvRecordStore", "save_record", "load_records",
                  "get_unique_values", "load_matching_records"):
         assert hasattr(data_manager, name), f"src.data_manager has no '{name}'"
 
@@ -52,30 +51,52 @@ def test_public_names_are_exported():
 # Moving the File One Folder Deeper Must Not Change Where the Reports are Stored
 def test_default_data_file_is_in_the_project_data_folder():
     expected = os.path.join(PROJECT_ROOT, "data", "data.csv")
-    assert os.path.abspath(manager.DATA_FILE) == expected
-    assert os.path.abspath(manager.DATA_FOLDER) == os.path.join(PROJECT_ROOT, "data")
+    assert os.path.abspath(constants.DATA_FILE) == expected
+    assert os.path.abspath(constants.DATA_FOLDER) == os.path.join(PROJECT_ROOT, "data")
 
 
-# Every DataManager Creates and Owns its Own RecordCleaner (Composition)
-def test_each_data_manager_owns_its_own_record_cleaner():
+# Every CsvRecordStore Creates and Owns its Own RecordCleaner (Composition)
+def test_each_csv_record_store_owns_its_own_record_cleaner():
     with tempfile.TemporaryDirectory() as folder:
-        first = DataManager(os.path.join(folder, "a.csv"))
-        second = DataManager(os.path.join(folder, "b.csv"))
+        first = CsvRecordStore(os.path.join(folder, "a.csv"))
+        second = CsvRecordStore(os.path.join(folder, "b.csv"))
         assert isinstance(first._cleaner, RecordCleaner)
         assert first._cleaner is not second._cleaner
 
 
-# A DataManager Saves to the File it is Given and Reads the Same Reports Back
-def test_data_manager_saves_and_loads_through_its_own_file():
+# The DataManager is Given its Store (Aggregation): it Keeps That Same Object, and the Store Works Without It
+def test_data_manager_uses_the_store_it_is_given():
+    with tempfile.TemporaryDirectory() as folder:
+        store = CsvRecordStore(os.path.join(folder, "data.csv"))
+        assert DataManager(store)._store is store
+        assert store.save_record({"reporter_name": "Ann", "incident_date": "2026-10-01", "importance_score": 7})[0]
+        assert len(store.load_records()) == 1  # the store did its job with no DataManager involved
+
+
+# A DataManager Saves and Reads Reports Through its Store's File
+def test_data_manager_saves_and_loads_through_its_store():
     with tempfile.TemporaryDirectory() as folder:
         data_file = os.path.join(folder, "data.csv")
-        dm = DataManager(data_file)
+        dm = DataManager(CsvRecordStore(data_file))
         report = {"reporter_name": "Ann", "incident_date": "2026-10-01", "importance_score": 7}
         assert dm.save_record(report) == (True, "Record saved.")
         assert dm.save_record(report)[0] is False  # Identical report is rejected
         loaded = dm.load_records()
         assert len(loaded) == 1 and loaded.iloc[0]["reporter_name"] == "Ann"
+        assert "reporter_name" in dm.get_column_names()
         assert os.path.exists(data_file)
+
+
+# The Filter Menu Offers Values Taken From Valid Reports Only (a Hand-Edited Bad Row is Never Offered)
+def test_unique_values_come_from_valid_reports_only():
+    with tempfile.TemporaryDirectory() as folder:
+        data_file = os.path.join(folder, "data.csv")
+        dm = DataManager(CsvRecordStore(data_file))
+        dm.save_record({"reporter_name": "Ann", "incident_date": "2026-10-01", "importance_score": 5, "location": "Office"})
+        with open(data_file, "a", encoding="utf-8") as f:
+            f.write("Bob,not-a-date,5,Warehouse\n")
+        assert dm.get_unique_values("location") == ["Office"]
+        assert dm.get_unique_values("no_such_column") == []
 
 # ------------ #
 # Test Runner

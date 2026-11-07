@@ -1,10 +1,12 @@
 # Public Parts of the Data Manager
+from src.data_manager.constants import DATA_FILE
 from src.data_manager.data_manager import DataManager
+from src.data_manager.storage.csv_record_store import CsvRecordStore
 from src.data_manager.storage.record_store import RecordStore
 
 # One shared DataManager, so the functions below keep working for io_manager and logic_manager
 # Remove them once main.py creates the DataManager and passes it to the other managers
-_manager = DataManager()
+_manager = DataManager(CsvRecordStore(DATA_FILE))
 
 def save_record(record):
     return _manager.save_record(record)
@@ -26,7 +28,7 @@ def show_chart(chart_name, filter_column=None, filter_value=None, save_path=None
 
 # The Package's Public Names
 __all__ = [
-    "DataManager", "RecordStore",
+    "DataManager", "RecordStore", "CsvRecordStore",
     "save_record", "load_records", "get_unique_values", "load_matching_records",
     "get_chart_options", "show_chart",
 ]

@@ -46,6 +46,13 @@ def test_every_method_has_type_hints():
         assert signature.return_annotation is not inspect.Signature.empty, f"{name} has no return type"
 
 
+# CsvRecordStore Fills in Every Method of the Contract, so it Can be Created (the Contract Itself Cannot)
+def test_csv_record_store_implements_the_contract():
+    from src.data_manager.storage.csv_record_store import CsvRecordStore
+    assert issubclass(CsvRecordStore, RecordStore)
+    assert not CsvRecordStore.__abstractmethods__
+
+
 # The default for ascending is False, so the most urgent report comes first
 def test_load_records_defaults_to_most_urgent_first():
     default = inspect.signature(RecordStore.load_records).parameters["ascending"].default

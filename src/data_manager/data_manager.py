@@ -1,17 +1,9 @@
 # Imports
-import logging
-import os
-
 import pandas as pd
 from datetime import timedelta
 
-from src.data_manager.constants import DATE_FIELD, DATE_FORMAT, REQUIRED_FIELDS, URGENCY_COLUMN
-from src.data_manager.storage.record_cleaner import RecordCleaner
-
-# Gets correct data directory no matter where application is launched from
-# (this file is in src/data_manager/, so go up two levels to reach the project's data folder)
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "..", "data")
-DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
+from src.data_manager.constants import DATE_FIELD, DATE_FORMAT, URGENCY_COLUMN
+from src.data_manager.storage.record_store import RecordStore
 
 # Columns that are searched for keywords (location)
 KEYWORD_COLUMNS = ["location"]
@@ -58,88 +50,29 @@ SEVERITY_ORDER = ["Low", "Medium", "High", "Critical"]
 SEVERITY_COLORS = {"Low": "#7fb77e", "Medium": "#f2c14e", "High": "#f08a4b", "Critical": "#d1495b"}
 
 UNKNOWN_PREFIX = "unknown"
-# Used for debugging to log warnings and errors instead of printing them to the console
-logger = logging.getLogger(__name__)
 
 
-
-# Reads and writes incident reports in a CSV file
+# The one place the rest of the app goes to save, read and filter incident reports
+# The reports themselves are kept by a RecordStore that is passed in
 class DataManager:
 
-    # data_file is the CSV file the reports are stored in (defaults to data/data.csv)
-    def __init__(self, data_file=DATA_FILE):
-        self.data_file = data_file
-        self.data_folder = os.path.dirname(data_file)
-        self._cleaner = RecordCleaner()  # Created and owned by this DataManager
+    # store is where the reports are kept (a CSV file in the app). It is passed in, not created here,
+    # so the DataManager can work with any RecordStore
+    def __init__(self, store: RecordStore):
+        self._store = store
 
-    # Function checks for duplicate records
-    def is_duplicate(self, existing_data, record):
-        # If the existing data is empty, there can't be a duplicate
-        if existing_data.empty:
-            return False
+    # Saves one report. Returns (success, message)
+    def save_record(self, record):
+        return self._store.save_record(record)
 
-        for row in existing_data.to_dict("records"):
-            row_matches = True  # Assume a match until a field proves otherwise
+    # Reads all saved reports, sorted by urgency (highest first by default)
+    def load_records(self, ascending=False):
+        return self._store.load_records(ascending=ascending)
 
-            for field, new_value in record.items():
-                # Comparing the existing row's value and the new record's value
-                if self._cleaner.comparable(row.get(field)) != self._cleaner.comparable(new_value):
-                    row_matches = False
-                    break
+    # Returns all column headers of the saved reports
+    def get_column_names(self):
+        return self._store.get_column_names()
 
-            # If all fields matched, there's a duplicate
-            if row_matches: 
-                return True
-        # Returns false, meaning the new record is a unique record    
-        return False
-
-    # Safe reading of the CSV file
-    def load_data_from_csv(self, file_path):
-        # Checks if file exists and isn't empty
-        # Returns empty table if does not exist or is empty
-        if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
-            return pd.DataFrame()
-
-        try:
-            # Only Blank Cells Count as Missing. By Default pandas Also Turns Text like "N/A" (the
-            # Deadline for Non-MOM Reports) into NaN, which Broke Duplicate Checks and Erased "N/A" on Re-Save.
-            df = pd.read_csv(file_path, keep_default_na=False, na_values=[""])
-
-        # Error handling, logs the error and returns empty table so application never crashes
-        except pd.errors.EmptyDataError:
-            logger.warning("File '%s' is empty.", file_path)
-            return pd.DataFrame()
-        except pd.errors.ParserError:
-            logger.warning("File '%s' is badly formatted.", file_path)
-            return pd.DataFrame()
-        except PermissionError:
-            logger.error("No permission to read '%s'.", file_path)
-            return pd.DataFrame()
-        except Exception as e:
-            logger.error("Unexpected problem loading '%s': %s", file_path, e)
-            return pd.DataFrame()
-
-        # Checks for required columns
-        missing = [col for col in REQUIRED_FIELDS if col not in df.columns]
-        if missing:
-            logger.warning("File '%s' is missing required columns: %s", file_path, missing)
-            return pd.DataFrame()
-
-        return df
-
-    def sort_by_column(self, data, column_name, ascending=True):
-
-        # Safety check : if column does not exist, return the data unchanged instead of crashing
-        if column_name not in data.columns:
-            return data
-
-        # Sort by the chosen column, rows with a blank value always go to the bottom
-        # Renumbers the rows in the new order starting with 0
-        return data.sort_values(by=column_name, ascending=ascending, na_position="last").reset_index(drop=True)
-
-    # Keeps the records whose score is within the chosen score band
-    # Example : "2 to under 4" will then keep records with score of 2 up to (not including) 4
-    # "8+" will keep every record from 8 upward
     def filter_by_minimum(self, data, column_name, value):
         try:
             # Extract the selected threshold from value which is the range (0-24 etc.)
@@ -235,91 +168,12 @@ class DataManager:
 
         return self.filter_by_text(data, column_name, value)
 
-    # Converts score column into numbers, then sorts by it
-    # Highest number is first by default
-    def sort_by_urgency(self, table, ascending=False):
-        if URGENCY_COLUMN in table.columns:
-            table = table.copy()
-            table[URGENCY_COLUMN] = pd.to_numeric(table[URGENCY_COLUMN], errors="coerce")
-        return self.sort_by_column(table, URGENCY_COLUMN, ascending=ascending)
-
-    # Adds one report to the CSV file
-    def save_record(self, record):
-        # Attempts to clean record
-        cleaned = self._cleaner.clean(record)
-        if cleaned is None:
-            return False, "Record rejected: missing or invalid required field."
-
-        # Makes sure data folder exists
-        os.makedirs(self.data_folder, exist_ok=True)
-        existing_data = self.load_data_from_csv(self.data_file)
-
-        # File exists but couldn't be read: keep a backup instead of overwriting it
-        if existing_data.empty and os.path.exists(self.data_file) and os.path.getsize(self.data_file) > 0:
-            os.replace(self.data_file, self.data_file.replace(".csv", "_backup.csv"))
-            logger.warning("Unreadable data file backed up to '%s'.", self.data_file.replace(".csv", "_backup.csv"))
-
-        # Checks if record is a duplicate
-        if self.is_duplicate(existing_data, cleaned):
-            return False, "Record rejected: an identical record already exists."
-
-        new_row = pd.DataFrame([cleaned])
-
-        # Creates a new DataFrame with the new row if existing_data is empty, otherwise concatenates the new row to existing_data
-        table = new_row if existing_data.empty else pd.concat([existing_data, new_row], ignore_index=True)
-        # Sort the table by urgency before saving
-        table = self.sort_by_urgency(table)
-
-        # Write a temporary file first to avoid data loss if the write fails, then replace the original if everything is good
-        temp_file = self.data_file + ".tmp"
-        try:
-            table.to_csv(temp_file, index=False)
-            os.replace(temp_file, self.data_file)
-        except OSError as e:
-            logger.error("Could not write '%s': %s", self.data_file, e)
-            return False, "Record could not be saved (file write error)."
-
-        return True, "Record saved."
-
-    # Reads all reports for display
-    # Loads the CSV file, cleans each row, drops invalid or duplicate rows
-    # Returns result sorted by urgency, does not change original file 
-    def load_records(self, ascending=False):
-        table = self.load_data_from_csv(self.data_file)
-        if table.empty:
-            return table
-
-        valid_records = []
-        # Convert dataframe to a list of dictionaries
-        for record in table.to_dict("records"):
-            # Clean each row and only keep valid ones
-            cleaned = self._cleaner.clean(record)
-            # Only keep rows that pass validation (rejects None)
-            if cleaned is not None:
-                valid_records.append(cleaned)
-
-        # If all rows were corrupt, return empty
-        if not valid_records:
-            return pd.DataFrame()
-
-        # Convert back to DataFrame and sort
-        clean_table = pd.DataFrame(valid_records)
-
-        # Drop exact duplicates that might have been pasted in manually
-        clean_table = clean_table.drop_duplicates()
-
-        return self.sort_by_urgency(clean_table, ascending=ascending)
-
-    # Simple function to return all column headers in the CSV file
-    def get_column_names(self):
-        return list(self.load_data_from_csv(self.data_file).columns)
-
     # This function builds the list of filter options the user sees in the I/O menu
     # For most columns, read the value from the file
     # For score, date and deadline specifically, fixed menu options are given
     def get_unique_values(self, column_name):
-        # Loads the saved CSV, returns empty list if file is empty/unreadable or doesn't exist
-        table = self.load_data_from_csv(self.data_file)
+        # Loads the saved reports, returns empty list if nothing is saved or the file is unreadable
+        table = self.load_records()
         if column_name not in table.columns:
             return []
 
