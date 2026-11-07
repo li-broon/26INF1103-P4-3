@@ -1,5 +1,5 @@
-from .helpers import to_bool
-from .score_factor import ScoreFactor
+from src.logic_manager.helpers import to_bool
+from src.logic_manager.scoring.factors.score_factor import ScoreFactor
 
 
 # One weight if the value is true, another if false

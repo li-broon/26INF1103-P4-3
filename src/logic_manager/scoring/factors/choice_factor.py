@@ -1,4 +1,4 @@
-from .score_factor import ScoreFactor
+from src.logic_manager.scoring.factors.score_factor import ScoreFactor
 
 
 # Looks the value up in a dictionary of weights (unknown values score 0)

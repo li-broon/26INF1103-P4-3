@@ -1,4 +1,4 @@
-from .config import MAX_SCORE
+from src.logic_manager.config import MAX_SCORE
 
 
 class ImportanceScorer:

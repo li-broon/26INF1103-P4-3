@@ -1,4 +1,4 @@
-from .score_factor import ScoreFactor
+from src.logic_manager.scoring.factors.score_factor import ScoreFactor
 
 
 # Uses the number of hours directly, clamped between 0 and max_hours

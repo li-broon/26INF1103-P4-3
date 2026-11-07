@@ -1,9 +1,9 @@
 from dataclasses import asdict
 
-from .data_manager_adapter import DataManagerAdapter
-from .default_scorer import build_default_scorer
-from .mom_reporting_rule import MomReportingRule
-from .save_outcome import SaveOutcome
+from src.logic_manager.adapters.data_manager_adapter import DataManagerAdapter
+from src.logic_manager.scoring.default_scorer import build_default_scorer
+from src.logic_manager.rules.mom_reporting_rule import MomReportingRule
+from src.logic_manager.models.save_outcome import SaveOutcome
 
 
 class LogicManager:

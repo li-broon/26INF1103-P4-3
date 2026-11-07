@@ -1,6 +1,6 @@
-from .boolean_factor import BooleanFactor
-from .choice_factor import ChoiceFactor
-from .config import (
+from src.logic_manager.scoring.factors.boolean_factor import BooleanFactor
+from src.logic_manager.scoring.factors.choice_factor import ChoiceFactor
+from src.logic_manager.config import (
     FIELD_IMPORTANCE,
     HOSPITALISED_WEIGHTS,
     LOST_TIME_INJURY_WEIGHTS,
@@ -10,8 +10,8 @@ from .config import (
     ROOT_CAUSE_WEIGHTS,
     SEVERITY_WEIGHTS,
 )
-from .hours_factor import HoursFactor
-from .importance_scorer import ImportanceScorer
+from src.logic_manager.scoring.factors.hours_factor import HoursFactor
+from src.logic_manager.scoring.importance_scorer import ImportanceScorer
 
 
 # Builds the scorer with the weights configured in config.py

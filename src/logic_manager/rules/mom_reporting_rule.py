@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
-from .config import MOM_DEADLINE_DAYS, MOM_REPORTABLE_SEVERITIES, NO_DEADLINE
-from .helpers import to_bool
+from src.logic_manager.config import MOM_DEADLINE_DAYS, MOM_REPORTABLE_SEVERITIES, NO_DEADLINE
+from src.logic_manager.helpers import to_bool
 
 
 class MomReportingRule:
