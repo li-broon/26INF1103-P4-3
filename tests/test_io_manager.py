@@ -5,8 +5,11 @@ import re
 import traceback
 import contextlib
 from datetime import date
+from types import SimpleNamespace
 from io import StringIO
 import pandas as pd
+from src.ai_manager import AIServiceError
+from src.io_manager.manager import IOManager
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src import io_manager as io
@@ -31,8 +34,15 @@ def test_fit_handles_non_strings():
     result = io.ReportFormatter().fit_text(42.5, 6)
     assert result == "42.5  "
 
-# Menu Tests
+# Test that Menu is abstract: Python must refuse to create a plain Menu
+def test_menu_is_abstract():
+    try:
+        io.Menu(io.Prompter())
+        assert False, "Menu should be abstract"
+    except TypeError:
+        pass
 
+# Menu Tests
 # Test that every menu shares the same show() but has its own number of options:
 # the same code accepts 3 on the main menu, 5 on the view menu and 4 on the page menu
 def test_menus_accept_their_own_last_option():
@@ -99,7 +109,6 @@ def test_row_range_last_page():
     assert pager.row_range() == (6, 7)
 
 
-
 # Report Card Tests
 REPORT = {
     "reporter_name": "Ahmad bin Ismail",
@@ -108,8 +117,16 @@ REPORT = {
     "is_near_miss": False,
     "injury_status": "",
 }
-SAVED = {"saved": True, "message": "Record saved.", "importance_score": 7.4,
-         "mom_reportable": "Yes", "deadline": "2099-12-31"}
+
+# A fake SaveOutcome: the same fields as the Logic Manager's real one
+SAVED = SimpleNamespace(saved=True, message="Record saved.", importance_score=7.4,
+                        mom_reportable="Yes", deadline="2099-12-31")
+
+# A copy of SAVED with some fields changed, e.g. outcome(deadline="2022-12-22")
+def outcome(**changes):
+    return SimpleNamespace(**{**vars(SAVED), **changes})
+
+card_view = io.ReportCardView(io.ReportFormatter())
 
 # Run fn and return what it printed, with colour codes removed.
 def printed(fn, *args):
@@ -120,7 +137,7 @@ def printed(fn, *args):
 
 # Test that a saved report is shown back with the worker's details plus the score and MOM deadline.
 def test_confirmation_card_shows_report_and_logic_results():
-    text = printed(io._print_save_outcome, REPORT, SAVED)
+    text = printed(card_view.show_save_outcome, REPORT, SAVED)
     assert "Your report has been saved" in text
     assert "Your Saved Report" in text
     assert "Ahmad bin Ismail" in text
@@ -132,8 +149,8 @@ def test_confirmation_card_shows_report_and_logic_results():
 
 # Test that a failed save shows the reason and no card, so the worker isn't told it was saved
 def test_confirmation_card_not_shown_when_save_fails():
-    failed = dict(SAVED, saved=False, message="Record rejected: an identical record already exists.")
-    text = printed(io._print_save_outcome, REPORT, failed)
+    failed = outcome(saved=False, message="Record rejected: an identical record already exists.")
+    text = printed(card_view.show_save_outcome, REPORT, failed)
     assert "NOT saved" in text
     assert "identical record" in text
     assert "Your Saved Report" not in text
@@ -141,36 +158,141 @@ def test_confirmation_card_not_shown_when_save_fails():
 
 # Test that a MOM deadline in the past is shown as OVERDUE.
 def test_confirmation_card_says_overdue_when_deadline_passed():
-    
-    text = printed(io._print_save_outcome, REPORT, dict(SAVED, deadline="2022-12-22"))
+    text = printed(card_view.show_save_outcome, REPORT, outcome(deadline="2022-12-22"))
     assert "OVERDUE" in text
     assert "2022-12-22" in text
 
 # Test that only deadlines before today count as overdue, and bad dates never do.
 def test_is_overdue():
-    
     today = date(2026, 10, 13)
-    assert io._is_overdue("2026-10-12", today) is True
-    assert io._is_overdue("2026-10-13", today) is False  # Due today is not overdue yet
-    assert io._is_overdue("2026-10-14", today) is False
-    assert io._is_overdue("Check incident date", today) is False
-    assert io._is_overdue("N/A", today) is False
+    assert card_view._is_overdue("2026-10-12", today) is True
+    assert card_view._is_overdue("2026-10-13", today) is False  # Due today is not overdue yet
+    assert card_view._is_overdue("2026-10-14", today) is False
+    assert card_view._is_overdue("Check incident date", today) is False
+    assert card_view._is_overdue("N/A", today) is False
 
 # Test that a non-MOM report shows N/A as its deadline and no MOM warning.
 def test_confirmation_card_no_mom_warning_when_not_reportable():
-    
-    not_reportable = dict(SAVED, mom_reportable="No", deadline="N/A")
-    text = printed(io._print_save_outcome, REPORT, not_reportable)
+    text = printed(card_view.show_save_outcome, REPORT, outcome(mom_reportable="No", deadline="N/A"))
     assert re.search(r"MOM reportable:\s+No", text)
     assert "must be reported" not in text
 
 # Test that opening a report from the table shows its number and its fields.
 def test_full_report_from_table_uses_report_number():
-    
     table = pd.DataFrame([REPORT, dict(REPORT, reporter_name="Siti")])
-    text = printed(io._print_full_report, table, 2)
+    text = printed(card_view.show_from_table, table, 2)
     assert "Report #2" in text
     assert "Siti" in text
+
+# Test that one page shows the header, 3 reports, and the footer exactly once
+def test_table_view_shows_one_page():
+    table = pd.DataFrame([REPORT] * 4)
+    view = io.ReportTableView(io.ReportFormatter())
+    text = printed(view.show, table, "Saved Reports", io.Pager(len(table), page_size=3))
+    assert "Score" in text and "Severity" in text
+    assert text.count("Ahmad bin Ismail") == 3
+    assert text.count("Page 1 of 2") == 1
+
+# IOManager Tests (fake managers: no API key, no CSV file)
+
+# A fake chat: hands back the prepared replies one at a time
+class FakeConversation:
+    def __init__(self, replies):
+        self._replies = iter(replies)
+    def send(self, text):
+        return next(self._replies)
+
+# A fake AI Manager: starts a fake chat with the prepared replies
+class FakeAI:
+    def __init__(self, replies):
+        self._replies = replies
+    def start_conversation(self):
+        return FakeConversation(self._replies)
+
+# A fake AI Manager with no API key: refuses to start, like the real one
+class NoKeyAI:
+    def start_conversation(self):
+        raise AIServiceError("GEMINI_API_KEY is missing.")
+
+# A fake Logic Manager: always returns the outcome it was given
+class FakeLogic:
+    def __init__(self, result=None):
+        self._result = result or outcome(mom_reportable="No", deadline="N/A")
+    def process(self, report):
+        return self._result
+
+# A fake Data Manager: always returns the table it was given
+class FakeData:
+    def __init__(self, table):
+        self._table = table
+    def load_records(self, ascending=False):
+        return self._table
+    def get_unique_values(self, column):
+        return []
+    def load_matching_records(self, column, value, ascending=False):
+        return self._table
+
+# One AI reply; by default a normal, unfinished one with no error
+def reply(**fields):
+    base = dict(reply="Thanks, tell me more.", is_complete=False, report={},
+                error=None, error_code=None, error_status=None)
+    return SimpleNamespace(**{**base, **fields})
+
+# Build an IOManager whose "user" types the given answers in order
+def io_manager(ai=None, logic=None, data=None, answers=()):
+    return IOManager(ai or FakeAI([]), logic or FakeLogic(), data or FakeData(pd.DataFrame()),
+                     read=fake_input(*answers))
+
+
+# Menu 1 (chat) -> one message -> report complete -> "n" to viewing reports -> 3 (exit)
+def test_chatbot_saves_a_complete_report():
+    manager = io_manager(ai=FakeAI([reply(is_complete=True, report=REPORT)]),
+                         answers=["1", "I cut my hand", "n", "3"])
+    text = printed(manager.run)
+    assert "Your report has been saved" in text
+    assert "Ahmad bin Ismail" in text
+    assert "Goodbye" in text
+
+# Typing quit asks to confirm, and nothing is saved
+def test_chatbot_quit_asks_to_confirm():
+    text = printed(io_manager(answers=["1", "quit", "y", "3"]).run)
+    assert "Report cancelled. Nothing was saved." in text
+
+# An error with no code must not tell the worker to resend
+def test_chatbot_error_without_code_does_not_say_resend():
+    manager = io_manager(ai=FakeAI([reply(error="Report not finished")]),
+                         answers=["1", "hi", "quit", "y", "3"])
+    text = printed(manager.run)
+    assert "couldn't be finished" in text
+    assert "resend" not in text
+
+# A real API error (it has a code) does tell the worker to resend
+def test_chatbot_api_error_says_resend():
+    manager = io_manager(ai=FakeAI([reply(error="Too many requests", error_code=429, error_status="RESOURCE_EXHAUSTED")]),
+                         answers=["1", "hi", "quit", "y", "3"])
+    text = printed(manager.run)
+    assert "429" in text
+    assert "resend" in text
+
+# A failed save is reported, and the worker is not told it was saved
+def test_chatbot_save_failure_is_reported():
+    manager = io_manager(ai=FakeAI([reply(is_complete=True, report=REPORT)]),
+                         logic=FakeLogic(outcome(saved=False, message="Disk full")),
+                         answers=["1", "I fell", "n", "3"])
+    text = printed(manager.run)
+    assert "NOT saved" in text
+    assert "has been saved" not in text
+
+# Without an API key, the chatbot explains why and returns to the menu instead of crashing
+def test_chatbot_without_api_key():
+    text = printed(io_manager(ai=NoKeyAI(), answers=["1", "3"]).run)
+    assert "GEMINI_API_KEY is missing" in text
+    assert "Goodbye" in text
+
+# Viewing reports with none saved says so instead of showing an empty table
+def test_view_reports_when_none_saved():
+    text = printed(io_manager(answers=["2", "3"]).run)
+    assert "No incident reports have been saved yet" in text
 
 # Prompter Tests
 # Build a fake 'input' that hands back the given answers one at a time
@@ -200,6 +322,26 @@ def test_prompter_no():
     result = prompter.ask_yes_no("Leave?")
     assert result is False
 
+# Test that choose_from returns the picked value, and None when the user picks Back
+def test_prompter_choose_from():
+    values = ["Fall", "Fire", "Machinery"]
+    with contextlib.redirect_stdout(StringIO()):
+        picked = io.Prompter(read=fake_input("2")).choose_from("Root Cause", values)
+        back = io.Prompter(read=fake_input("4")).choose_from("Root Cause", values)
+    assert picked == "Fire"     # option 2 is the second value
+    assert back is None         # option 4 is Back (3 values + 1)
+
+# Test that ask_text returns what was typed, without the spaces around it
+def test_prompter_ask_text_strips_spaces():
+    assert io.Prompter(read=fake_input("  Warehouse B  ")).ask_text("Keyword: ") == "Warehouse B"
+
+# Test that the cancel words work in any capitals, and normal text is not a cancel
+def test_prompter_is_cancel():
+    prompter = io.Prompter()
+    assert prompter.is_cancel("QUIT") is True
+    assert prompter.is_cancel(" exit ") is True
+    assert prompter.is_cancel("hello") is False
+
 
 # Mini runner
 def run_all():
@@ -222,3 +364,4 @@ def run_all():
 
 if __name__ == "__main__":
     sys.exit(1 if run_all() else 0)
+
