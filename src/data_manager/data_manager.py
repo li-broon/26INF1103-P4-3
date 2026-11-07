@@ -2,35 +2,15 @@
 import pandas as pd
 from datetime import timedelta
 
-from src.data_manager.constants import DATE_FIELD, DATE_FORMAT, URGENCY_COLUMN
+from src.data_manager.constants import DATE_FIELD, DATE_FORMAT, DEADLINE_FIELD, URGENCY_COLUMN
+# The filter choices now live with their filter classes (these imports go once DataManager uses the filter objects)
+from src.data_manager.filters.date_range_filter import DATE_RANGES
+from src.data_manager.filters.deadline_filter import DEADLINE_FILTERS
+from src.data_manager.filters.score_band_filter import SCORE_THRESHOLDS
 from src.data_manager.storage.record_store import RecordStore
 
 # Columns that are searched for keywords (location)
 KEYWORD_COLUMNS = ["location"]
-
-# Predefined date ranges for filtering, counting back from today
-DATE_RANGES = {
-    "Last 7 Days": 7,
-    "Last 30 Days": 30,
-    "Last 90 Days": 90,
-    "Last 180 Days": 180,
-    "Last 365 Days": 365,
-}
-
-DEADLINE_FIELD = "deadline"
-
-# Filter options for the MOM deadline column: (earliest, latest) in days from
-# today. None means no limit on that side. 0 is today, -1 is yesterday.
-DEADLINE_FILTERS = {
-    "Overdue": (None, -1),
-    "Due within 3 days": (0, 3),
-    "Due within 7 days": (0, 7),
-    "All upcoming": (0, None),
-}
-
-# Indicates the boundary for each threshold filter in the urgency column.
-# Ranges [0-2, 2-4, 4-6, 6-8, 8 and above]
-SCORE_THRESHOLDS = ["0", "2", "4", "6", "8"]
 
 CHART_OPTIONS = {
     "severity": "Incidents by severity",

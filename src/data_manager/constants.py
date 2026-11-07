@@ -13,6 +13,9 @@ REQUIRED_FIELDS = ["reporter_name", "incident_date", URGENCY_COLUMN]
 DATE_FIELD = "incident_date"
 DATE_FORMAT = "%Y-%m-%d"
 
+# The MOM deadline column ("N/A" for reports that do not need a MOM report)
+DEADLINE_FIELD = "deadline"
+
 # Gets correct data directory no matter where application is launched from
 # (this file is in src/data_manager/, so go up two levels to reach the project's data folder)
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "..", "data")
