@@ -35,5 +35,5 @@ class Menu(ABC):
 
         options = self.options()
         for number, label in enumerate(options, start=1):
-            print(f"{GREEN}{BOLD}{number}{RESET}.  {label}")
+            print(f"      {GREEN}{BOLD}{number}{RESET}.  {label}")
         return self._prompter.ask_number(f"Choose an option (1-{len(options)}): ", 1, len(options))

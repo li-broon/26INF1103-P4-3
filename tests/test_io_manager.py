@@ -8,6 +8,8 @@ from datetime import date
 from types import SimpleNamespace
 from io import StringIO
 import pandas as pd
+from src.ai_manager import AIServiceError
+from src.io_manager.manager import IOManager
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src import io_manager as io
@@ -191,6 +193,107 @@ def test_table_view_shows_one_page():
     assert text.count("Ahmad bin Ismail") == 3
     assert text.count("Page 1 of 2") == 1
 
+# IOManager Tests (fake managers: no API key, no CSV file)
+
+# A fake chat: hands back the prepared replies one at a time
+class FakeConversation:
+    def __init__(self, replies):
+        self._replies = iter(replies)
+    def send(self, text):
+        return next(self._replies)
+
+# A fake AI Manager: starts a fake chat with the prepared replies
+class FakeAI:
+    def __init__(self, replies):
+        self._replies = replies
+    def start_conversation(self):
+        return FakeConversation(self._replies)
+
+# A fake AI Manager with no API key: refuses to start, like the real one
+class NoKeyAI:
+    def start_conversation(self):
+        raise AIServiceError("GEMINI_API_KEY is missing.")
+
+# A fake Logic Manager: always returns the outcome it was given
+class FakeLogic:
+    def __init__(self, result=None):
+        self._result = result or outcome(mom_reportable="No", deadline="N/A")
+    def process(self, report):
+        return self._result
+
+# A fake Data Manager: always returns the table it was given
+class FakeData:
+    def __init__(self, table):
+        self._table = table
+    def load_records(self, ascending=False):
+        return self._table
+    def get_unique_values(self, column):
+        return []
+    def load_matching_records(self, column, value, ascending=False):
+        return self._table
+
+# One AI reply; by default a normal, unfinished one with no error
+def reply(**fields):
+    base = dict(reply="Thanks, tell me more.", is_complete=False, report={},
+                error=None, error_code=None, error_status=None)
+    return SimpleNamespace(**{**base, **fields})
+
+# Build an IOManager whose "user" types the given answers in order
+def io_manager(ai=None, logic=None, data=None, answers=()):
+    return IOManager(ai or FakeAI([]), logic or FakeLogic(), data or FakeData(pd.DataFrame()),
+                     read=fake_input(*answers))
+
+
+# Menu 1 (chat) -> one message -> report complete -> "n" to viewing reports -> 3 (exit)
+def test_chatbot_saves_a_complete_report():
+    manager = io_manager(ai=FakeAI([reply(is_complete=True, report=REPORT)]),
+                         answers=["1", "I cut my hand", "n", "3"])
+    text = printed(manager.run)
+    assert "Your report has been saved" in text
+    assert "Ahmad bin Ismail" in text
+    assert "Goodbye" in text
+
+# Typing quit asks to confirm, and nothing is saved
+def test_chatbot_quit_asks_to_confirm():
+    text = printed(io_manager(answers=["1", "quit", "y", "3"]).run)
+    assert "Report cancelled. Nothing was saved." in text
+
+# An error with no code must not tell the worker to resend
+def test_chatbot_error_without_code_does_not_say_resend():
+    manager = io_manager(ai=FakeAI([reply(error="Report not finished")]),
+                         answers=["1", "hi", "quit", "y", "3"])
+    text = printed(manager.run)
+    assert "couldn't be finished" in text
+    assert "resend" not in text
+
+# A real API error (it has a code) does tell the worker to resend
+def test_chatbot_api_error_says_resend():
+    manager = io_manager(ai=FakeAI([reply(error="Too many requests", error_code=429, error_status="RESOURCE_EXHAUSTED")]),
+                         answers=["1", "hi", "quit", "y", "3"])
+    text = printed(manager.run)
+    assert "429" in text
+    assert "resend" in text
+
+# A failed save is reported, and the worker is not told it was saved
+def test_chatbot_save_failure_is_reported():
+    manager = io_manager(ai=FakeAI([reply(is_complete=True, report=REPORT)]),
+                         logic=FakeLogic(outcome(saved=False, message="Disk full")),
+                         answers=["1", "I fell", "n", "3"])
+    text = printed(manager.run)
+    assert "NOT saved" in text
+    assert "has been saved" not in text
+
+# Without an API key, the chatbot explains why and returns to the menu instead of crashing
+def test_chatbot_without_api_key():
+    text = printed(io_manager(ai=NoKeyAI(), answers=["1", "3"]).run)
+    assert "GEMINI_API_KEY is missing" in text
+    assert "Goodbye" in text
+
+# Viewing reports with none saved says so instead of showing an empty table
+def test_view_reports_when_none_saved():
+    text = printed(io_manager(answers=["2", "3"]).run)
+    assert "No incident reports have been saved yet" in text
+
 # Prompter Tests
 # Build a fake 'input' that hands back the given answers one at a time
 def fake_input(*answers):
@@ -261,3 +364,4 @@ def run_all():
 
 if __name__ == "__main__":
     sys.exit(1 if run_all() else 0)
+
