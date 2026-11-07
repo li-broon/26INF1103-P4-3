@@ -1,7 +1,7 @@
 # Imports
 import pandas as pd
 
-from src.data_helper.settings import *
+from src.data_manager.constants import *
 
 
 # Checks and tidies one report before it is saved or shown

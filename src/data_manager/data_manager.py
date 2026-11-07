@@ -5,11 +5,12 @@ import os
 import pandas as pd
 from datetime import timedelta
 
-from src.data_helper.record_cleaner import RecordCleaner
-from src.data_helper.settings import DATE_FIELD, DATE_FORMAT, REQUIRED_FIELDS, URGENCY_COLUMN
+from src.data_manager.constants import DATE_FIELD, DATE_FORMAT, REQUIRED_FIELDS, URGENCY_COLUMN
+from src.data_manager.storage.record_cleaner import RecordCleaner
 
 # Gets correct data directory no matter where application is launched from
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "data")
+# (this file is in src/data_manager/, so go up two levels to reach the project's data folder)
+DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
 
 # Columns that are searched for keywords (location)
@@ -59,6 +60,8 @@ SEVERITY_COLORS = {"Low": "#7fb77e", "Medium": "#f2c14e", "High": "#f08a4b", "Cr
 UNKNOWN_PREFIX = "unknown"
 # Used for debugging to log warnings and errors instead of printing them to the console
 logger = logging.getLogger(__name__)
+
+
 
 # Reads and writes incident reports in a CSV file
 class DataManager:
@@ -517,24 +520,3 @@ class DataManager:
         plt.show()  # Blocks until the window is closed
         plt.close(fig)
         return True, "Chart closed."
-
-
-_manager = DataManager()
-
-def save_record(record):
-    return _manager.save_record(record)
-
-def load_records(ascending=False):
-    return _manager.load_records(ascending=ascending)
-
-def get_unique_values(column_name):
-    return _manager.get_unique_values(column_name)
-
-def load_matching_records(column_name, value, ascending=False):
-    return _manager.load_matching_records(column_name, value, ascending=ascending)
-
-def get_chart_options():
-    return _manager.get_chart_options()
- 
-def show_chart(chart_name, filter_column=None, filter_value=None, save_path=None):
-    return _manager.show_chart(chart_name, filter_column, filter_value, save_path)
