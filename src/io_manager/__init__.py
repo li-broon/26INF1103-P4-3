@@ -183,16 +183,21 @@ def run_chatbot():
         print("Thinking...\n")
         result = conversation.send(user_text)
 
-        # Catch API errors (like rate limits etc.) and allow the user to try again without losing their spot
+        # Something went wrong with this message: explain it, with advice that fits the kind of error
         if result.error:
             print(f"{RED}{BOLD}  Error Occurred:{RESET}")
 
+            # A real API error (it has a code, e.g. a rate limit): sending again can work
             if result.error_code is not None:
                 print(f"   {BOLD}{RED}Code:{RESET}    {result.error_code}")
                 print(f"   {BOLD}{RED}Status:{RESET}  {result.error_status}")
+                print(f"   {BOLD}{RED}Message:{RESET} {result.error}")
+                print(f"{BOLD}{RED}Please resend your last message to try again!{RESET}\n")
 
-            print(f"   {BOLD}{RED}Message:{RESET} {result.error}")
-            print(f"{BOLD}{RED}Please resend your last message to try again!{RESET}\n")
+            # Any other problem (no code): sending the same message again won't help
+            else:
+                print(f"   {BOLD}{RED}Message:{RESET} {result.error}")
+                print(f"{YELLOW}This report couldn't be finished. Type 'quit' to go back, or tell your supervisor directly.{RESET}\n")
 
         else:
             # Print the AI's translated response to the terminal
