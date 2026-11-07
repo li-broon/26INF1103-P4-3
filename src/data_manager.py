@@ -5,19 +5,12 @@ import os
 import pandas as pd
 from datetime import timedelta
 
+from src.data_helper.record_cleaner import RecordCleaner
+from src.data_helper.settings import DATE_FIELD, DATE_FORMAT, REQUIRED_FIELDS, URGENCY_COLUMN
+
 # Gets correct data directory no matter where application is launched from
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "data")
 DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
-
-# Sorting by score means sorting by urgency 
-URGENCY_COLUMN = "importance_score"
-
-# Important fields that csv must contain, or the csv is rejected
-REQUIRED_FIELDS = ["reporter_name", "incident_date", URGENCY_COLUMN]
-
-# The date column and its format (e.g. 2026-12-5)
-DATE_FIELD = "incident_date"
-DATE_FORMAT = "%Y-%m-%d"
 
 # Columns that are searched for keywords (location)
 KEYWORD_COLUMNS = ["location"]
@@ -67,8 +60,6 @@ UNKNOWN_PREFIX = "unknown"
 # Used for debugging to log warnings and errors instead of printing them to the console
 logger = logging.getLogger(__name__)
 
-
-
 # Reads and writes incident reports in a CSV file
 class DataManager:
 
@@ -76,50 +67,7 @@ class DataManager:
     def __init__(self, data_file=DATA_FILE):
         self.data_file = data_file
         self.data_folder = os.path.dirname(data_file)
-
-    # CSV Cleaning
-    def clean_record(self, record):
-        # If input is not a dictionary, rejects it
-        if not isinstance(record, dict):
-            return None
-
-        # Makes a copy so that the original is not affected
-        cleaned = record.copy()
-
-        # Strip whitespace from every text value
-        for k, v in cleaned.items():
-            if isinstance(v, str):
-                cleaned[k] = v.strip()
-            else:
-                cleaned[k] = v
-
-        # Required fields must exist and be non-empty
-        for field in REQUIRED_FIELDS:
-            value = cleaned.get(field)
-            if value is None or (isinstance(value, str) and value == "") or pd.isna(value):
-                return None
-
-        try:
-            # Converts date to exact YYYY-MM-DD format
-            cleaned[DATE_FIELD] = pd.to_datetime(
-                cleaned[DATE_FIELD], format=DATE_FORMAT
-            ).strftime(DATE_FORMAT)
-            # Converts score to decimal number
-            cleaned[URGENCY_COLUMN] = float(cleaned[URGENCY_COLUMN])
-        # If conversion fails, reject the input
-        except (ValueError, TypeError):
-            return None
-
-        # Returns cleaned copy
-        return cleaned
-
-    # Function purpose : converts value into a standardised format for fair comparison
-    # Example : "5" and 5.0 count as equal, or lowercase and trims such that "Fire" and "fire" are equal
-    def comparable(self, value):
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return str(value).strip().lower()
+        self._cleaner = RecordCleaner()  # Created and owned by this DataManager
 
     # Function checks for duplicate records
     def is_duplicate(self, existing_data, record):
@@ -132,7 +80,7 @@ class DataManager:
 
             for field, new_value in record.items():
                 # Comparing the existing row's value and the new record's value
-                if self.comparable(row.get(field)) != self.comparable(new_value):
+                if self._cleaner.comparable(row.get(field)) != self._cleaner.comparable(new_value):
                     row_matches = False
                     break
 
@@ -295,7 +243,7 @@ class DataManager:
     # Adds one report to the CSV file
     def save_record(self, record):
         # Attempts to clean record
-        cleaned = self.clean_record(record)
+        cleaned = self._cleaner.clean(record)
         if cleaned is None:
             return False, "Record rejected: missing or invalid required field."
 
@@ -342,7 +290,7 @@ class DataManager:
         # Convert dataframe to a list of dictionaries
         for record in table.to_dict("records"):
             # Clean each row and only keep valid ones
-            cleaned = self.clean_record(record)
+            cleaned = self._cleaner.clean(record)
             # Only keep rows that pass validation (rejects None)
             if cleaned is not None:
                 valid_records.append(cleaned)
