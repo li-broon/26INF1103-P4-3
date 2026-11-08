@@ -3,6 +3,7 @@ data/*
 !data/.gitkeep
 __pycache__/
 .devcontainer/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
