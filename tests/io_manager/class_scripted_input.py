@@ -1,4 +1,4 @@
-# Stands in for the Keyboard: Pass .read to Anything that Normally Calls input(), and it Hands Back the Answers in Order
+# Stands in for the keyboard: pass .read to anything that normally calls input(), and it hands back the answers in order
 class ScriptedInput:
     def __init__(self, *answers: str):
         self._answers = list(answers)

@@ -2,8 +2,11 @@
 # Imports
 # ------- #
 
-from tests.fakes.fake_gemini_response import FakeGeminiResponse
+from tests.ai_manager.class_fake_gemini_response import FakeGeminiResponse
 
+# ---- #
+# Class
+# ---- #
 
 # Fake Gemini Chat Session: Raises the Given Errors in Order, then Replies "ok"
 class FakeGeminiChat:

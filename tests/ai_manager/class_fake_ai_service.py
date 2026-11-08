@@ -5,6 +5,9 @@
 from src.ai_manager import AIServiceError
 from src.ai_manager.services.ai_service import AIService
 
+# ---- #
+# Class
+# ---- #
 
 # Fake AI Provider (Same AIService Contract, No Live API): Gives Out the Reply Texts (or AIServiceErrors to Raise) in Order, Repeating the Last One
 class FakeAIService(AIService):
