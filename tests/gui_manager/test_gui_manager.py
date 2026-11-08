@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # Tkinter is Part of Python, but Some Linux Installs Leave it Out: Skip Rather than Fail
 pytest.importorskip("tkinter")
 from src import gui_manager as gui
-from src.io_manager import TABLE_COLUMNS, FULL_REPORT_FIELDS
+from src.io_manager.constants import TABLE_COLUMNS, FULL_REPORT_FIELDS
 
 # These Tests Only Use the Helpers, so No Window is Opened (CI Has No Display)
 

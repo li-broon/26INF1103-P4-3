@@ -8,5 +8,8 @@ ROOT_CAUSES = [
     "Slip or Trip", "Fire", "Water", "Safety Procedure Breach", "Other",
 ]
 
+# Date Format for the Incident Date and for "Today" in the Prompt (Must Match so Relative Dates Work)
+DATE_FORMAT = "%Y-%m-%d"
+
 # Value the AI Stores when the Worker Really Does Not Know a Detail
 UNKNOWN_VALUE = "unknown (worker could not say)"

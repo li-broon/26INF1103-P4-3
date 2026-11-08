@@ -6,12 +6,7 @@ from src.data_manager import save_record
 # Weight Configuration
 
 # Weight for each possible value that the AI can return for ai_severity
-SEVERITY_WEIGHTS = {
-    "Low": 1,
-    "Medium": 4,
-    "High": 7,
-    "Critical": 10,
-}
+SEVERITY_WEIGHTS = {"Low": 1, "Medium": 4, "High": 7, "Critical": 10}
 
 # Weight for each possible value of that the AI can return for root_cause_category
 ROOT_CAUSE_WEIGHTS = {
@@ -28,22 +23,13 @@ ROOT_CAUSE_WEIGHTS = {
 }
 
 # Weight for hospitalised (true/false)
-HOSPITALISED_WEIGHTS = {
-    True: 5,
-    False: 10,
-}
+HOSPITALISED_WEIGHTS = {True: 5, False: 10}
 
 # Weight for is_near_miss (true/false) 
-NEAR_MISS_WEIGHTS = {
-    True: 2,
-    False: 0,
-}
+NEAR_MISS_WEIGHTS = {True: 2, False: 0}
 
 # Weight for lost_time_injury (true/false)
-LOST_TIME_INJURY_WEIGHTS = {
-    True: 8,
-    False: 1,
-}
+LOST_TIME_INJURY_WEIGHTS = {True: 8, False: 1}
 
 # The importance score is capped at this value
 MAX_SCORE = 10

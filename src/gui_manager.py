@@ -12,14 +12,13 @@ from tkinter import messagebox, ttk
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
 from src.data_manager import get_unique_values, load_matching_records, load_records
-from src.io_manager import (
+from src.io_manager import ReportCardView, ReportFormatter
+from src.io_manager.constants import (
     CANCEL_WORDS,
     FILTER_COLUMNS,
     FULL_REPORT_FIELDS,
     TABLE_COLUMNS,
     YES_NO_COLUMNS,
-    ReportFormatter,
-    _is_overdue,
 )
 from src.logic_manager import logic
 
@@ -106,6 +105,9 @@ ENV_FILE = os.path.join(os.path.dirname(__file__), "..", ".env")
 
 # One Formatter Shared by the Whole Window (YES/No Wording Matches the Terminal)
 _formatter = ReportFormatter()
+
+# The Terminal's Overdue Check now Lives on ReportCardView, so the Window Borrows It
+_is_overdue = ReportCardView(_formatter)._is_overdue
 
 
 # Build a Font Tuple in the App's Typeface

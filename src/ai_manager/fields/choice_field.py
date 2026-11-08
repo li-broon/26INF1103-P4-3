@@ -14,5 +14,9 @@ class ChoiceField(Field):
         super().__init__(name, "one of " + ", ".join(choices))
         self._choices = choices
 
+    # Text Limited to the Choices
+    def schema(self) -> dict:
+        return {"type": self.SCHEMA_TYPE, "enum": self._choices}
+
     def _check(self, value) -> bool:
         return value in self._choices

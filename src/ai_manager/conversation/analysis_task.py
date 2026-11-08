@@ -3,7 +3,6 @@
 # ------- #
 
 import json
-from src.ai_manager.constants import SEVERITY_LEVELS, ROOT_CAUSES
 from src.ai_manager.fields.field_set import FieldSet
 from src.ai_manager.services.ai_service import AIService
 from src.ai_manager.services.ai_service_error import AIServiceError
@@ -12,8 +11,7 @@ from src.ai_manager.services.ai_service_error import AIServiceError
 # Class
 # ----- #
 
-# Separate One-Off Request for the AI's Own Analysis
-# (Used when the Chat Finished the Worker's Details but Left the Analysis Empty or Invalid)
+# Separate One-Off Request for the AI's Own Analysis (Used when the Chat Finished the Worker's Details but Left the Analysis Empty or Invalid)
 class AnalysisTask:
     MAX_ATTEMPTS = 3
 
@@ -35,23 +33,6 @@ Fields to return:
 Respond ONLY with a JSON object containing exactly these fields.
 """
 
-    # Shape Gemini Must Follow (Forces the Allowed Values and Real true/false)
-    SCHEMA = {
-        "type": "OBJECT",
-        "properties": {
-            "detected_language": {"type": "STRING"},
-            "ai_severity": {"type": "STRING", "enum": SEVERITY_LEVELS},
-            "is_near_miss": {"type": "BOOLEAN"},
-            "root_cause_category": {"type": "STRING", "enum": ROOT_CAUSES},
-            "lost_time_injury": {"type": "BOOLEAN"},
-            "safety_recommendation": {"type": "STRING"},
-        },
-        "required": [
-            "detected_language", "ai_severity", "is_near_miss",
-            "root_cause_category", "lost_time_injury", "safety_recommendation",
-        ],
-    }
-
     def __init__(self, service: AIService, worker_fields: FieldSet, analysis_fields: FieldSet):
         self._service = service
         self._worker_fields = worker_fields
@@ -65,9 +46,11 @@ Respond ONLY with a JSON object containing exactly these fields.
             messages="\n".join([f"- {text}" for text in worker_messages]) or "- (not available)",
             fields=self._analysis_fields.describe(),
         )
+        # Shape Gemini Must Follow (Forces the Allowed Values and Real true/false), Built from the Analysis Fields
+        schema = self._analysis_fields.schema()
         for _ in range(self.MAX_ATTEMPTS):
             try:
-                reply_text = self._service.generate_json(prompt, self.SCHEMA)
+                reply_text = self._service.generate_json(prompt, schema)
             except AIServiceError:
                 return None
             analysis = self._parse(reply_text)

@@ -1,27 +1,26 @@
 # Imports
 
-# Used to Capture logic()'s Output, to Check it Prints Nothing
+# Used to Capture process()'s Output, to Check it Prints Nothing
 import contextlib
 import io
 
-# Used to Mock logic_manager.save_record(), so data.csv is Never Touched
+# Used to Fake the Data Manager's save_record(), so data.csv is Never Touched
 from unittest import mock
 
 # Others
 import json
 import os
-import sys
-import traceback
 from datetime import datetime, timedelta
 
-# Import the Module Under Test
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")) # Let 'src' be Imported
-from src import logic_manager
+# Import the Classes Under Test
+from src.logic_manager import LogicManager
+from src.logic_manager.rules.mom_reporting_rule import MomReportingRule
+from src.logic_manager.scoring.default_scorer import build_default_scorer
 
 # Test Config.
 
 # Hardcoded AI Replies
-SAMPLES_FOLDER = "tests/samples"
+SAMPLES_FOLDER = os.path.join(os.path.dirname(__file__), "..", "samples")
 
 # Helper Functions
 
@@ -32,17 +31,14 @@ def load_sample_report(file_name):
 
 # Score a Sample Report
 def score(report):
-    return logic_manager._calculate_importance_score(report)
+    return build_default_scorer().score(report)
 
-# Run logic() with save_record Replaced by a Fake, so data.csv is Never Touched. Returns the Fake.
-def run_logic_without_saving(report):
-    return run_logic_with_save_result(report)[0]
-
-# Same, but the Fake save_record Returns 'save_result'. Returns (Fake, What logic() Returned).
+# Run LogicManager.process() with a Fake Data Manager whose save_record Returns 'save_result', so data.csv is Never Touched. Returns (Fake save_record, What process() Returned).
 def run_logic_with_save_result(report, save_result=(True, "Record saved.")):
-    with mock.patch.object(logic_manager, "save_record", return_value=save_result) as fake_save:
-        outcome = logic_manager.logic(report)
-    return fake_save, outcome
+    fake_data_manager = mock.Mock()
+    fake_data_manager.save_record.return_value = save_result
+    outcome = LogicManager(data_manager=fake_data_manager).process(report)
+    return fake_data_manager.save_record, outcome
 
 # Scores are Rounded Floats, so Compare with a Small Tolerance (e.g. 2.725 can Round to 2.72 or 2.73)
 def assert_close(actual, expected, tolerance=0.01):
@@ -125,29 +121,23 @@ def test_text_booleans_are_converted():
 
 # Hospitalised Incidents Must be Reported, 10 Days after the Incident
 def test_hospitalised_is_mom_reportable():
-    flag, deadline = logic_manager._check_mom_reporting(
-        {"hospitalised": True, "incident_date": "2026-10-01"}
-    )
+    flag, deadline = MomReportingRule().check({"hospitalised": True, "incident_date": "2026-10-01"})
     assert flag == "Yes"
     assert deadline == "2026-10-11"
 
 # Lost Time Injuries Must be Reported
 def test_lost_time_injury_is_mom_reportable():
-    flag, _ = logic_manager._check_mom_reporting(
-        {"lost_time_injury": True, "incident_date": "2026-10-01"}
-    )
+    flag, _ = MomReportingRule().check({"lost_time_injury": True, "incident_date": "2026-10-01"})
     assert flag == "Yes"
 
 # Critical Severity Must be Reported, even with No Injury
 def test_critical_severity_is_mom_reportable():
-    flag, _ = logic_manager._check_mom_reporting(
-        {"ai_severity": "Critical", "incident_date": "2026-10-01"}
-    )
+    flag, _ = MomReportingRule().check({"ai_severity": "Critical", "incident_date": "2026-10-01"})
     assert flag == "Yes"
 
 # Minor Incidents are Not Reported and Have No Deadline
 def test_minor_incident_is_not_reportable():
-    flag, deadline = logic_manager._check_mom_reporting(
+    flag, deadline = MomReportingRule().check(
         {"hospitalised": False, "lost_time_injury": False,
          "ai_severity": "Low", "incident_date": "2026-10-01"}
     )
@@ -155,33 +145,27 @@ def test_minor_incident_is_not_reportable():
 
 # "true" as Text Must Still Trigger the Report
 def test_text_boolean_triggers_mom_report():
-    flag, _ = logic_manager._check_mom_reporting(
-        {"hospitalised": "true", "incident_date": "2026-10-01"}
-    )
+    flag, _ = MomReportingRule().check({"hospitalised": "true", "incident_date": "2026-10-01"})
     assert flag == "Yes"
 
 # A Reportable Incident with a Bad Date is Still Flagged
 def test_bad_date_is_still_flagged():
     for date in (None, "", "yesterday", "01/10/2026"):
-        flag, deadline = logic_manager._check_mom_reporting(
-            {"hospitalised": True, "incident_date": date}
-        )
+        flag, deadline = MomReportingRule().check({"hospitalised": True, "incident_date": date})
         assert flag == "Yes", f"date={date!r}"
         assert deadline == "Check incident date", f"date={date!r}"
 
 # The Deadline Counts Across a Month End (e.g. 25 Oct + 10 Days = 4 Nov)
 def test_deadline_crosses_month_end():
-    _, deadline = logic_manager._check_mom_reporting(
-        {"hospitalised": True, "incident_date": "2026-10-25"}
-    )
+    _, deadline = MomReportingRule().check({"hospitalised": True, "incident_date": "2026-10-25"})
     assert deadline == "2026-11-04"
 
-# logic() Pipeline Tests
+# LogicManager.process() Pipeline Tests
 
-# logic() Saves Exactly One Record, with the Score and MOM Details Added
+# process() Saves Exactly One Record, with the Score and MOM Details Added
 def test_logic_saves_scored_record():
     report = load_sample_report("critical_electrical.json")
-    fake_save = run_logic_without_saving(report)
+    fake_save, _ = run_logic_with_save_result(report)
     fake_save.assert_called_once()
     saved = fake_save.call_args.args[0]
     assert_close(saved["importance_score"], 7.4)
@@ -192,71 +176,45 @@ def test_logic_saves_scored_record():
 
 # A Minor Incident is Saved as Not Reportable
 def test_logic_saves_non_reportable_incident():
-    fake_save = run_logic_without_saving(load_sample_report("near_miss_slip.json"))
+    fake_save, _ = run_logic_with_save_result(load_sample_report("near_miss_slip.json"))
     saved = fake_save.call_args.args[0]
     assert saved["mom_reportable"] == "No"
     assert saved["deadline"] == "N/A"
 
-# logic() Must Not Change the Report it was Given
+# process() Must Not Change the Report it was Given
 def test_logic_does_not_change_original_report():
     report = load_sample_report("near_miss_slip.json")
     original = dict(report)
-    run_logic_without_saving(report)
+    run_logic_with_save_result(report)
     assert report == original
     assert "importance_score" not in report
     assert "mom_reportable" not in report
     assert "deadline" not in report
 
-# logic() Returns the Real Save Result and the Score and MOM Details, for 'io_manager' to Show
+# process() Returns the Real Save Result and the Score and MOM Details, for 'io_manager' to Show
 def test_logic_returns_outcome():
     _, outcome = run_logic_with_save_result(load_sample_report("critical_electrical.json"))
-    assert outcome["saved"] is True
-    assert outcome["message"] == "Record saved."
-    assert_close(outcome["importance_score"], 7.4)
-    assert outcome["mom_reportable"] == "Yes"
+    assert outcome.saved is True
+    assert outcome.message == "Record saved."
+    assert_close(outcome.importance_score, 7.4)
+    assert outcome.mom_reportable == "Yes"
 
 # A Failed Save is Passed On, Not Hidden
 def test_logic_returns_failed_save():
     rejected = (False, "Record rejected: an identical record already exists.")
     _, outcome = run_logic_with_save_result(load_sample_report("near_miss_slip.json"), rejected)
-    assert outcome["saved"] is False
-    assert outcome["message"] == rejected[1]
-    assert outcome["mom_reportable"] == "No"
-    assert outcome["deadline"] == "N/A"
+    assert outcome.saved is False
+    assert outcome.message == rejected[1]
+    assert outcome.mom_reportable == "No"
+    assert outcome.deadline == "N/A"
 
-# logic() Prints Nothing (Printing is 'io_manager's Job, Workers Should Never See Raw JSON)
+# process() Prints Nothing (Printing is 'io_manager's Job, Workers Should Never See Raw JSON)
 def test_logic_prints_nothing():
     with contextlib.redirect_stdout(io.StringIO()) as output:
-        run_logic_without_saving(load_sample_report("critical_electrical.json"))
+        run_logic_with_save_result(load_sample_report("critical_electrical.json"))
     assert output.getvalue() == ""
 
 # Same Input Gives the Same Score Every Run
 def test_score_is_deterministic():
     report = load_sample_report("medium_machinery.json")
     assert len({score(report) for _ in range(5)}) == 1
-
-# Main
-
-# Run Every Function Named test_*, Print PASS/FAIL for Each, and Return how Many Failed
-def run_all_tests():
-    tests = [func for name, func in globals().items() if name.startswith("test_") and callable(func)] # globals() is a Dict of All Functions in this File
-    failed = 0
-
-    for test in tests:
-        
-        # Run the Test and Print PASS if it Succeeds
-        try:
-            test()
-            print(f"\033[32mPASS\033[0m  {test.__name__}")
-            
-        # Handle Any Exceptions and Print FAIL & the Traceback
-        except Exception:
-            failed += 1
-            print(f"\033[31mFAIL\033[0m  {test.__name__}")
-            print(traceback.format_exc())
-
-    print(f"\n{len(tests) - failed}/{len(tests)} tests passed")
-    return failed
-
-if __name__ == "__main__":
-    sys.exit(1 if run_all_tests() else 0)
