@@ -4,7 +4,7 @@
 
 import json
 from datetime import datetime
-from src.ai_manager.constants import UNKNOWN_VALUE
+from src.ai_manager.constants import DATE_FORMAT, UNKNOWN_VALUE
 from src.ai_manager.fields.field import Field
 from src.ai_manager.fields.field_set import FieldSet
 from src.ai_manager.services.ai_service import AIService
@@ -86,7 +86,7 @@ Respond ONLY with JSON in this exact format:
         self._worker_messages = []
         system_prompt = self.SYSTEM_PROMPT.format(
             unknown=UNKNOWN_VALUE,
-            today=datetime.now().strftime("%Y-%m-%d"),
+            today=datetime.now().strftime(DATE_FORMAT),
             worker_fields=worker_fields.describe(),
             analysis_fields=analysis_fields.describe(),
         )
@@ -99,7 +99,7 @@ Respond ONLY with JSON in this exact format:
             return reply
         self._worker_messages.append(user_text)
 
-        # If AI Says "complete" but Worker Details are Missing or Wrongly Formatted,  Tell it to Fix Them, up to MAX_FIX_ATTEMPTS Times
+        # If AI Says "complete" but Worker Details are Missing or Wrongly Formatted, Tell it to Fix Them, up to MAX_FIX_ATTEMPTS Times
         for _ in range(self.MAX_FIX_ATTEMPTS):
             invalid = self._worker_fields.invalid(reply.report)
             if not (reply.is_complete and invalid):
@@ -142,7 +142,7 @@ Respond ONLY with JSON in this exact format:
     def _parse(self, text: str) -> AIReply | None:
         try:
             data = json.loads(text)
-            
+
         # If the Reply is Not JSON or Not a Dict with the Right Keys, Return None so the AI is Asked to Resend
         except (json.JSONDecodeError, TypeError):
             return None

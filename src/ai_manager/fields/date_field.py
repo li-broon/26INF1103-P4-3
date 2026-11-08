@@ -3,6 +3,7 @@
 # ------- #
 
 from datetime import datetime
+from src.ai_manager.constants import DATE_FORMAT
 from src.ai_manager.fields.field import Field
 
 # ----- #
@@ -13,6 +14,6 @@ from src.ai_manager.fields.field import Field
 class DateField(Field):
     def _check(self, value) -> bool:
         try:
-            return datetime.strptime(value, "%Y-%m-%d") <= datetime.now()
+            return datetime.strptime(value, DATE_FORMAT) <= datetime.now()
         except (TypeError, ValueError):
             return False
