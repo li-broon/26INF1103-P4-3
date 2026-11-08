@@ -465,7 +465,7 @@ def browse_pages(table, title):
                 print(f"{YELLOW}You are already on the first page. {RESET}")
         elif choice == 3:
             number = _prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
-            print_full_report(table, number)
+            _print_full_report(table, number)
             # Keep the full report on screen instead of printing the table over it
             show_page = False
         else:
