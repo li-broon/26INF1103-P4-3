@@ -7,8 +7,4 @@ class MainMenu(Menu):
         return "Main Menu"
 
     def options(self) -> list:
-        return [
-            "Report a new incident (chatbot)",
-            "View saved incident reports",
-            "Exit",
-        ]
+        return ["Report a new incident (chatbot)", "View saved incident reports", "Exit"]

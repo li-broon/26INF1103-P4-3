@@ -6,8 +6,8 @@ from src.logic_manager.rules.mom_reporting_rule import MomReportingRule
 from src.logic_manager.models.save_outcome import SaveOutcome
 
 
+# Coordinates scoring, MOM checking and saving. Dependencies are injected.
 class LogicManager:
-    """Coordinates scoring, MOM checking and saving. Dependencies are injected."""
 
     def __init__(self, data_manager=None, scorer=None, mom_rule=None):
         self._data_manager = data_manager or DataManagerAdapter()
@@ -34,7 +34,6 @@ class LogicManager:
         )
 
 
-# Backwards-compatible entry point: same name and dict output as before,
-# so existing callers (e.g. io_manager) keep working unchanged.
+# Backwards-compatible entry point: same name and dict output as before, so existing callers keep working
 def logic(json_result):
     return asdict(LogicManager().process(json_result))

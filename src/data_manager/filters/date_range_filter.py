@@ -14,13 +14,7 @@ from src.data_manager.filters.report_filter import ReportFilter
 # ------------------ #
 
 # Predefined date ranges for filtering, counting back from today
-DATE_RANGES = {
-    "Last 7 Days": 7,
-    "Last 30 Days": 30,
-    "Last 90 Days": 90,
-    "Last 180 Days": 180,
-    "Last 365 Days": 365,
-}
+DATE_RANGES = {"Last 7 Days": 7, "Last 30 Days": 30, "Last 90 Days": 90, "Last 180 Days": 180, "Last 365 Days": 365}
 
 # ----- #
 # Class

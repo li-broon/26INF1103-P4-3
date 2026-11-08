@@ -12,8 +12,7 @@ from src.ai_manager.services.ai_service_error import AIServiceError
 # Class
 # ----- #
 
-# Separate One-Off Request for the AI's Own Analysis
-# (Used when the Chat Finished the Worker's Details but Left the Analysis Empty or Invalid)
+# Separate One-Off Request for the AI's Own Analysis (Used when the Chat Finished the Worker's Details but Left the Analysis Empty or Invalid)
 class AnalysisTask:
     MAX_ATTEMPTS = 3
 

@@ -1,12 +1,7 @@
 # Weight Configuration
 
 # Weight for each possible value that the AI can return for ai_severity
-SEVERITY_WEIGHTS = {
-    "Low": 1,
-    "Medium": 4,
-    "High": 7,
-    "Critical": 10,
-}
+SEVERITY_WEIGHTS = {"Low": 1, "Medium": 4, "High": 7, "Critical": 10}
 
 # Weight for each possible value of that the AI can return for root_cause_category
 ROOT_CAUSE_WEIGHTS = {

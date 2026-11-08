@@ -65,9 +65,7 @@ class CsvRecordStore(RecordStore):
 
         return True, "Record saved."
 
-    # Reads all reports for display
-    # Loads the CSV file, cleans each row, drops invalid or duplicate rows
-    # Returns result sorted by urgency, does not change original file 
+    # Reads all reports for display: cleans each row, drops invalid or duplicate rows and sorts by urgency, without changing the file
     def load_records(self, ascending: bool = False) -> pd.DataFrame:
         table = self._load_data_from_csv(self._data_file)
         if table.empty:
@@ -121,14 +119,12 @@ class CsvRecordStore(RecordStore):
 
     # Safe reading of the CSV file
     def _load_data_from_csv(self, file_path: str) -> pd.DataFrame:
-        # Checks if file exists and isn't empty
-        # Returns empty table if does not exist or is empty
+        # A missing or empty file gives an empty table
         if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
             return pd.DataFrame()
 
         try:
-            # Only Blank Cells Count as Missing. By Default pandas Also Turns Text like "N/A" (the
-            # Deadline for Non-MOM Reports) into NaN, which Broke Duplicate Checks and Erased "N/A" on Re-Save.
+            # Only Blank Cells Count as Missing (pandas' Default Turned the "N/A" Deadline into NaN, Breaking Duplicate Checks and Erasing "N/A" on Re-Save)
             df = pd.read_csv(file_path, keep_default_na=False, na_values=[""])
 
         # Error handling, logs the error and returns empty table so application never crashes
@@ -159,12 +155,10 @@ class CsvRecordStore(RecordStore):
         if column_name not in data.columns:
             return data
 
-        # Sort by the chosen column, rows with a blank value always go to the bottom
-        # Renumbers the rows in the new order starting with 0
+        # Sorts by the chosen column (blank values go to the bottom) and renumbers the rows from 0
         return data.sort_values(by=column_name, ascending=ascending, na_position="last").reset_index(drop=True)
 
-    # Converts score column into numbers, then sorts by it
-    # Highest number is first by default
+    # Converts the score column to numbers and sorts by it, highest first by default
     def _sort_by_urgency(self, table: pd.DataFrame, ascending: bool = False) -> pd.DataFrame:
         if URGENCY_COLUMN in table.columns:
             table = table.copy()

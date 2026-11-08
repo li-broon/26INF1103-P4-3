@@ -4,8 +4,8 @@ from src.logic_manager.config import MOM_DEADLINE_DAYS, MOM_REPORTABLE_SEVERITIE
 from src.logic_manager.helpers import to_bool
 
 
+# Decides if an incident must be reported to MOM and works out the deadline.
 class MomReportingRule:
-    """Decides if an incident must be reported to MOM and works out the deadline."""
 
     def __init__(self, severities=MOM_REPORTABLE_SEVERITIES, deadline_days=MOM_DEADLINE_DAYS):
         self._severities = severities

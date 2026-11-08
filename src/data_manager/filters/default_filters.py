@@ -16,8 +16,7 @@ KEYWORD_COLUMNS = ["location"]
 # Function
 # ---------- #
 
-# Builds the filters the app uses, one per column, as a dictionary of column name -> filter
-# The DataManager is given this dictionary. Any column that is not in it is matched on its exact text
+# Builds the app's filters as a dictionary of column name -> filter; any column not in it is matched on its exact text
 def create_default_filters() -> dict[str, ReportFilter]:
     column_filters = [ScoreBandFilter(), DateRangeFilter(), DeadlineFilter()]
     for column in KEYWORD_COLUMNS:

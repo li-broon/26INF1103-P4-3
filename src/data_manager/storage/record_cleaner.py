@@ -13,8 +13,7 @@ from src.data_manager.constants import DATE_FIELD, DATE_FORMAT, REQUIRED_FIELDS,
 # ----- #
 
 
-# Checks and tidies one report before it is saved or shown
-# Rejects a report that is missing a required field or has an invalid date or score
+# Checks and tidies one report before it is saved or shown, rejecting one with a missing required field or an invalid date or score
 class RecordCleaner:
 
     # required_fields are the fields every report must have (defaults to REQUIRED_FIELDS)
@@ -45,9 +44,7 @@ class RecordCleaner:
 
         try:
             # Converts date to exact YYYY-MM-DD format
-            cleaned[DATE_FIELD] = pd.to_datetime(
-                cleaned[DATE_FIELD], format=DATE_FORMAT
-            ).strftime(DATE_FORMAT)
+            cleaned[DATE_FIELD] = pd.to_datetime(cleaned[DATE_FIELD], format=DATE_FORMAT).strftime(DATE_FORMAT)
             # Converts score to decimal number
             cleaned[URGENCY_COLUMN] = float(cleaned[URGENCY_COLUMN])
         # If conversion fails, reject the input
@@ -57,8 +54,7 @@ class RecordCleaner:
         # Returns cleaned copy
         return cleaned
 
-    # Function purpose : converts value into a standardised format for fair comparison
-    # Example : "5" and 5.0 count as equal, or lowercase and trims such that "Fire" and "fire" are equal
+    # Converts a value to a standard form for fair comparison, e.g. "5" equals 5.0 and "Fire" equals "fire"
     def comparable(self, value: Any) -> float | str:
         try:
             return float(value)

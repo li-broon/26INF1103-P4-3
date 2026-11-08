@@ -11,8 +11,7 @@ from src.data_manager.filters.report_filter import ReportFilter
 # Filter Choices
 # ------------------ #
 
-# Indicates the boundary for each threshold filter in the urgency column.
-# Ranges [0-2, 2-4, 4-6, 6-8, 8 and above]
+# Lower boundary of each score band in the urgency column: 0-2, 2-4, 4-6, 6-8, 8 and above
 SCORE_THRESHOLDS = ["0", "2", "4", "6", "8"]
 
 # ----- #
@@ -27,9 +26,7 @@ class ScoreBandFilter(ReportFilter):
         super().__init__(column)
         self._thresholds = list(thresholds)
 
-    # Keeps the records whose score is within the chosen score band
-    # Example : "2 to under 4" will then keep records with score of 2 up to (not including) 4
-    # "8+" will keep every record from 8 upward
+    # Keeps the records within the chosen score band, e.g. "2 to under 4" keeps 2 up to (not including) 4 and "8+" keeps 8 and above
     def _match(self, table: pd.DataFrame, value: str) -> pd.DataFrame:
         try:
             # Extract the selected threshold from value which is the range (0-24 etc.)

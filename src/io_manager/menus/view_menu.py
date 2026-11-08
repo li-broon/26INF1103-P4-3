@@ -7,10 +7,4 @@ class ViewMenu(Menu):
         return "Report Options"
 
     def options(self) -> list:
-        return [
-            "Next page",
-            "Previous page",
-            "Filter these reports",
-            "View a full report",
-            "Back to the main menu",
-        ]
+        return ["Next page", "Previous page", "Filter these reports", "View a full report", "Back to the main menu"]
