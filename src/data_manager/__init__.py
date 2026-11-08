@@ -4,20 +4,21 @@ from src.data_manager.filters.default_filters import create_default_filters
 from src.data_manager.manager import DataManager
 from src.data_manager.storage.csv_record_store import CsvRecordStore
 from src.data_manager.storage.record_store import RecordStore
+import pandas as pd
 
 # One shared DataManager so the functions below keep working for io_manager and logic_manager (remove once main.py passes a DataManager in)
 _manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters())
 
-def save_record(record):
+def save_record(record)-> tuple[bool, str]:
     return _manager.save_record(record)
 
-def load_records(ascending=False):
+def load_records(ascending=False)-> pd.DataFrame:
     return _manager.load_records(ascending=ascending)
 
-def get_unique_values(column_name):
+def get_unique_values(column_name)-> list[str]:
     return _manager.get_unique_values(column_name)
 
-def load_matching_records(column_name, value, ascending=False):
+def load_matching_records(column_name, value, ascending=False) -> pd.DataFrame:
     return _manager.load_matching_records(column_name, value, ascending=ascending)
 
 # The Package's Public Names
