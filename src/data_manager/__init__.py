@@ -6,8 +6,7 @@ from src.data_manager.storage.csv_record_store import CsvRecordStore
 from src.data_manager.storage.record_store import RecordStore
 import pandas as pd
 
-# One shared DataManager, so the functions below keep working for io_manager and logic_manager
-# Remove them once main.py creates the DataManager and passes it to the other managers
+# One shared DataManager so the functions below keep working for io_manager and logic_manager (remove once main.py passes a DataManager in)
 _manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters())
 
 def save_record(record)-> tuple[bool, str]:

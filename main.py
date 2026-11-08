@@ -9,17 +9,12 @@ from src.logic_manager import logic
 from src.data_manager import CsvRecordStore, DataManager, create_default_filters
 from src.data_manager.constants import DATA_FILE
 
-
-# TEMPORARY (task 18 replaces this): until Akira's LogicManager is merged, wrap the old
-# logic() function so it has the process() method IOManager calls
+# TEMPORARY (task 18 replaces this): wraps the old logic() function so it has the process() method IOManager calls
 class OldLogicAdapter:
     def process(self, report):
         return SimpleNamespace(**logic(report))
 
-
-# TEMPORARY (task 18 replaces this): GeminiService checks the API key as soon as it is
-# created, so without a key the app could not even show the menu. This stand-in only
-# reports the missing key when the chatbot is opened, so viewing reports still works
+# TEMPORARY (task 18 replaces this): reports a missing API key only when the chatbot opens, so the menu and saved reports still work without one
 class NoKeyAI:
     def __init__(self, error):
         self._error = error
@@ -27,10 +22,10 @@ class NoKeyAI:
     def start_conversation(self):
         raise self._error
 
-
 # --------- #
 # Start App
 # --------- #
+
 # Create every manager once and hand them to the IO Manager (UML Figure 1)
 def main():
     try:

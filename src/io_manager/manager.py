@@ -1,14 +1,5 @@
 from src.ai_manager import AIServiceError
-from src.io_manager.constants import (
-    BOLD,
-    FILTER_BACK_OPTION,
-    FILTER_COLUMNS,
-    GOODBYE,
-    RED,
-    RESET,
-    WELCOME,
-    YELLOW,
-)
+from src.io_manager.constants import BOLD, FILTER_BACK_OPTION, FILTER_COLUMNS, GOODBYE, RED, RESET, WELCOME, YELLOW
 from src.io_manager.display.pager import Pager
 from src.io_manager.display.report_card_view import ReportCardView
 from src.io_manager.display.report_formatter import ReportFormatter
@@ -110,8 +101,7 @@ class IOManager:
 
         heading, column = FILTER_COLUMNS[choice - 1]
 
-        # Location is a free-text keyword search, so users don't pick from a huge list
-        # (task 16 replaces this check, once the Data Manager's KeywordFilter offers no options)
+        # Location is a free-text keyword search so users don't pick from a huge list (task 16 replaces this check once KeywordFilter offers no options)
         if column in ["location"]:
             value = self._prompter.ask_text(f"\n{BOLD}Enter a keyword to search in {heading}:{RESET} ")
         else:

@@ -7,12 +7,14 @@ on:
     paths:
       - '**.py'
       - 'requirements.txt'
+      - 'pytest.ini'
       - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
     paths:
       - '**.py'
       - 'requirements.txt'
+      - 'pytest.ini'
       - '.github/workflows/**'
 
 jobs:
@@ -35,7 +37,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pandas
 
     # 4. Run all test scripts under tests folder
     - name: Run Tests

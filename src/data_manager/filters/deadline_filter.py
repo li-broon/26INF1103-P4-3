@@ -11,8 +11,7 @@ from src.data_manager.filters.report_filter import ReportFilter
 # Filter Choices
 # ------------------ #
 
-# Filter options for the MOM deadline column: (earliest, latest) in days from
-# today. None means no limit on that side. 0 is today, -1 is yesterday.
+# Filter options for the MOM deadline column: (earliest, latest) days from today; None means no limit, 0 is today, -1 is yesterday
 DEADLINE_FILTERS = {
     "Overdue": (None, -1),
     "Due within 3 days": (0, 3),

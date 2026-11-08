@@ -1,5 +1,5 @@
-# What the Conversation Returns to 'io_manager' after Each Worker Message
-# (On Failure, 'error' Holds the Message, and error_code/error_status are Set for API Errors)
+# What the Conversation Returns to 'io_manager' after Each Worker Message 
+# (On Failure, 'error' Holds the Message; error_code/error_status are Set for API Errors)
 class AIReply:
     def __init__(self, reply: str = "", is_complete: bool = False, report: dict | None = None,
                  error: str | None = None, error_code: int | None = None, error_status: str | None = None):

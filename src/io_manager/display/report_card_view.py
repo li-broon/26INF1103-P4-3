@@ -1,15 +1,6 @@
 from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
-from src.io_manager.constants import (
-    BOLD,
-    FULL_REPORT_FIELDS,
-    GREEN,
-    RED,
-    RESET,
-    UNDERLINE,
-    YELLOW,
-    YES_NO_COLUMNS,
-)
+from src.io_manager.constants import BOLD, FULL_REPORT_FIELDS, GREEN, RED, RESET, UNDERLINE, YELLOW, YES_NO_COLUMNS
 
 
 #Prints One Report in Full: a Report Opened from the Table, or the Card a Worker Sees After Saving
@@ -33,8 +24,7 @@ class ReportCardView:
         report = table.iloc[number - 1].fillna("-").to_dict()
         self.show(report, f"Report #{number}")
 
-    # Tell the worker whether their report was really saved; if it was, show it back as a card
-    # with the score and MOM details the Logic Manager added (outcome is a SaveOutcome object)
+    # Tells the worker whether the report was really saved; if so, shows it back as a card with the score and MOM details (outcome is a SaveOutcome)
     def show_save_outcome(self, report: dict, outcome) -> None:
         # Only claim success when the Data Manager actually wrote the record
         if not outcome.saved:

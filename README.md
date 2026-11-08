@@ -62,8 +62,9 @@ docker run -it --rm inf1103-p4 pytest
 ```
 or
 ```bash
-docker run -it --rm inf1103-p4 python tests/test_logic_manager.py  
+docker run -it --rm inf1103-p4 pytest tests/logic_manager
 
 ```
-to run the test cases of `logic_manager.py` which fulfills the submission requirements
+to run only the `logic_manager` test cases (scoring, MOM rule and LogicManager), which fulfils the submission requirements.
+Each manager's tests are in their own folder, so `tests/ai_manager`, `tests/data_manager` or `tests/io_manager` work the same way.
 

@@ -1,13 +1,10 @@
 # ---------------- #
 # Import and Setup
 # ---------------- #
-import sys
 import os
 import json
-import traceback
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from google.genai import errors
 from src.ai_manager import AIManager, GeminiService, AIServiceError
 from src.ai_manager.constants import SEVERITY_LEVELS, UNKNOWN_VALUE
@@ -21,39 +18,12 @@ from src.ai_manager.fields.field_set import FieldSet
 from src.ai_manager.services import gemini_service  # Its 'time' Module is Patched so Retry Waits are Skipped
 from src.ai_manager.services.ai_service import AIService
 from src.ai_manager.conversation.incident_conversation import IncidentConversation
+from tests.ai_manager.class_fake_ai_service import FakeAIService
+from tests.ai_manager.class_fake_gemini_chat import FakeGeminiChat
 
-# -------------------- #
-# Test Helpers (Fakes)
-# -------------------- #
-
-# Fake AI Provider used Instead of Gemini, so Tests Run Without a Live API.
-# It Follows the Same AIService Contract, so the Conversation Cannot Tell the Difference.
-# Each List Holds Reply Texts (or AIServiceErrors to Raise) Given Out in Order; the Last One Repeats.
-class FakeAIService(AIService):
-    def __init__(self, chat_replies: list[str | AIServiceError], json_replies: list[str | AIServiceError] | None = None):
-        self._chat_replies = list(chat_replies)
-        self._json_replies = list(json_replies or [])
-        self.system_prompt = None
-        self.sent_messages = []
-        self.json_prompts = []
-
-    def start_chat(self, system_prompt: str) -> str:
-        self.system_prompt = system_prompt
-        return "fake-chat"
-
-    def send_chat_message(self, chat, message: str) -> str:
-        self.sent_messages.append(message)
-        return self._next(self._chat_replies)
-
-    def generate_json(self, prompt: str, schema: dict) -> str:
-        self.json_prompts.append(prompt)
-        return self._next(self._json_replies)
-
-    def _next(self, replies: list[str | AIServiceError]) -> str:
-        item = replies.pop(0) if len(replies) > 1 else replies[0]
-        if isinstance(item, AIServiceError):
-            raise item
-        return item
+# ------------ #
+# Test Helpers
+# ------------ #
 
 # Worker Details All Filled In and Valid
 GOOD_WORKER_DETAILS = {
@@ -253,22 +223,6 @@ def test_analysis_failure_gives_clear_error():
 # Gemini Service Tests (No Live Calls)
 # ------------------------------------ #
 
-# Fake Gemini Reply (Only the .text the Service Reads)
-class FakeGeminiResponse:
-    def __init__(self, text: str):
-        self.text = text
-
-# Fake Gemini Chat Session: Raises the Given Errors in Order, then Replies "ok"
-class FakeGeminiChat:
-    def __init__(self, errors_to_raise: list[Exception]):
-        self._errors = list(errors_to_raise)
-        self.attempts = 0
-
-    def send_message(self, message: str) -> FakeGeminiResponse:
-        self.attempts += 1
-        if self._errors:
-            raise self._errors.pop(0)
-        return FakeGeminiResponse("ok")
 
 # Make a Gemini API Error with the Given HTTP Code
 def api_error(code: int, status: str) -> errors.APIError:
@@ -338,28 +292,3 @@ def test_connection_problem_becomes_service_error():
     except AIServiceError as error:
         assert "Could not reach the AI" in error.message
         assert error.code is None
-
-# --------- #
-# Main Test
-# --------- #
-
-def run_all() -> int:
-    tests = [(name, fn) for name, fn in sorted(globals().items())
-             if name.startswith("test_") and callable(fn)]
-    failures = 0
-    for name, fn in tests:
-        try:
-            fn()
-            sys.stdout.write(f"PASS  {name}\n")
-        except AssertionError as e:
-            failures += 1
-            sys.stdout.write(f"FAIL  {name}\n      {e}\n")
-        except Exception:
-            failures += 1
-            sys.stdout.write(f"FAIL  {name}\n{traceback.format_exc()}\n")
-
-    sys.stdout.write(f"\n{len(tests) - failures}/{len(tests)} tests passed\n")
-    return failures
-
-if __name__ == "__main__":
-    sys.exit(1 if run_all() else 0)

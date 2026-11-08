@@ -1,5 +1,4 @@
-# Terminal Colour and Style Codes, Shared by Every IO Class
-# (Constants Only - No Class, so it Doesn't Break the One-Class-per-File Rule)
+# Terminal Colour and Style Codes, Shared by Every IO Class (Constants Only, No Class, so the One-Class-per-File Rule Holds)
 RESET = "\033[0m"
 BOLD = "\033[1m"
 UNDERLINE = "\033[4m"
@@ -50,9 +49,7 @@ TABLE_COLUMNS = [
 # Yes/No Columns Shown in Red when the Value is YES
 ALERT_COLUMNS = ("hospitalised", "mom_reportable")
 
-#Full-Text Fields Printed Under Each Summary Row: (Label, Column Name in 'data.csv')
-#These Hold Whole Sentences, so They are Wrapped Instead of Squeezed into a Column
-#(a 200-Character Safety Recommendation Cut to 18 Characters is No Use to Anyone)
+#Full-Text Fields Wrapped Under Each Summary Row: (Label, Column Name in 'data.csv'), Since Whole Sentences Don't Fit in a Table Column
 DETAIL_FIELDS = [
     ("Reported by", "reporter_name"),
     ("Injury", "injury_status"),

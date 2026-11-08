@@ -1,8 +1,8 @@
 from src.logic_manager.config import MAX_SCORE
 
 
+# Adds up the contribution of every factor and caps the result.
 class ImportanceScorer:
-    """Adds up the contribution of every factor and caps the result."""
 
     def __init__(self, factors, max_score=MAX_SCORE):
         self._factors = list(factors)

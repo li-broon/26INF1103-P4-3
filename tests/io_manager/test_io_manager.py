@@ -1,18 +1,17 @@
 # Imports
-import sys
-import os
 import re
-import traceback
 import contextlib
 from datetime import date
 from types import SimpleNamespace
 from io import StringIO
 import pandas as pd
-from src.ai_manager import AIServiceError
 from src.io_manager.manager import IOManager
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src import io_manager as io
+from tests.io_manager.class_fake_ai import FakeAI
+from tests.io_manager.class_fake_data import FakeData
+from tests.io_manager.class_fake_logic import FakeLogic
+from tests.io_manager.class_no_key_ai import NoKeyAI
+from tests.io_manager.class_scripted_input import ScriptedInput
 
 # _fit Tests
 
@@ -43,17 +42,11 @@ def test_menu_is_abstract():
         pass
 
 # Menu Tests
-# Test that every menu shares the same show() but has its own number of options:
-# the same code accepts 3 on the main menu, 5 on the view menu and 4 on the page menu
+# Every menu shares show() but has its own options: the same code accepts 3 on the main menu, 5 on the view menu and 4 on the page menu
 def test_menus_accept_their_own_last_option():
-    menus = [
-        (io.MainMenu, 3),
-        (io.ViewMenu, 5),
-        (io.PageMenu, 4),
-        (io.FilterMenu, 8),
-    ]
+    menus = [(io.MainMenu, 3), (io.ViewMenu, 5), (io.PageMenu, 4), (io.FilterMenu, 8)]
     for menu_class, last_option in menus:
-        menu = menu_class(io.Prompter(read=fake_input(str(last_option + 1), str(last_option))))
+        menu = menu_class(io.Prompter(read=ScriptedInput(str(last_option + 1), str(last_option)).read))
         with contextlib.redirect_stdout(StringIO()) as out:
             choice = menu.show()
         assert choice == last_option                                     # the last real option is accepted
@@ -195,42 +188,6 @@ def test_table_view_shows_one_page():
 
 # IOManager Tests (fake managers: no API key, no CSV file)
 
-# A fake chat: hands back the prepared replies one at a time
-class FakeConversation:
-    def __init__(self, replies):
-        self._replies = iter(replies)
-    def send(self, text):
-        return next(self._replies)
-
-# A fake AI Manager: starts a fake chat with the prepared replies
-class FakeAI:
-    def __init__(self, replies):
-        self._replies = replies
-    def start_conversation(self):
-        return FakeConversation(self._replies)
-
-# A fake AI Manager with no API key: refuses to start, like the real one
-class NoKeyAI:
-    def start_conversation(self):
-        raise AIServiceError("GEMINI_API_KEY is missing.")
-
-# A fake Logic Manager: always returns the outcome it was given
-class FakeLogic:
-    def __init__(self, result=None):
-        self._result = result or outcome(mom_reportable="No", deadline="N/A")
-    def process(self, report):
-        return self._result
-
-# A fake Data Manager: always returns the table it was given
-class FakeData:
-    def __init__(self, table):
-        self._table = table
-    def load_records(self, ascending=False):
-        return self._table
-    def get_unique_values(self, column):
-        return []
-    def load_matching_records(self, column, value, ascending=False):
-        return self._table
 
 # One AI reply; by default a normal, unfinished one with no error
 def reply(**fields):
@@ -241,13 +198,12 @@ def reply(**fields):
 # Build an IOManager whose "user" types the given answers in order
 def io_manager(ai=None, logic=None, data=None, answers=()):
     return IOManager(ai or FakeAI([]), logic or FakeLogic(), data or FakeData(pd.DataFrame()),
-                     read=fake_input(*answers))
+                     read=ScriptedInput(*answers).read)
 
 
 # Menu 1 (chat) -> one message -> report complete -> "n" to viewing reports -> 3 (exit)
 def test_chatbot_saves_a_complete_report():
-    manager = io_manager(ai=FakeAI([reply(is_complete=True, report=REPORT)]),
-                         answers=["1", "I cut my hand", "n", "3"])
+    manager = io_manager(ai=FakeAI([reply(is_complete=True, report=REPORT)]), answers=["1", "I cut my hand", "n", "3"])
     text = printed(manager.run)
     assert "Your report has been saved" in text
     assert "Ahmad bin Ismail" in text
@@ -260,8 +216,7 @@ def test_chatbot_quit_asks_to_confirm():
 
 # An error with no code must not tell the worker to resend
 def test_chatbot_error_without_code_does_not_say_resend():
-    manager = io_manager(ai=FakeAI([reply(error="Report not finished")]),
-                         answers=["1", "hi", "quit", "y", "3"])
+    manager = io_manager(ai=FakeAI([reply(error="Report not finished")]), answers=["1", "hi", "quit", "y", "3"])
     text = printed(manager.run)
     assert "couldn't be finished" in text
     assert "resend" not in text
@@ -295,14 +250,10 @@ def test_view_reports_when_none_saved():
     assert "No incident reports have been saved yet" in text
 
 # Prompter Tests
-# Build a fake 'input' that hands back the given answers one at a time
-def fake_input(*answers):
-    answers = iter(answers)
-    return lambda prompt: next(answers)
 
 # Test that blank, text and out-of-range answers are rejected before a valid one is accepted
 def test_prompter_ask_number_rejects_bad_input_then_accepts():
-    prompter = io.Prompter(read=fake_input("", "abc", "9", "2"))
+    prompter = io.Prompter(read=ScriptedInput("", "abc", "9", "2").read)
     with contextlib.redirect_stdout(StringIO()) as out:
         result = prompter.ask_number("Choose (1-3): ", 1, 3)
     assert result == 2
@@ -312,13 +263,13 @@ def test_prompter_ask_number_rejects_bad_input_then_accepts():
 
     # The user types y, so ask_yes_no should give back True
 def test_prompter_yes():
-    prompter = io.Prompter(read=fake_input("y"))
+    prompter = io.Prompter(read=ScriptedInput("y").read)
     result = prompter.ask_yes_no("Leave?")
     assert result is True
 
 # The user types n, so ask_yes_no should give back False
 def test_prompter_no():
-    prompter = io.Prompter(read=fake_input("n"))
+    prompter = io.Prompter(read=ScriptedInput("n").read)
     result = prompter.ask_yes_no("Leave?")
     assert result is False
 
@@ -326,14 +277,14 @@ def test_prompter_no():
 def test_prompter_choose_from():
     values = ["Fall", "Fire", "Machinery"]
     with contextlib.redirect_stdout(StringIO()):
-        picked = io.Prompter(read=fake_input("2")).choose_from("Root Cause", values)
-        back = io.Prompter(read=fake_input("4")).choose_from("Root Cause", values)
+        picked = io.Prompter(read=ScriptedInput("2").read).choose_from("Root Cause", values)
+        back = io.Prompter(read=ScriptedInput("4").read).choose_from("Root Cause", values)
     assert picked == "Fire"     # option 2 is the second value
     assert back is None         # option 4 is Back (3 values + 1)
 
 # Test that ask_text returns what was typed, without the spaces around it
 def test_prompter_ask_text_strips_spaces():
-    assert io.Prompter(read=fake_input("  Warehouse B  ")).ask_text("Keyword: ") == "Warehouse B"
+    assert io.Prompter(read=ScriptedInput("  Warehouse B  ").read).ask_text("Keyword: ") == "Warehouse B"
 
 # Test that the cancel words work in any capitals, and normal text is not a cancel
 def test_prompter_is_cancel():
@@ -341,27 +292,3 @@ def test_prompter_is_cancel():
     assert prompter.is_cancel("QUIT") is True
     assert prompter.is_cancel(" exit ") is True
     assert prompter.is_cancel("hello") is False
-
-
-# Mini runner
-def run_all():
-    tests = [(name, fn) for name, fn in sorted(globals().items())
-             if name.startswith("test_") and callable(fn)]
-    failures = 0
-    for name, fn in tests:
-        try:
-            fn()
-            sys.stdout.write(f"PASS  {name}\n")
-        except AssertionError as e:
-            failures += 1
-            sys.stdout.write(f"FAIL  {name}\n      {e}\n")
-        except Exception:
-            failures += 1
-            sys.stdout.write(f"FAIL  {name}\n{traceback.format_exc()}\n")
-            
-    sys.stdout.write(f"\n{len(tests) - failures}/{len(tests)} tests passed\n")
-    return failures
-
-if __name__ == "__main__":
-    sys.exit(1 if run_all() else 0)
-

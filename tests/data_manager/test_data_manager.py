@@ -4,19 +4,16 @@ import atexit
 import itertools
 import os
 import shutil
-import sys
 import tempfile
-import traceback
 from datetime import timedelta
 
 import pandas as pd
 
 # Import the Module Under Test
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))  # Let 'src' be Imported
 from src.data_manager.filters.default_filters import create_default_filters
-from src.data_manager.filters.report_filter import ReportFilter
 from src.data_manager.manager import DataManager
 from src.data_manager.storage.csv_record_store import CsvRecordStore
+from tests.data_manager.class_shout_filter import ShoutFilter
 
 # ------- #
 # Helpers
@@ -212,18 +209,12 @@ def test_columns_without_a_filter_in_the_dictionary_match_exact_text():
     assert manager.get_unique_values("importance_score")[0] == "0.5"                    # the saved values, not the bands
 
 
-# A New Kind of Filter Works Without Changing the DataManager (a Filter Made Here With type(), no class Statement)
+# A New Kind of Filter Works Without Changing the DataManager (Open/Closed Principle)
 def test_a_filter_it_is_given_is_the_one_used():
-    calls = []
-
-    def match(self, table, value):
-        calls.append(value)
-        return table[table["reporter_name"] == "Eli"].reset_index(drop=True)
-
-    shout = type("ShoutFilter", (ReportFilter,), {"_match": match, "_options": lambda self, table: ["only choice"]})
-    manager = make_manager(filters={"location": shout("location")})
+    shout = ShoutFilter("location")
+    manager = make_manager(filters={"location": shout})
     assert names(manager.load_matching_records("location", "anything")) == ["Eli"]
-    assert calls == ["anything"]
+    assert shout.calls == ["anything"]
     assert manager.get_unique_values("location") == ["only choice"]
     assert names(manager.load_matching_records("ai_severity", "high")) == ["Ann", "Fay"]  # other columns are unaffected
 
@@ -250,24 +241,3 @@ def test_the_filters_are_required():
 def test_the_public_methods_are_the_five_in_the_uml():
     public = sorted(name for name in dir(DataManager) if not name.startswith("_"))
     assert public == ["get_column_names", "get_unique_values", "load_matching_records", "load_records", "save_record"]
-
-# ------------ #
-# Test Runner
-# ------------ #
-
-def run_all():
-    tests = [(name, fn) for name, fn in sorted(globals().items()) if name.startswith("test_") and callable(fn)]
-    failures = 0
-    for name, fn in tests:
-        try:
-            fn()
-            sys.stdout.write(f"PASS  {name}\n")
-        except Exception:
-            failures += 1
-            sys.stdout.write(f"FAIL  {name}\n{traceback.format_exc()}\n")
-    sys.stdout.write(f"\n{len(tests) - failures}/{len(tests)} tests passed\n")
-    return failures
-
-
-if __name__ == "__main__":
-    sys.exit(1 if run_all() else 0)

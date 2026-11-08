@@ -10,8 +10,7 @@ import pandas as pd
 # Class
 # ----- #
 
-# Base Class for the Filters the User can Apply to the Saved Reports (One Filter Works on One Column)
-# It does the checks every filter needs, each subclass only says how a report matches the chosen value
+# Base Class for the Filters the User can Apply to Saved Reports (One per Column): Does the Shared Checks, Each Subclass Only Says How a Report Matches
 class ReportFilter(ABC):
 
     # column is the column of the reports this filter works on
@@ -40,7 +39,6 @@ class ReportFilter(ABC):
     def _match(self, table: pd.DataFrame, value: str) -> pd.DataFrame:
         pass
 
-    # Default Choices: Each Distinct Saved Value Once, in Alphabetical Order
-    # A Filter that Offers Fixed Choices (e.g. "Last 7 Days") Overrides This
+    # Default Choices: Each Distinct Saved Value Once, in Alphabetical Order (Filters with Fixed Choices, e.g. "Last 7 Days", Override This)
     def _options(self, table: pd.DataFrame) -> list[str]:
         return sorted(table[self._column].dropna().astype(str).unique())

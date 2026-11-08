@@ -1,5 +1,4 @@
-#A Numbered Menu: Shows a Title and Options, then Asks the User to Pick One
-#Each Child Menu Only Says WHAT its Title and Options Are, the Parent Does the Showing and Asking
+#A Numbered Menu: Shows a Title and Options, then Asks the User to Pick One (Child Menus Say WHAT to Show, the Parent Shows and Asks)
 
 from abc import ABC, abstractmethod
 
