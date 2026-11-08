@@ -1,6 +1,7 @@
 # -------- #
 # Import(s)
 # -------- #
+import sys
 from types import SimpleNamespace
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
@@ -30,7 +31,7 @@ class NoKeyAI:
 def main():
     try:
         ai_manager = AIManager(GeminiService())
-        
+
     except AIServiceError as error:
         ai_manager = NoKeyAI(error)
 
@@ -38,5 +39,10 @@ def main():
     IOManager(ai_manager, OldLogicAdapter(), data_manager).run()
 
 
+# "python main.py" Runs the Terminal App, "python main.py --gui" Opens the Tkinter Window
 if __name__ == "__main__":
-    main()
+    if "--gui" in sys.argv:
+        from src.gui_manager import main as gui_main
+        gui_main()
+    else:
+        main()
