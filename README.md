@@ -68,3 +68,34 @@ docker run -it --rm inf1103-p4 pytest tests/logic_manager
 to run only the `logic_manager` test cases (scoring, MOM rule and LogicManager), which fulfils the submission requirements.
 Each manager's tests are in their own folder, so `tests/ai_manager`, `tests/data_manager` or `tests/io_manager` work the same way.
 
+## Running the GUI with Docker
+
+The GUI (`python main.py --gui`) opens a window, so the container must be given your screen. Pick the command for your system (build the image first, as above).
+
+**Linux** (X11, or Wayland with XWayland)
+```bash
+xhost +local:
+docker run -it --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$(pwd)/data:/app/data" inf1103-p4 python main.py --gui
+```
+
+**Windows: WSL terminal** (Windows 11, or Windows 10 with WSLg)
+```bash
+docker run -it --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$(pwd)/data:/app/data" inf1103-p4 python main.py --gui
+```
+
+**Windows: PowerShell** (Windows 11 with Docker Desktop on the WSL 2 backend)
+```powershell
+docker run -it --rm -e DISPLAY=:0 -v /run/desktop/mnt/host/wslg/.X11-unix:/tmp/.X11-unix -v "${PWD}/data:/app/data" inf1103-p4 python main.py --gui
+```
+
+**macOS** (Intel or Apple Silicon)
+1. Install [XQuartz](https://www.xquartz.org) and log out and back in.
+2. Open XQuartz, go to **Settings → Security** and tick **Allow connections from network clients**, then quit and reopen XQuartz.
+3. In a terminal:
+```bash
+xhost +localhost
+docker run -it --rm -e DISPLAY=host.docker.internal:0 -v "$(pwd)/data:/app/data" inf1103-p4 python main.py --gui
+```
+
+The same `DISPLAY=host.docker.internal:0` command also works on any Windows version if an X server such as VcXsrv is running (with access control disabled).
+

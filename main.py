@@ -42,7 +42,13 @@ def main():
 # "python main.py" Runs the Terminal App, "python main.py --gui" Opens the Tkinter Window
 if __name__ == "__main__":
     if "--gui" in sys.argv:
+        from tkinter import TclError
         from src.gui_manager import main as gui_main
-        gui_main()
+
+        # No Screen Given to the Container (or No Display at All): Point to the README Instead of a Traceback
+        try:
+            gui_main()
+        except TclError as error:
+            print(f"Could not open the GUI window ({error}). See 'Running the GUI with Docker' in README.md.")
     else:
         main()

@@ -5,8 +5,13 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install Dependencies
+# Copy Dependencies Txt File
 COPY requirements.txt .
+
+# Tkinter, plus fonts for every language on the welcome screen
+RUN apt-get update && apt-get install -y --no-install-recommends python3-tk fontconfig fonts-noto-core fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
+
+# Install Dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create a Directory for Data Files
