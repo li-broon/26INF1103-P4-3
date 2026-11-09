@@ -6,7 +6,8 @@ import tkinter as tk
 from tkinter import ttk
 
 from src.gui_manager.constants import (
-    APP_SUBTITLE, APP_TITLE, DANGER, EMERGENCY_TEXT, HEADER_BG, HEADER_MUTED, HEADER_TEXT, WINDOW_HEIGHT, WINDOW_WIDTH,
+    APP_SUBTITLE, APP_TITLE, DANGER, EMERGENCY_TEXT, HEADER_BG, HEADER_MUTED, HEADER_TEXT, ICON_FILE, WINDOW_HEIGHT,
+    WINDOW_WIDTH, WINDOWS_APP_ID,
 )
 from src.gui_manager.display.window_report_formatter import WindowReportFormatter
 from src.gui_manager.tabs.chat_tab import ChatTab
@@ -20,9 +21,12 @@ from src.gui_manager.theme import apply_theme, fit_window, font
 # Main Window: the Same Managers as IOManager, Shown in Tabs Instead of the Terminal
 class GUIManager(tk.Tk):
     def __init__(self, ai_manager, logic_manager, data_manager):
-        self._enable_sharp_text()  # Must Happen Before the Window Exists
+        self._set_up_windows_os()  # Must Happen Before the Window Exists
         super().__init__()
         self.title(APP_TITLE)
+
+        # True Gives the Report Windows the Icon Too; Tk Copies the Image, so it Need Not be Kept
+        self.iconphoto(True, tk.PhotoImage(file=ICON_FILE))
         fit_window(self, WINDOW_WIDTH, WINDOW_HEIGHT)
         apply_theme(self)
 
@@ -45,10 +49,11 @@ class GUIManager(tk.Tk):
         tabs.add(self._reports_tab, text="Saved reports")
         tabs.pack(fill="both", expand=True)
 
-    # Make Text Sharp on Windows Screens Scaled Above 100% (Without This, Windows Stretches a Blurry Image)
-    def _enable_sharp_text(self):
+    # Windows Only: Give the App its Own Taskbar Entry (Showing Our Icon, Not Python's), and Make Text Sharp on Scaled Screens
+    def _set_up_windows_os(self):
         try:
             import ctypes
-            ctypes.windll.shcore.SetProcessDpiAwareness(1)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(WINDOWS_APP_ID)
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)  # Without This, Windows Stretches a Blurry Image
         except (AttributeError, OSError):
             pass  # Not Windows, or an Old Windows Version: Keep the Default

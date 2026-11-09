@@ -1,6 +1,12 @@
 # --Window Text, Sizes and Colours Shared by Every GUI Class (Constants Only, No Class)-- #
 
+import os
+
 APP_TITLE = "Workplace Incident Reporting Assistant"
+
+# Window and Taskbar Icon (Two Folders Up from src/gui_manager/), and the Windows App ID that Lets the Taskbar Use it
+ICON_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "icon.png")
+WINDOWS_APP_ID = "P4-3.IncidentReportingAssistant"
 APP_SUBTITLE = "Report what happened in any language."
 EMERGENCY_TEXT = "Someone still in danger? Call 995 and your supervisor FIRST"
 
