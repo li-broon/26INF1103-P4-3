@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from dataclasses import asdict
 
 from .exceptions import InvalidReportError
 from .models.evaluation import Evaluation
@@ -61,3 +62,11 @@ class LogicManager:
             deadline=evaluation.deadline,
             priority=evaluation.priority,
         )
+
+
+# TEMPORARY: old function style entry point still used by main.py and the GUI. Builds a LogicManager that saves
+# through the shared functions in src.data_manager, and returns the outcome as a dictionary.
+def logic(report):
+    from src import data_manager  # Imported here so LogicManager itself never depends on the data manager package
+
+    return asdict(LogicManager(data_manager).process(report))

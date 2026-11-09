@@ -19,4 +19,3 @@ class Evaluation:
             "deadline": self.deadline,
             "priority": self.priority,
         }
-    pass
