@@ -1,5 +1,5 @@
-from src.logic_manager.helpers import to_bool
-from src.logic_manager.scoring.factors.score_factor import ScoreFactor
+from ...field_parser import FieldParser
+from .score_factor import ScoreFactor
 
 
 # One weight if the value is true, another if false
@@ -10,4 +10,4 @@ class BooleanFactor(ScoreFactor):
         self._if_false = if_false
 
     def _weight(self, value):
-        return self._if_true if to_bool(value) else self._if_false
+        return self._if_true if FieldParser.to_bool(value) else self._if_false

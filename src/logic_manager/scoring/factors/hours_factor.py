@@ -1,4 +1,5 @@
-from src.logic_manager.scoring.factors.score_factor import ScoreFactor
+from ...field_parser import FieldParser
+from .score_factor import ScoreFactor
 
 
 # Uses the number of hours directly, clamped between 0 and max_hours
@@ -8,8 +9,4 @@ class HoursFactor(ScoreFactor):
         self._max_hours = max_hours
 
     def _weight(self, value):
-        try:
-            hours = float(value or 0)
-        except (TypeError, ValueError):
-            hours = 0
-        return max(0, min(hours, self._max_hours))  # No negatives, and capped
+        return max(0, min(FieldParser.to_float(value), self._max_hours))  # No negatives, and capped

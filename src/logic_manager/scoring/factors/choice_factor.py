@@ -1,4 +1,4 @@
-from src.logic_manager.scoring.factors.score_factor import ScoreFactor
+from .score_factor import ScoreFactor
 
 
 # Looks the value up in a dictionary of weights (unknown values score 0)
@@ -8,4 +8,7 @@ class ChoiceFactor(ScoreFactor):
         self._weights = weights
 
     def _weight(self, value):
-        return self._weights.get(value, 0)
+        try:
+            return self._weights.get(value, 0)
+        except TypeError:  # unhashable AI output, e.g. a list or dict
+            return 0
