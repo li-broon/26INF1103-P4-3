@@ -1,5 +1,3 @@
-from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
-
 from src.io_manager.constants import BOLD, FULL_REPORT_FIELDS, GREEN, RED, RESET, UNDERLINE, YELLOW, YES_NO_COLUMNS
 
 
@@ -42,16 +40,8 @@ class ReportCardView:
 
         # A MOM-reportable incident has a legal deadline, so make it stand out
         if outcome.mom_reportable == "Yes":
-            if self._is_overdue(outcome.deadline):
+            if self._formatter.is_overdue(outcome.deadline):
                 print(f"{RED}{BOLD}  OVERDUE: this incident had to be reported to MOM by {outcome.deadline}. "
                       f"Tell your supervisor now.{RESET}\n")
             else:
                 print(f"{RED}{BOLD}  This incident must be reported to MOM by {outcome.deadline}.{RESET}\n")
-
-    # Check whether a MOM deadline has already passed (a deadline of today is not overdue yet)
-    def _is_overdue(self, deadline, today=None) -> bool:
-        try:
-            due = datetime.strptime(str(deadline), "%Y-%m-%d").date()
-        except ValueError:
-            return False  # e.g. "Check incident date": no real date to compare
-        return due < (today or date.today())
