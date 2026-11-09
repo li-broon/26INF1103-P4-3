@@ -22,8 +22,6 @@ from src.logic_manager.scoring.factors.hours_factor import HoursFactor
 from src.logic_manager.scoring.factors.score_factor import ScoreFactor
 from src.logic_manager.scoring.importance_scorer import ImportanceScorer
 
-# Test Config.
-
 # Hardcoded AI Replies
 SAMPLES_FOLDER = os.path.join(os.path.dirname(__file__), "..", "samples")
 
@@ -189,6 +187,14 @@ def test_field_parser():
     assert FieldParser.to_float("abc") == 0.0
     assert FieldParser.to_float(None) == 0.0
 
+# "yes" Counts as True, and Numbers that are Not Usable (inf, nan, Huge, Lists) Become 0.0
+def test_field_parser_extra_cases():
+    assert FieldParser.to_bool("Yes") is True
+    assert FieldParser.to_bool(0) is False
+    for junk in ("inf", "nan", float("inf"), 10 ** 400, [], {}):
+        assert FieldParser.to_float(junk) == 0.0, f"value={junk!r}"
+    assert FieldParser.to_float(" 2.5 ") == 2.5
+
 # Score Factor Tests (One Class at a Time)
 
 # ChoiceFactor Looks Values Up, and Unknown Values Score 0
@@ -197,6 +203,13 @@ def test_choice_factor():
     assert factor.contribution({"ai_severity": "High"}) == 3.5
     assert factor.contribution({"ai_severity": "Banana"}) == 0
     assert factor.contribution({}) == 0
+
+# ChoiceFactor Ignores Case and Spaces in Text ("low", " HIGH ") but Still Scores Unknown Words 0
+def test_choice_factor_ignores_case():
+    factor = ChoiceFactor("ai_severity", 0.5, {"Low": 1, "High": 7})
+    assert factor.contribution({"ai_severity": "low"}) == 0.5
+    assert factor.contribution({"ai_severity": " HIGH "}) == 3.5
+    assert factor.contribution({"ai_severity": "Banana"}) == 0
 
 # BooleanFactor Picks the True/False Weight, Including for Text Booleans
 def test_boolean_factor():
@@ -299,6 +312,11 @@ def test_bad_date_is_still_flagged():
     for date in (None, "", "yesterday", "01/10/2026"):
         result = default_rule().check({"hospitalised": True, "incident_date": date})
         assert result == ("Yes", "Check incident date"), f"date={date!r}"
+
+# The AI Writing "critical" or " High " in the Wrong Case Must Not Hide a Reportable Incident
+def test_severity_case_does_not_hide_mom_report():
+    for severity in ("critical", " HIGH ", "High"):
+        assert default_rule().check({"ai_severity": severity, "incident_date": "2026-10-01"})[0] == "Yes", severity
 
 # The Deadline Counts Across a Month End (e.g. 25 Oct + 10 Days = 4 Nov)
 def test_deadline_crosses_month_end():
@@ -454,6 +472,13 @@ def test_data_manager_is_shared_not_owned():
     LogicManager(data_manager).process(load_sample_report("near_miss_slip.json"))
     LogicManager(data_manager).process(load_sample_report("medium_machinery.json"))
     assert len(data_manager.saved_records) == 2
+
+# The Names main.py and the GUI Import from the Package Must Keep Working
+def test_package_exports_public_names():
+    import src.logic_manager as package
+    for name in ("Evaluation", "InvalidReportError", "LogicConfig", "LogicManager", "SaveOutcome", "logic"):
+        assert hasattr(package, name), name
+        assert name in package.__all__, name
 
 # The Manager Prints Nothing (Printing is 'io_manager's Job, Workers Should Never See Raw JSON)
 def test_manager_prints_nothing():
