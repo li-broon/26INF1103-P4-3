@@ -4,7 +4,7 @@
 
 import pandas as pd
 
-from src.data_manager.charts.constants import COUNT_LABEL, MAX_LABEL_LENGTH, OTHER_LABEL, TOP_LOCATIONS
+from src.data_manager.constants import COUNT_LABEL, MAX_LABEL_LENGTH, OTHER_LABEL, TOP_LOCATIONS
 from src.data_manager.charts.time_chart_drawer import TimeChartDrawer
 from src.data_manager.constants import DATE_FIELD
 
