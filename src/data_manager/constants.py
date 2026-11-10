@@ -29,4 +29,11 @@ SEVERITY_COLORS = {"Low": "#7fb77e", "Medium": "#f2c14e", "High": "#f08a4b", "Cr
 
 UNKNOWN_PREFIX = "unknown"
 BAR_COLOR = "#4c78a8"
-COUNT_LABEL = "Number of Incidents"
+COUNT_LABEL = "Number of incidents"
+
+# Severity as a Number, so Mean and Median Can be Worked Out (Low = 1 ... Critical = 4)
+SEVERITY_SCORES = {level: number for number, level in enumerate(SEVERITY_ORDER, start=1)}
+
+MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+OTHER_LABEL = "Other"      # Where the locations outside the top ones are grouped
+MAX_LABEL_LENGTH = 28      # Longer location names are shortened so the legend stays readable

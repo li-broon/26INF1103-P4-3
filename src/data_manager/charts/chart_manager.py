@@ -4,6 +4,12 @@
 
 from src.data_manager.charts.chart_drawer import ChartDrawer
 
+# --------- #
+# Constants
+# --------- #
+
+PANEL_HEIGHT = 3.8  # Height in inches of one panel of a chart
+
 # ----- #
 # Class
 # ----- #
@@ -47,23 +53,28 @@ class ChartManager:
 
         drawers = list(self._drawers.values()) if chart_name == "all" else [self._drawers[chart_name]]
         columns = 2 if len(drawers) > 1 else 1
-        rows = -(-len(drawers) // columns)
-        fig, axes = plt.subplots(rows, columns, figsize=(7 * columns, 4.5 * rows), squeeze=False)
-        axes = axes.flatten()
 
-        for ax, drawer in zip(axes, drawers):
-            if not drawer.draw(ax, table):
-                ax.set_title(drawer.title)
-                ax.text(0.5, 0.5, "No data to show", ha="center", va="center", transform=ax.transAxes)
-                ax.axis("off")
-        for ax in axes[len(drawers):]:
-            ax.axis("off")  # Hide any unused slot in the grid
+        # One panel charts go side by side in pairs; a chart with several panels gets a full width row of its own (after the one panel charts)
+        small = [drawer for drawer in drawers if drawer.panels == 1]
+        big = [drawer for drawer in drawers if drawer.panels > 1]
+        rows = [small[i:i + columns] for i in range(0, len(small), columns)] + [[drawer] for drawer in big]
+        row_panels = [max(drawer.panels for drawer in row) for row in rows]  # A row is as tall as its tallest chart
+
+        fig = plt.figure(figsize=(11 if columns == 1 else 8 * columns, PANEL_HEIGHT * sum(row_panels)), layout="constrained")
+        grid = fig.add_gridspec(len(rows), columns, height_ratios=row_panels)
+        for row_number, row in enumerate(rows):
+            for column, drawer in enumerate(row):
+                full_width = len(row) == 1 and drawer.panels > 1
+                ax = fig.add_subplot(grid[row_number, :] if full_width else grid[row_number, column])
+                if not drawer.draw(ax, table):
+                    ax.set_title(drawer.title)
+                    ax.text(0.5, 0.5, "No data to show", ha="center", va="center", transform=ax.transAxes)
+                    ax.axis("off")
 
         heading = f"Incident Reports ({len(table)} reports)"
         if filter_column is not None:
             heading += f" where {filter_column} = {filter_value}"
         fig.suptitle(heading, fontsize=14, fontweight="bold")
-        fig.tight_layout(rect=(0, 0, 1, 0.97))  # Leave room for the main title
 
         if save_path:
             fig.savefig(save_path, dpi=150, bbox_inches="tight")
