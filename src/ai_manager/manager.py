@@ -4,8 +4,9 @@
 # Imports
 # ------- #
 
-from src.ai_manager.constants import SEVERITY_LEVELS, ROOT_CAUSES
+from src.ai_manager.constants import SEVERITY_LEVELS, ROOT_CAUSES, UNKNOWN_VALUE
 from src.ai_manager.fields.text_field import TextField
+from src.ai_manager.fields.location_field import LocationField
 from src.ai_manager.fields.date_field import DateField
 from src.ai_manager.fields.time_field import TimeField
 from src.ai_manager.fields.boolean_field import BooleanField
@@ -27,7 +28,11 @@ class AIManager:
         # Details the AI Collects from the Worker
         self._worker_fields = FieldSet([
             TextField("reporter_name", "full name of the person reporting"),
-            TextField("location", "site and exact area where it happened"),
+            LocationField("location", "from the biggest place to the smallest, separated by commas: main site FIRST, then the "
+                                      "exact area, then optionally an even more exact spot (e.g. 'Tuas site, loading bay 2' or "
+                                      "'Jurong Island, Block A, level 3'); never put a smaller area before the main site "
+                                      "(not 'loading bay 2, Tuas site'); if only the exact area is not known, write the site "
+                                      f"then ', {UNKNOWN_VALUE}'"),
             DateField("incident_date", "date in YYYY-MM-DD"),
             TimeField("incident_time", "time in 24h HH:MM", allows_unknown=True),
             TextField("description", "what happened, in clear English"),

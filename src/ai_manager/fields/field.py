@@ -26,7 +26,7 @@ class Field(ABC):
     def description(self) -> str:
         return self._description
 
-    # Line Describing this Field in a Prompt (e.g. "- location: site and exact area")
+    # Line Describing this Field in a Prompt (e.g. "- reporter_name: full name of the person reporting")
     def describe(self) -> str:
         return f"- {self._name}: {self._description}"
 
