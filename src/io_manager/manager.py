@@ -1,5 +1,5 @@
 from src.ai_manager import AIServiceError
-from src.io_manager.constants import BOLD, FILTER_BACK_OPTION, FILTER_COLUMNS, GOODBYE, RED, RESET, WELCOME, YELLOW
+from src.io_manager.constants import BOLD, FILTER_BACK_OPTION, FILTER_COLUMNS, GOODBYE, RED, RESET, WELCOME, YELLOW, GREEN
 from src.io_manager.display.pager import Pager
 from src.io_manager.display.report_card_view import ReportCardView
 from src.io_manager.display.report_formatter import ReportFormatter
@@ -13,11 +13,12 @@ from src.io_manager.prompts.prompter import Prompter
 
 #User interface manager, handling all input and output, prompts, menu, pager
 class IOManager:
-    def __init__(self, ai_manager, logic_manager, data_manager, read=input):
+    def __init__(self, ai_manager, logic_manager, data_manager,chart_manager, read=input, ):
         #handed in by main() and used, but not created or ownned by here (association)
         self._ai_manager = ai_manager
         self._logic_manager = logic_manager
         self._data_manager = data_manager 
+        self._chart_manager = chart_manager
 
         #create her and owned by this IOManager (Composition)
         self._prompter = Prompter(read)
@@ -93,7 +94,7 @@ class IOManager:
             else:
                 return
 
-    # Ask which column and value to filter by, then page through the matching reports
+    #Ask which column and value to filter by, then page through the matching reports
     def _filter_reports(self) -> None:
         choice = self._menus["filter"].show()
         if choice == FILTER_BACK_OPTION:
@@ -101,11 +102,11 @@ class IOManager:
 
         heading, column = FILTER_COLUMNS[choice - 1]
 
-        # Location is a free-text keyword search so users don't pick from a huge list (task 16 replaces this check once KeywordFilter offers no options)
+        #Location is a free-text keyword search so users don't pick from a huge list (task 16 replaces this check once KeywordFilter offers no options)
         if column in ["location"]:
             value = self._prompter.ask_text(f"\n{BOLD}Enter a keyword to search in {heading}:{RESET} ")
         else:
-            value = self._prompter.choose_from(heading, self._data_manager.get_unique_values(column))
+            value = self._prompter.choose_from(f"Values saved under {heading}", self._data_manager.get_unique_values(column))
         if not value:
             return
 
@@ -117,7 +118,7 @@ class IOManager:
         self._browse_pages(matches, f"Reports where {heading} matches '{value}' ({len(matches)} found, most urgent first)")
 
 
-            # Chat with the worker until the AI has a complete report, then score it, save it and show the result
+    #Chat with the worker until the AI has a complete report, then score it, save it and show the result
     def _run_chatbot(self) -> None:
         # Start the conversation (fails here if the API key is missing)
         try:
@@ -163,7 +164,7 @@ class IOManager:
                     self._view_reports()
                 return
 
-    # Show an AI error, with advice that fits the kind of error
+    #Show an AI error, with advice that fits the kind of error
     def _show_ai_error(self, result) -> None:
         print(f"{RED}{BOLD}  Error Occurred:{RESET}")
 
@@ -179,7 +180,24 @@ class IOManager:
             print(f"   {BOLD}{RED}Message:{RESET} {result.error}")
             print(f"{YELLOW}This report couldn't be finished. Type 'quit' to go back, or tell your supervisor directly.{RESET}\n")
 
-    # Start the app: show the main menu until the user exits (Ctrl+C also exits cleanly)
+    #Options 3 so the user can pick the chart option
+    def _show_charts(self) -> None:
+        options = self._chart_manager.get_chart_options() + [("all", "All charts on one page")]
+        labels = [label for key, label in options]
+
+        label = self._prompter.choose_from("Charts", labels)
+        if label is None:
+            return
+        key = options[labels.index(label)][0]
+
+        if self._prompter.ask_yes_no("Open the chart in a window? (n saves it as a picture in the data folder)"):
+            saved, message = self._chart_manager.show_chart(key)
+        else:
+            saved, message = self._chart_manager.show_chart(key, save_path=f"data/chart_{key}.png")
+
+        print(f"{GREEN if saved else YELLOW}{message}{RESET}")
+
+    #Start the app: show the main menu until the user exits (Ctrl+C also exits cleanly)
     def run(self) -> None:
         try:
             while True:
@@ -188,6 +206,8 @@ class IOManager:
                     self._run_chatbot()
                 elif choice == 2:
                     self._view_reports()
+                elif choice == 3:
+                    self._show_charts()
                 else:
                     print(GOODBYE)
                     return

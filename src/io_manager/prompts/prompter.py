@@ -37,7 +37,7 @@ class Prompter:
     def choose_from(self, heading: str, values: list): #The selected value, or None if the user chooses the 'Back' option.
         back_option = len(values) + 1
 
-        print(f"\n{BOLD}Values saved under {heading}:{RESET}")
+        print(f"\n{BOLD}{heading}:{RESET}")
         #Print out every available filter option as a numbered list
         for number, value in enumerate(values, start=1):
             print(f"      {GREEN}{BOLD}{number}{RESET}. {value}")
