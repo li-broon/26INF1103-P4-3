@@ -13,7 +13,7 @@ from src.io_manager.prompts.prompter import Prompter
 
 #User interface manager, handling all input and output, prompts, menu, pager
 class IOManager:
-    def __init__(self, ai_manager, logic_manager, data_manager,chart_manager, read=input, ):
+    def __init__(self, ai_manager, logic_manager, data_manager, chart_manager, read=input, ):
         #handed in by main() and used, but not created or ownned by here (association)
         self._ai_manager = ai_manager
         self._logic_manager = logic_manager
