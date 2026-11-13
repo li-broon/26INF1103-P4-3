@@ -106,19 +106,25 @@ class ChartManager:
         drawers = list(self._drawers.values()) if chart_name == "all" else [self._drawers[chart_name]]
         return (drawers, table, heading), ""
 
-    # Draws the drawers on one new figure and returns it.
-    # With several charts the figure is a dashboard of two columns as equal in height as possible, each keeping the menu order
+    # Draws the drawers on one new pyplot figure and returns it (used by show_chart, which opens it in a window or saves it)
     # for_window: a window has to fit a screen; a saved picture can be taller
     def _build_figure(self, drawers: list[ChartDrawer], table, heading: str, for_window: bool):
         import matplotlib.pyplot as plt
-        columns = self._split_into_columns(drawers)
+        figure = plt.figure(figsize=self._figure_size(drawers, for_window), layout="constrained")
+        self._draw_on(figure, drawers, table, heading)
+        return figure
 
+    # Size in inches: one chart grows with its panels; several charts share one big dashboard
+    @staticmethod
+    def _figure_size(drawers: list[ChartDrawer], for_window: bool) -> tuple[float, float]:
         if len(drawers) == 1:
-            width, height = WINDOW_WIDTH, min(MAX_WINDOW_HEIGHT, WINDOW_HEIGHT + EXTRA_PANEL_HEIGHT * (drawers[0].panels - 1))
-        else:
-            width, height = ALL_WIDTH, ALL_WINDOW_HEIGHT if for_window else ALL_SAVED_HEIGHT
+            return WINDOW_WIDTH, min(MAX_WINDOW_HEIGHT, WINDOW_HEIGHT + EXTRA_PANEL_HEIGHT * (drawers[0].panels - 1))
+        return ALL_WIDTH, ALL_WINDOW_HEIGHT if for_window else ALL_SAVED_HEIGHT
 
-        figure = plt.figure(figsize=(width, height), layout="constrained")
+    # Draws the drawers on the given figure.
+    # With several charts the figure is a dashboard of two columns as equal in height as possible, each keeping the menu order
+    def _draw_on(self, figure, drawers: list[ChartDrawer], table, heading: str) -> None:
+        columns = self._split_into_columns(drawers)
         grid = figure.add_gridspec(1, len(columns))
         for number, column in enumerate(columns):
             # Each chart gets the share of the column's height that it asks for
@@ -131,7 +137,6 @@ class ChartManager:
                     ax.axis("off")
 
         figure.suptitle(heading, fontsize=14, fontweight="bold")
-        return figure
 
     # Shares the charts between a left and a right column so the columns are as close in height as possible (a 3 panel chart
     # is not stacked under a 2 panel one while 3 small charts share the other side), keeping the menu order inside each column.
