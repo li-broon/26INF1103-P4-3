@@ -29,6 +29,8 @@ class ChartsTab(ttk.Frame):
             tk.Radiobutton(picker, text=title, value=key, variable=self._choice, command=self.refresh, font=font(10),
                            fg=TEXT, bg=SURFACE, activebackground=PRIMARY_SOFT, selectcolor=SURFACE, anchor="w",
                            highlightthickness=0, padx=4, pady=4).pack(fill="x", padx=14)
+        ttk.Button(picker, text="Refresh", style="Secondary.TButton", command=self.refresh).pack(
+            side="bottom", fill="x", padx=18, pady=16)
 
         # Right: the Chart Itself, or a Message Saying Why there is No Chart
         self._chart_card = card(self, side="left", fill="both", expand=True, padx=(0, 24), pady=20)
