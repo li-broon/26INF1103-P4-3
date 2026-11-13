@@ -1,7 +1,7 @@
 from src.io_manager.menus.menu import Menu
 
 
-#child class of Menu(Main Menu)
+# child class of Menu(Main Menu)
 class MainMenu(Menu):
     def title(self) -> str:
         return "Main Menu"

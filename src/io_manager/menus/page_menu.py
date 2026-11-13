@@ -1,7 +1,7 @@
 from src.io_manager.menus.menu import Menu
 
 
-#Child Class of Menu(PageMenu)
+# Child Class of Menu(PageMenu)
 class PageMenu(Menu):
     def title(self) -> str:
         return "Page Options"

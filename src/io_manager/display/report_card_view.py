@@ -3,7 +3,7 @@ from src.io_manager.constants import (
 )
 
 
-#Prints One Report in Full: a Report Opened from the Table, or the Card a Worker Sees After Saving
+# Prints One Report in Full: a Report Opened from the Table, or the Card a Worker Sees After Saving
 class ReportCardView:
     def __init__(self, formatter):
         self._formatter = formatter   # The shared ReportFormatter, handed in (association)

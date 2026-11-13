@@ -2,14 +2,11 @@ import json
 from dataclasses import dataclass, field, fields
 
 
+# Every weight, threshold and deadline the Logic Manager uses, in one place.
+# The defaults reproduce the original Phase 1 behaviour. A JSON file can override
+# any of them (see from_json), so business rules are configurable without code changes.
 @dataclass(frozen=True)
 class LogicConfig:
-    """Every weight, threshold and deadline the Logic Manager uses, in one place.
-
-    The defaults reproduce the original Phase 1 behaviour. A JSON file can override
-    any of them (see from_json), so business rules are configurable without code changes.
-    """
-
     # Weight for each value the AI can return for ai_severity / root_cause_category
     severity_weights: dict = field(default_factory=lambda: {
         "Low": 1, "Medium": 4, "High": 7, "Critical": 10,
@@ -89,4 +86,3 @@ class LogicConfig:
             return ok, frozenset(value) if ok else None
         return is_number(value), value
 
-    

@@ -115,9 +115,9 @@ class CsvRecordStore(RecordStore):
                     break
 
             # If all fields matched, there's a duplicate
-            if row_matches: 
+            if row_matches:
                 return True
-        # Returns false, meaning the new record is a unique record    
+        # Returns false, meaning the new record is a unique record
         return False
 
     # Safe reading of the CSV file

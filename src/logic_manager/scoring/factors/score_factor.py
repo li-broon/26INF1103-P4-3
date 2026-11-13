@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 
 
+# Scores one field of a report. Subclasses decide how a value becomes a weight.
 class ScoreFactor(ABC):
-    """Scores one field of a report. Subclasses decide how a value becomes a weight."""
-
     def __init__(self, field, importance):
         self._field = field
         self._importance = importance
@@ -17,6 +16,7 @@ class ScoreFactor(ABC):
     def contribution(self, report):
         return self._weight(report.get(self._field)) * self._importance
 
+    # Turn the raw field value into a weight (never raise on bad AI output).
     @abstractmethod
     def _weight(self, value):
-        """Turn the raw field value into a weight (never raise on bad AI output)."""
+        pass

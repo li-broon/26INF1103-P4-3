@@ -1,7 +1,7 @@
 from src.io_manager.constants import BOLD, CYAN, RESET, UNDERLINE
 
 
-#Prints One Page of the Reports Table: Title, Header, Rows with their Details, Page Footer
+# Prints One Page of the Reports Table: Title, Header, Rows with their Details, Page Footer
 class ReportTableView:
     def __init__(self, formatter):
         self._formatter = formatter   # The shared ReportFormatter, handed in (association)

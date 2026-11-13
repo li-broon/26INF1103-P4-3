@@ -13,16 +13,16 @@ from src.io_manager.menus.view_menu import ViewMenu
 from src.io_manager.prompts.prompter import Prompter
 
 
-#User interface manager, handling all input and output, prompts, menu, pager
+# User interface manager, handling all input and output, prompts, menu, pager
 class IOManager:
     def __init__(self, ai_manager, logic_manager, data_manager, chart_manager, read=input, ):
-        #handed in by main() and used, but not created or ownned by here (association)
+        # handed in by main() and used, but not created or owned by here (association)
         self._ai_manager = ai_manager
         self._logic_manager = logic_manager
-        self._data_manager = data_manager 
+        self._data_manager = data_manager
         self._chart_manager = chart_manager
 
-        #create her and owned by this IOManager (Composition)
+        # created here and owned by this IOManager (Composition)
         self._prompter = Prompter(read)
         self._formatter = ReportFormatter()
         self._table_view = ReportTableView(self._formatter)
@@ -39,7 +39,7 @@ class IOManager:
             print(f"{YELLOW}You are already on the {end} page.{RESET}")
         return moved
 
-    #page through a filtered table: next, previous, open a report, or go back
+    # page through a filtered table: next, previous, open a report, or go back
     def _browse_pages(self, table, title: str) -> None:
         pager = Pager(len(table))
         show_page = True
@@ -109,7 +109,7 @@ class IOManager:
         text = self._data_manager.load_transcript(transcript_id)
         self._card_view.show_transcript(text, f"Transcript for Report #{number}")
 
-    #Ask which column and value to filter by, then page through the matching reports
+    # Ask which column and value to filter by, then page through the matching reports
     def _filter_reports(self) -> None:
         choice = self._menus["filter"].show()
         if choice == FILTER_BACK_OPTION:
@@ -134,7 +134,7 @@ class IOManager:
         self._browse_pages(matches, f"Reports where {heading} matches '{value}' ({len(matches)} found, most urgent first)")
 
 
-    #Chat with the worker until the AI has a complete report, then score it, save it and show the result
+    # Chat with the worker until the AI has a complete report, then score it, save it and show the result
     def _run_chatbot(self) -> None:
         # Start the conversation (fails here if the API key is missing)
         try:
@@ -187,7 +187,7 @@ class IOManager:
                     self._view_reports()
                 return
 
-    #Show an AI error, with advice that fits the kind of error
+    # Show an AI error, with advice that fits the kind of error
     def _show_ai_error(self, result) -> None:
         print(f"{RED}{BOLD}  Error Occurred:{RESET}")
 
@@ -203,7 +203,7 @@ class IOManager:
             print(f"   {BOLD}{RED}Message:{RESET} {result.error}")
             print(f"{YELLOW}This report couldn't be finished. Type 'quit' to go back, or tell your supervisor directly.{RESET}\n")
 
-    #Options 3 so the user can pick the chart option
+    # Options 3 so the user can pick the chart option
     def _show_charts(self) -> None:
         options = self._chart_manager.get_chart_options() + [("all", "All charts on one page")]
         labels = [label for key, label in options]
@@ -220,7 +220,7 @@ class IOManager:
 
         print(f"{GREEN if saved else YELLOW}{message}{RESET}")
 
-    #Start the app: show the main menu until the user exits (Ctrl+C also exits cleanly)
+    # Start the app: show the main menu until the user exits (Ctrl+C also exits cleanly)
     def run(self) -> None:
         try:
             while True:

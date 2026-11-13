@@ -48,7 +48,7 @@ class GUIManager(tk.Tk):
         tabs = ttk.Notebook(self)
         self._reports_tab = ReportsTab(tabs, data_manager, formatter)
         self._mom_tab = MomTab(tabs, mom_store, data_manager, formatter) if mom_store is not None else None
-        self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, data_manager, formatter, on_saved=self._reports_tab.refresh)
+        self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, data_manager, formatter, on_saved=self._refresh_tabs)
         tabs.add(self._chat_tab, text="Report an incident")
         tabs.add(self._reports_tab, text="Saved reports")
         if self._mom_tab is not None:
@@ -66,7 +66,6 @@ class GUIManager(tk.Tk):
         self._reports_tab.refresh()
         if self._mom_tab is not None:
             self._mom_tab.refresh()
-
 
     # Open Every Chart on One Page, Same as "All charts on one page" in the Terminal Menu (Waits Until the Chart Window Is Closed)
     def _show_all_charts(self):

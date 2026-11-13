@@ -1,7 +1,7 @@
 from src.io_manager.menus.menu import Menu
 
 
-#Child Class of Menu (View Menu)
+# Child Class of Menu (View Menu)
 class ViewMenu(Menu):
     def title(self) -> str:
         return "Report Options"

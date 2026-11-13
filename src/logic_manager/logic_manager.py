@@ -9,14 +9,11 @@ from .rules.priority_classifier import PriorityClassifier
 from .scoring.importance_scorer import ImportanceScorer
 
 
+# Applies the business rules to an AI-enriched report and hands it on to be saved.
+# - Composition: it builds and owns its scorer, reporting rule and classifier.
+# - Aggregation: the DataManager is injected and lives on independently of it.
+# - Aggregation: the optional MOM store (any object with save_record) is injected too; MOM reportable reports are copied into it after the main save.
 class LogicManager:
-    """Applies the business rules to an AI-enriched report and hands it on to be saved.
-
-    - Composition: it builds and owns its scorer, reporting rule and classifier.
-    - Aggregation: the DataManager is injected and lives on independently of it.
-    - Aggregation: the optional MOM store (any object with save_record) is injected too; MOM reportable reports are copied into it after the main save.
-    """
-
     def __init__(self, data_manager, config=None, mom_store=None):
         config = config or LogicConfig()
         self._data_manager = data_manager                       # aggregation (your DataManager, or any object with save_record)

@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
 
 
+# What the business rules decided about one report (nothing has been saved yet).
 @dataclass
 class Evaluation:
-    """What the business rules decided about one report (nothing has been saved yet)."""
-
     importance_score: float
     mom_reportable: str
     deadline: str

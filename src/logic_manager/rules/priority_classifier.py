@@ -1,6 +1,5 @@
+# Turns an importance score into a priority band such as Urgent / Elevated / Routine.
 class PriorityClassifier:
-    """Turns an importance score into a priority band such as Urgent / Elevated / Routine."""
-
     # Returned if no bands were configured
     UNCLASSIFIED = "Unclassified"
 

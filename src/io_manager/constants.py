@@ -12,7 +12,7 @@ RED = "\033[91m"
 WELCOME = f"""
 
 ========================================================================
-{CYAN}{BOLD} 
+{CYAN}{BOLD}
             Workplace Incident Reporting Assistant {RESET}
 
 ========================================================================
@@ -20,7 +20,7 @@ WELCOME = f"""
         Hello! I'm here to help you report a workplace incident.{RESET}
         Just tell me what happened, like you're talking to a friend.
         I'll ask a few questions if anything is missing. 📝
-        
+
         {GREEN}{BOLD}{UNDERLINE} Speak in YOUR language! Any language or a mix is OK.{RESET}
 
       🇬🇧  {GREEN}English{RESET}   : You can talk to me in your own language.
@@ -29,7 +29,7 @@ WELCOME = f"""
       🇮🇳  {GREEN}தமிழ்{RESET}      : நீங்கள் உங்கள் சொந்த மொழியில் பேசலாம்.
       🇮🇳  {GREEN}हिन्दी{RESET}     : आप अपनी भाषा में बात कर सकते हैं।
       🇧🇩  {GREEN}বাংলা{RESET}     : আপনি আপনার নিজের ভাষায় কথা বলতে পারেন।{RESET}
-    
+
 {RED}{BOLD} If someone is still in danger, call 995 and your supervisor FIRST! 🚨{RESET}
       {YELLOW} Type your message below and press Enter to start. ⬇️{RESET}
 """
@@ -38,7 +38,7 @@ CANCEL_WORDS = ("quit", "exit", "cancel")  # Typing one of these in the chatbot 
 
 # How Many Reports are Shown on Each Page of the Table
 PAGE_SIZE = 3
-#Map UI headings to the exact column names and set their display width
+# Map UI headings to the exact column names and set their display width
 TABLE_COLUMNS = [
     ("Score", "importance_score", 7),
     ("Severity", "ai_severity", 9),
@@ -51,7 +51,7 @@ TABLE_COLUMNS = [
 # Yes/No Columns Shown in Red when the Value is YES
 ALERT_COLUMNS = ("hospitalised", "mom_reportable")
 
-#Full-Text Fields Wrapped Under Each Summary Row: (Label, Column Name in 'data.csv'), Since Whole Sentences Don't Fit in a Table Column
+# Full-Text Fields Wrapped Under Each Summary Row: (Label, Column Name in 'data.csv'), Since Whole Sentences Don't Fit in a Table Column
 DETAIL_FIELDS = [
     ("Reported by", "reporter_name"),
     ("Injury", "injury_status"),
@@ -110,5 +110,5 @@ FILTER_COLUMNS = [
     ("MOM Deadline", "deadline"),
 ]
 
-#Dynamically calculate the back option number so it stays correct if columns are added later
+# Dynamically calculate the back option number so it stays correct if columns are added later
 FILTER_BACK_OPTION = len(FILTER_COLUMNS) + 1

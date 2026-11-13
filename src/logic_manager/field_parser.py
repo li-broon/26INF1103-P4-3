@@ -1,9 +1,8 @@
 import math
 
 
+# Turns messy AI generated values into clean Python ones (never raises).
 class FieldParser:
-    """Turns messy AI generated values into clean Python ones (never raises)."""
-
     # Text the AI may use for "true"
     TRUE_WORDS = frozenset({"true", "yes", "y", "1"})
 

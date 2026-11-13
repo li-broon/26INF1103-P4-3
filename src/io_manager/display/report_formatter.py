@@ -17,7 +17,7 @@ from src.io_manager.constants import (
 )
 
 
-#Turns Report Data into Display Text (Never Prints)
+# Turns Report Data into Display Text (Never Prints)
 class ReportFormatter:
     # The layout of the table does not change, so it is stored once
     def __init__(self, columns=TABLE_COLUMNS, details=DETAIL_FIELDS):
