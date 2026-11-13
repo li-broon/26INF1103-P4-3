@@ -161,11 +161,12 @@ def test_confirmation_card_says_overdue_when_deadline_passed():
 #Test that only deadlines before today count as overdue, and bad dates never do.
 def test_is_overdue():
     today = date(2026, 10, 13)
-    assert card_view._is_overdue("2026-10-12", today) is True
-    assert card_view._is_overdue("2026-10-13", today) is False  # Due today is not overdue yet
-    assert card_view._is_overdue("2026-10-14", today) is False
-    assert card_view._is_overdue("Check incident date", today) is False
-    assert card_view._is_overdue("N/A", today) is False
+    formatter = io.ReportFormatter()
+    assert formatter.is_overdue("2026-10-12", today) is True
+    assert formatter.is_overdue("2026-10-13", today) is False  # Due today is not overdue yet
+    assert formatter.is_overdue("2026-10-14", today) is False
+    assert formatter.is_overdue("Check incident date", today) is False
+    assert formatter.is_overdue("N/A", today) is False
 
 #Test that a non-MOM report shows N/A as its deadline and no MOM warning.
 def test_confirmation_card_no_mom_warning_when_not_reportable():

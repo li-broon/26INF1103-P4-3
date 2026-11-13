@@ -9,6 +9,9 @@ from google.genai import errors, types
 from src.ai_manager.services.ai_service import AIService
 from src.ai_manager.services.ai_service_error import AIServiceError
 
+# The Project's .env File (Three Folders Up from src/ai_manager/services/)
+ENV_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env")
+
 # ----- #
 # Class
 # ----- #
@@ -28,12 +31,23 @@ Create a file called '.env' in the project folder containing:
 Then run the program again. With Docker, pass the file in:
     docker run -it --rm --env-file .env -v "$(pwd)/data:/app/data" inf1103-p4"""
 
-    # Raise AIServiceError if API Key is Not Set
-    def __init__(self):
-        api_key = os.environ.get("GEMINI_API_KEY", "")
+    # Uses GEMINI_API_KEY if Set, Otherwise the .env File's (so the App also Runs Outside Docker); Raises AIServiceError if Neither Has One
+    def __init__(self, env_file: str = ENV_FILE):
+        api_key = os.environ.get("GEMINI_API_KEY", "") or self._read_key(env_file)
         if not api_key:
             raise AIServiceError(self.MISSING_KEY_MESSAGE)
         self._client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=self.TIMEOUT_MS))
+
+    # The GEMINI_API_KEY Value in the .env File, Without Quotes ("" if There is No File or No Key)
+    def _read_key(self, env_file: str) -> str:
+        if not os.path.exists(env_file):
+            return ""
+        with open(env_file, encoding="utf-8") as file:
+            for line in file:
+                name, _, value = line.partition("=")
+                if name.strip() == "GEMINI_API_KEY":
+                    return value.strip().strip('"').strip("'")
+        return ""
 
     def start_chat(self, system_prompt: str):
         config = types.GenerateContentConfig(
