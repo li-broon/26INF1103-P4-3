@@ -2,7 +2,6 @@
 # Import(s)
 # -------- #
 import sys
-from types import SimpleNamespace
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
 from src.data_manager import CsvRecordStore, DataManager, create_default_filters
@@ -10,13 +9,7 @@ from src.data_manager.charts.chart_manager import ChartManager
 from src.data_manager.charts.default_charts import create_default_charts
 from src.data_manager.constants import DATA_FILE
 from src.io_manager import IOManager
-from src.logic_manager import logic
-
-
-# TEMPORARY (task 18 replaces this): wraps the old logic() function so it has the process() method IOManager calls
-class OldLogicAdapter:
-    def process(self, report):
-        return SimpleNamespace(**logic(report))
+from src.logic_manager import LogicManager
 
 # TEMPORARY (task 18 replaces this): reports a missing API key only when the chatbot opens, so the menu and saved reports still work without one
 class NoKeyAI:
@@ -38,8 +31,8 @@ def main():
     except AIServiceError as error:
         ai_manager = NoKeyAI(error)
 
-    logic_manager = OldLogicAdapter()
     data_manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters())
+    logic_manager = LogicManager(data_manager)
     chart_manager = ChartManager(data_manager, create_default_charts())
     
 
