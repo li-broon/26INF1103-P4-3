@@ -15,18 +15,18 @@ from src.logic_manager import LogicManager
 # Start App
 # --------- #
 
-# Create every manager once and hand them to the IO Manager or GUI Manager (UML Figure 1).
-# A missing API key is only reported when the chatbot opens, so the menu, saved reports and charts work without one
+# Create every manager once and hand them to the IO Manager or GUI Manager
 def main():
     ai_manager = AIManager(GeminiService())
     data_manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters(), TextTranscriptStore(TRANSCRIPT_FOLDER))
     mom_store = MomRecordStore(MOM_DATA_FILE)
-    mom_store.sync(data_manager.load_records())  # Picks up MOM reportable reports saved before the register existed
-    logic_manager = LogicManager(data_manager, mom_store=mom_store)  # New ones go into the register as they are saved
+    mom_store.sync(data_manager.load_records())
+    logic_manager = LogicManager(data_manager, mom_store=mom_store)
     chart_manager = ChartManager(data_manager, create_default_charts())
 
     # "python main.py --gui" Opens the Tkinter Window, Otherwise the Terminal App Runs
     if "--gui" in sys.argv:
+        
         # Imported Here so the Terminal App Still Runs on a Python Installed Without Tkinter
         from tkinter import TclError
         from src.gui_manager import GUIManager
