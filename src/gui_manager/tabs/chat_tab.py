@@ -85,13 +85,13 @@ class ChatTab(ttk.Frame):
         if enabled:
             self._entry.focus_set()
 
-    # Animated "Assistant is thinking..." Line while Waiting for Gemini
+    # Animated "Chatbot is thinking..." Line while Waiting for Gemini
     def _animate_thinking(self):
         if not self._busy:
             self._thinking.configure(text="")
             return
         self._dots = self._dots % 3 + 1
-        self._thinking.configure(text="Assistant is thinking" + "." * self._dots)
+        self._thinking.configure(text="Chatbot is thinking" + "." * self._dots)
         self.after(THINKING_MS, self._animate_thinking)
 
     # Clear the Chat and Start a Fresh Conversation (Shows the Error if the API Key is Missing)
@@ -112,7 +112,7 @@ class ChatTab(ttk.Frame):
     # "New report" Button: Confirm First if a Report is Half Done
     def ask_new_report(self):
         if self._busy:
-            messagebox.showinfo(APP_TITLE, "Please wait for the assistant to finish replying.", parent=self)
+            messagebox.showinfo(APP_TITLE, "Please wait for the chatbot to finish replying.", parent=self)
             return
         if self._conversation and not self._finished:
             if not messagebox.askyesno(APP_TITLE, "Leave without finishing this report? Nothing will be saved.",

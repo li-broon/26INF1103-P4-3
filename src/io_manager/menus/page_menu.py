@@ -7,5 +7,5 @@ class PageMenu(Menu):
         return "Page Options"
 
     def options(self) -> list:
-        return ["Next page", "Previous page", "View a full report", "View a report's conversation (untranslated)",
+        return ["Next page", "Previous page", "View a full report", "View a report's transcript",
                 "Back to report options"]

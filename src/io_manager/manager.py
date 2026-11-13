@@ -107,7 +107,7 @@ class IOManager:
         number = self._prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
         transcript_id = table.iloc[number - 1].to_dict().get(TRANSCRIPT_COLUMN)
         text = self._data_manager.load_transcript(transcript_id)
-        self._card_view.show_transcript(text, f"Conversation for Report #{number}")
+        self._card_view.show_transcript(text, f"Transcript for Report #{number}")
 
     #Ask which column and value to filter by, then page through the matching reports
     def _filter_reports(self) -> None:

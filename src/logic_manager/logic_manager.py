@@ -53,7 +53,7 @@ class LogicManager:
         try:
             saved, message = self._data_manager.save_record(record)
         except OSError as error:
-            saved, message = False, f"Could not save record: {error}"
+            saved, message = False, f"Could not save report: {error}"
 
         # Once the main save worked, copy MOM reportable reports into the MOM register
         if saved and evaluation.mom_reportable == "Yes" and self._mom_store is not None:

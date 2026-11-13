@@ -36,7 +36,7 @@ def test_saves_only_mom_reportable_reports():
     def run(store, path):
         assert store.save_record(make_report("Ann"))[0] is True
         saved, message = store.save_record(make_report("Ben", mom="No"))
-        assert saved is False and "not MOM reportable" in message
+        assert saved is False and "not MOM Reportable" in message
         table = store.load_records()
         assert list(table["reporter_name"]) == ["Ann"]
         assert table.iloc[0][MOM_REPORTED_FIELD] == "No"

@@ -115,7 +115,7 @@ REPORT = {
 }
 
 #A fake SaveOutcome: the same fields as the Logic Manager's real one
-SAVED = SimpleNamespace(saved=True, message="Record saved.", importance_score=7.4,
+SAVED = SimpleNamespace(saved=True, message="Report saved.", importance_score=7.4,
                         mom_reportable="Yes", deadline="2099-12-31")
 
 #A copy of SAVED with some fields changed, e.g. outcome(deadline="2022-12-22")
@@ -145,10 +145,10 @@ def test_confirmation_card_shows_report_and_logic_results():
 
 #Test that a failed save shows the reason and no card, so the worker isn't told it was saved
 def test_confirmation_card_not_shown_when_save_fails():
-    failed = outcome(saved=False, message="Record rejected: an identical record already exists.")
+    failed = outcome(saved=False, message="Report rejected: an identical report already exists.")
     text = printed(card_view.show_save_outcome, REPORT, failed)
     assert "NOT saved" in text
-    assert "identical record" in text
+    assert "identical report" in text
     assert "Your Saved Report" not in text
     assert "has been saved" not in text
 
@@ -171,7 +171,7 @@ def test_is_overdue():
 #Test that a non-MOM report shows N/A as its deadline and no MOM warning.
 def test_confirmation_card_no_mom_warning_when_not_reportable():
     text = printed(card_view.show_save_outcome, REPORT, outcome(mom_reportable="No", deadline="N/A"))
-    assert re.search(r"MOM reportable:\s+No", text)
+    assert re.search(r"MOM Reportable:\s+No", text)
     assert "must be reported" not in text
 
 #Test that opening a report from the table shows its number and its fields.
@@ -265,14 +265,14 @@ def test_no_transcript_when_the_report_is_not_saved():
 def test_view_reports_shows_a_reports_conversation():
     data = FakeData(pd.DataFrame([REPORT]), transcript="Worker: saya jatuh\nAI: Maaf mendengarnya.")
     text = printed(io_manager(data=data, answers=["2", "5", "1", "6", "4"]).run)
-    assert "Conversation for Report #1" in text
+    assert "Transcript for Report #1" in text
     assert "Worker:" in text and "saya jatuh" in text
-    assert "AI:" in text and "Maaf mendengarnya." in text
+    assert "Chatbot:" in text and "Maaf mendengarnya." in text
 
 #A report saved before transcripts existed says so instead of crashing
 def test_view_reports_without_a_conversation_says_so():
     text = printed(io_manager(data=FakeData(pd.DataFrame([REPORT])), answers=["2", "5", "1", "6", "4"]).run)
-    assert "No conversation transcript is saved for this report" in text
+    assert "No transcript is saved for this report" in text
 
 #Without an API key, the chatbot explains why and returns to the menu instead of crashing
 def test_chatbot_without_api_key():

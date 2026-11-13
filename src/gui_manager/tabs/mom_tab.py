@@ -111,7 +111,7 @@ class MomTab(ttk.Frame):
         self._status.configure(text=f"{self._show_box.get()}  ·  {len(shown)} of {stats['total']} shown")
 
         if shown.empty:
-            self._empty.configure(text="No MOM reportable incidents yet." if everything.empty
+            self._empty.configure(text="No MOM Reportable incidents yet." if everything.empty
                                   else "Nothing to show for this choice.")
             self._empty.place(relx=0.5, rely=0.5, anchor="center")
         else:

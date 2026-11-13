@@ -32,7 +32,7 @@ class CsvRecordStore(RecordStore):
         # Attempts to clean record
         cleaned = self._cleaner.clean(record)
         if cleaned is None:
-            return False, "Record rejected: missing or invalid required field."
+            return False, "Report rejected: missing or invalid required field."
 
         # Makes sure data folder exists
         os.makedirs(self._data_folder, exist_ok=True)
@@ -45,7 +45,7 @@ class CsvRecordStore(RecordStore):
 
         # Checks if record is a duplicate
         if self._is_duplicate(existing_data, cleaned):
-            return False, "Record rejected: an identical record already exists."
+            return False, "Report rejected: an identical report already exists."
 
         new_row = pd.DataFrame([cleaned])
 
@@ -61,9 +61,9 @@ class CsvRecordStore(RecordStore):
             os.replace(temp_file, self._data_file)
         except OSError as e:
             logger.error("Could not write '%s': %s", self._data_file, e)
-            return False, "Record could not be saved (file write error)."
+            return False, "Report could not be saved (file write error)."
 
-        return True, "Record saved."
+        return True, "Report saved."
 
     # Reads all reports for display: cleans each row, drops invalid or duplicate rows and sorts by urgency, without changing the file
     def load_records(self, ascending: bool = False) -> pd.DataFrame:

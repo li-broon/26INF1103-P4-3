@@ -38,9 +38,9 @@ class MomRecordStore:
     def save_record(self, record: dict) -> tuple[bool, str]:
         cleaned = self._cleaner.clean(record)
         if cleaned is None:
-            return False, "MOM record rejected: missing or invalid required field."
+            return False, "MOM report rejected: missing or invalid required field."
         if str(cleaned.get("mom_reportable", "")).strip().lower() not in YES_WORDS:
-            return False, "MOM record rejected: the report is not MOM reportable."
+            return False, "MOM report rejected: the report is not MOM Reportable."
 
         cleaned[MOM_ID_FIELD] = self.make_id(cleaned)
         cleaned[MOM_REPORTED_FIELD] = "No"
@@ -48,11 +48,11 @@ class MomRecordStore:
 
         table = self._load_for_update()
         if not table.empty and cleaned[MOM_ID_FIELD] in set(table[MOM_ID_FIELD].dropna()):
-            return False, "MOM record rejected: this report is already in the MOM register."
+            return False, "MOM report rejected: this report is already in the MOM register."
 
         new_row = pd.DataFrame([cleaned])
         table = new_row if table.empty else pd.concat([table, new_row], ignore_index=True)
-        return self._write(table, "MOM record saved.")
+        return self._write(table, "MOM report saved.")
 
     # Adds every MOM reportable report in 'table' that is not in the register yet (used once at start-up, so reports saved before the register existed show up too). Returns how many were added
     def sync(self, table: pd.DataFrame) -> int:

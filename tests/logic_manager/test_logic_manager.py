@@ -29,7 +29,7 @@ SAMPLES_FOLDER = os.path.join(os.path.dirname(__file__), "..", "samples")
 
 # A Fake Data Manager: Remembers What it was Asked to Save, so data.csv is Never Touched
 class FakeDataManager:
-    def __init__(self, result=(True, "Record saved."), error=None):
+    def __init__(self, result=(True, "Report saved."), error=None):
         self._result = result
         self._error = error
         self.saved_records = []
@@ -437,13 +437,13 @@ def test_process_returns_outcome():
     outcome = make_manager()[0].process(load_sample_report("critical_electrical.json"))
     assert isinstance(outcome, SaveOutcome)
     assert outcome.saved is True
-    assert outcome.message == "Record saved."
+    assert outcome.message == "Report saved."
     assert_close(outcome.importance_score, 7.4)
     assert (outcome.mom_reportable, outcome.priority) == ("Yes", "Urgent")
 
 # A Failed Save is Passed On, Not Hidden
 def test_failed_save_is_passed_on():
-    rejected = (False, "Record rejected: an identical record already exists.")
+    rejected = (False, "Report rejected: an identical report already exists.")
     manager, _ = make_manager(data_manager=FakeDataManager(result=rejected))
     outcome = manager.process(load_sample_report("near_miss_slip.json"))
     assert outcome.saved is False
@@ -491,7 +491,7 @@ def test_manager_prints_nothing():
 
 # A Fake MOM Store: Remembers What it was Asked to Save, so no File is Touched
 class FakeMomStore:
-    def __init__(self, result=(True, "MOM record saved."), error=None):
+    def __init__(self, result=(True, "MOM report saved."), error=None):
         self._result = result
         self._error = error
         self.saved_records = []
@@ -510,7 +510,7 @@ def test_mom_reportable_report_is_copied_to_mom_store():
     assert len(mom_store.saved_records) == 1
     assert mom_store.saved_records[0]["mom_reportable"] == "Yes"
     assert mom_store.saved_records[0]["deadline"] != "N/A"
-    assert outcome.message == "Record saved."
+    assert outcome.message == "Report saved."
 
 # A Report that is Not MOM Reportable Never Reaches the MOM Store
 def test_non_reportable_report_is_not_copied_to_mom_store():
@@ -521,7 +521,7 @@ def test_non_reportable_report_is_not_copied_to_mom_store():
 # If the Main Save Fails the MOM Store is Not Touched (it Must Never Hold a Report data.csv Does Not)
 def test_mom_store_is_skipped_when_main_save_fails():
     mom_store = FakeMomStore()
-    data_manager = FakeDataManager(result=(False, "Record rejected."))
+    data_manager = FakeDataManager(result=(False, "Report rejected."))
     outcome = LogicManager(data_manager, None, mom_store).process(load_sample_report("critical_electrical.json"))
     assert outcome.saved is False
     assert mom_store.saved_records == []
@@ -538,4 +538,4 @@ def test_mom_store_problem_does_not_undo_main_save():
 # Without a MOM Store, Behaviour is Exactly as Before
 def test_no_mom_store_is_fine():
     outcome = make_manager()[0].process(load_sample_report("critical_electrical.json"))
-    assert outcome.saved is True and outcome.message == "Record saved."
+    assert outcome.saved is True and outcome.message == "Report saved."

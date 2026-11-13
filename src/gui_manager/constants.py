@@ -22,7 +22,7 @@ THINKING_MS = 400
 ALL_REPORTS = "All reports"
 
 # Under the Title of a Saved Conversation
-TRANSCRIPT_NOTE = "Exactly as the worker and the assistant wrote it, before any translation."
+TRANSCRIPT_NOTE = "Exactly as the worker and the chatbot wrote it, before any translation."
 
 # Grey Hint in the Empty Message Box
 PLACEHOLDER = "Describe what happened, then press Enter..."
@@ -104,7 +104,7 @@ MOM_STAT_CARDS = [
 BUBBLE_STYLES = {
     "you": ("You", PRIMARY, "#ffffff", "e"),
     "worker": ("Worker", PRIMARY, "#ffffff", "e"),  # The Worker's Side of a Saved Transcript, Read Back by Someone Else
-    "ai": ("Assistant", AI_BUBBLE, TEXT, "w"),
+    "ai": ("Chatbot", AI_BUBBLE, TEXT, "w"),
     "error": ("Problem", DANGER_SOFT, DANGER, "w"),
     "good": ("Report saved", SUCCESS_SOFT, SUCCESS, "w"),
 }

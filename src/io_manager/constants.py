@@ -86,7 +86,7 @@ FULL_REPORT_FIELDS = [
     ("Action taken", "immediate_action_taken"),
     ("Recommended action", "safety_recommendation"),
     ("Language", "detected_language"),
-    ("MOM reportable", "mom_reportable"),
+    ("MOM Reportable", "mom_reportable"),
     ("MOM deadline", "deadline"),
 ]
 
@@ -96,6 +96,9 @@ YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury", "mom_repor
 # Column Naming a Report's Conversation File, and the Speaker Labels that Start Each Transcript Line ("Worker: ...", "AI: ...")
 TRANSCRIPT_COLUMN = "transcript_id"
 TRANSCRIPT_SPEAKERS = (WORKER_LABEL, AI_LABEL)
+
+# How a Speaker is Named when a Transcript is Shown (the Files Keep the Short "AI:"), so it is Obvious Which Side is the Human
+SPEAKER_DISPLAY_NAMES = {AI_LABEL: "Chatbot"}
 
 FILTER_COLUMNS = [
     ("Score", "importance_score"),

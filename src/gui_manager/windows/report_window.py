@@ -49,9 +49,9 @@ class ReportWindow(tk.Toplevel):
         if severity != "-":
             badge_specs.append((f"{severity} severity", PRIMARY, PRIMARY_SOFT))
         if formatter.yes_no(report.get("mom_reportable")) == "YES":
-            badge_specs.append(("MOM reportable", DANGER, DANGER_SOFT))
+            badge_specs.append(("MOM Reportable", DANGER, DANGER_SOFT))
         else:
-            badge_specs.append(("Not MOM reportable", SUCCESS, SUCCESS_SOFT))
+            badge_specs.append(("Not MOM Reportable", SUCCESS, SUCCESS_SOFT))
         for text, colour, background in badge_specs:
             badge(badges, text, colour, background).pack(side="left", padx=(0, 6))
 
@@ -67,7 +67,7 @@ class ReportWindow(tk.Toplevel):
         footer.pack(side="bottom", fill="x", padx=20, pady=(0, 20))
         ttk.Button(footer, text="Close", style="Secondary.TButton", command=self.destroy).pack(side="right")
         if transcript:
-            ttk.Button(footer, text="View conversation", style="Secondary.TButton",
+            ttk.Button(footer, text="View transcript", style="Secondary.TButton",
                        command=self._open_transcript).pack(side="left")
 
         # Every Field, Label Above Value
@@ -91,6 +91,6 @@ class ReportWindow(tk.Toplevel):
         self.bind("<Escape>", lambda event: self.destroy())
         self.focus_set()
 
-    # "View conversation" Button: the Untranslated Chat Behind this Report, in a Third Window
+    # "View transcript" Button: the Untranslated Chat Behind this Report, in a Third Window
     def _open_transcript(self):
-        TranscriptWindow(self, self._formatter.transcript_turns(self._transcript), f"Conversation for {self._title}")
+        TranscriptWindow(self, self._formatter.transcript_turns(self._transcript), f"Transcript for {self._title}")

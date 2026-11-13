@@ -8,4 +8,4 @@ class ViewMenu(Menu):
 
     def options(self) -> list:
         return ["Next page", "Previous page", "Filter these reports", "View a full report",
-                "View a report's conversation (untranslated)", "Back to the main menu"]
+                "View a report's transcript", "Back to the main menu"]

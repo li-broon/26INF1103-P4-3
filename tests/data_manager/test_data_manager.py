@@ -79,7 +79,7 @@ def names(table):
 def test_saving_and_reading_go_through_the_store():
     store = make_store()
     manager = DataManager(store, create_default_filters(), make_transcript_store())
-    assert manager.save_record(make_report("Ann", 5)) == (True, "Record saved.")
+    assert manager.save_record(make_report("Ann", 5)) == (True, "Report saved.")
     assert list(store.load_records()["reporter_name"]) == ["Ann"]
     assert manager.load_records().equals(store.load_records())
     assert manager.get_column_names() == store.get_column_names()
@@ -296,4 +296,4 @@ def test_duplicate_report_is_still_rejected_when_only_the_transcript_id_differs(
     first = dict(make_report("Ann", 5), transcript_id="20261113-101010-0001")
     second = dict(make_report("Ann", 5), transcript_id="20261113-101011-0002")
     assert manager.save_record(first)[0] is True
-    assert manager.save_record(second) == (False, "Record rejected: an identical record already exists.")
+    assert manager.save_record(second) == (False, "Report rejected: an identical report already exists.")

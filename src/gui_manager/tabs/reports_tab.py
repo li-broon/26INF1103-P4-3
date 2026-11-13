@@ -65,7 +65,7 @@ class ReportsTab(ttk.Frame):
         info.pack(fill="x", padx=26, pady=(0, 8))
         self._status = tk.Label(info, text="", font=font(10, "bold"), fg=TEXT, bg=BG)
         self._status.pack(side="left")
-        tk.Label(info, text="Double-click a report to open it   ·   Red rows: hospitalised or MOM reportable",
+        tk.Label(info, text="Double-click a report to open it   ·   Red rows: hospitalised or MOM Reportable",
                  font=font(9), fg=MUTED, bg=BG).pack(side="right")
 
         # Report Table
