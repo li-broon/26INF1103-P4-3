@@ -45,9 +45,9 @@ def test_menu_is_abstract():
         pass
 
 #Menu Tests
-#Every menu shares show() but has its own options: the same code accepts 3 on the main menu, 5 on the view menu and 4 on the page menu
+#Every menu shares show() but has its own options: the same code accepts 4 on the main menu, 6 on the view menu and 5 on the page menu
 def test_menus_accept_their_own_last_option():
-    menus = [(io.MainMenu, 4), (io.ViewMenu, 5), (io.PageMenu, 4), (io.FilterMenu, 8)]
+    menus = [(io.MainMenu, 4), (io.ViewMenu, 6), (io.PageMenu, 5), (io.FilterMenu, 8)]
     for menu_class, last_option in menus:
         menu = menu_class(io.Prompter(read=ScriptedInput(str(last_option + 1), str(last_option)).read))
         with contextlib.redirect_stdout(StringIO()) as out:
@@ -241,6 +241,38 @@ def test_chatbot_save_failure_is_reported():
     text = printed(manager.run)
     assert "NOT saved" in text
     assert "has been saved" not in text
+
+#After a saved report, the conversation is kept under the transcript ID as "Worker: ..." / "AI: ..." lines
+def test_chatbot_saves_the_transcript_with_the_report():
+    data = FakeData(pd.DataFrame())
+    manager = io_manager(ai=FakeAI([reply(is_complete=True, report=REPORT, reply="Thank you!")]), data=data,
+                         answers=["1", "I cut my hand", "n", "4"])
+    printed(manager.run)
+    assert len(data.saved_transcripts) == 1
+    transcript_id, text = data.saved_transcripts[0]
+    assert re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{4}", transcript_id)
+    assert text == "Worker: I cut my hand\nAI: Thank you!"
+
+#A report that was not saved gets no transcript either
+def test_no_transcript_when_the_report_is_not_saved():
+    data = FakeData(pd.DataFrame())
+    manager = io_manager(ai=FakeAI([reply(is_complete=True, report=REPORT)]), data=data,
+                         logic=FakeLogic(outcome(saved=False, message="Disk full")), answers=["1", "I fell", "n", "4"])
+    printed(manager.run)
+    assert data.saved_transcripts == []
+
+#Menu 2 (view) -> 5 (conversation) -> report 1 -> 6 (back) -> 4 (exit): the transcript is printed as the worker typed it
+def test_view_reports_shows_a_reports_conversation():
+    data = FakeData(pd.DataFrame([REPORT]), transcript="Worker: saya jatuh\nAI: Maaf mendengarnya.")
+    text = printed(io_manager(data=data, answers=["2", "5", "1", "6", "4"]).run)
+    assert "Conversation for Report #1" in text
+    assert "Worker:" in text and "saya jatuh" in text
+    assert "AI:" in text and "Maaf mendengarnya." in text
+
+#A report saved before transcripts existed says so instead of crashing
+def test_view_reports_without_a_conversation_says_so():
+    text = printed(io_manager(data=FakeData(pd.DataFrame([REPORT])), answers=["2", "5", "1", "6", "4"]).run)
+    assert "No conversation transcript is saved for this report" in text
 
 #Without an API key, the chatbot explains why and returns to the menu instead of crashing
 def test_chatbot_without_api_key():

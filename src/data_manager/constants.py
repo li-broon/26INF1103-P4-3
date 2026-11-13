@@ -19,6 +19,10 @@ DEADLINE_FIELD = "deadline"
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
 
+# Where each report's conversation is kept (one text file per report), and the column in data.csv that names the file
+TRANSCRIPT_FOLDER = os.path.join(DATA_FOLDER, "transcripts")
+TRANSCRIPT_ID_FIELD = "transcript_id"
+
 # Shared Chart settings used by the Chart Classes
 
 TOP_LOCATIONS = 10         # How many locations the location chart shows

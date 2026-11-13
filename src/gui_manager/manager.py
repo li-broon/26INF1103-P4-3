@@ -46,7 +46,7 @@ class GUIManager(tk.Tk):
         formatter = WindowReportFormatter()
         tabs = ttk.Notebook(self)
         self._reports_tab = ReportsTab(tabs, data_manager, formatter)
-        self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, formatter, on_saved=self._reports_tab.refresh)
+        self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, data_manager, formatter, on_saved=self._reports_tab.refresh)
         tabs.add(self._chat_tab, text="Report an incident")
         tabs.add(self._reports_tab, text="Saved reports")
         tabs.pack(fill="both", expand=True)

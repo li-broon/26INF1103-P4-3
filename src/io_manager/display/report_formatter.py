@@ -13,6 +13,7 @@ from src.io_manager.constants import (
     RED,
     RESET,
     TABLE_COLUMNS,
+    TRANSCRIPT_SPEAKERS,
 )
 
 
@@ -60,6 +61,17 @@ class ReportFormatter:
         except ValueError:
             return False  # e.g. "Check incident date": no real date to compare
         return due < (today or date.today())
+
+    # Split a saved transcript back into (speaker, text) turns; a line without a "Speaker: " start continues the turn before it
+    def transcript_turns(self, text) -> list:
+        turns = []
+        for line in str(text or "").splitlines():
+            speaker, separator, rest = line.partition(": ")
+            if separator and speaker in TRANSCRIPT_SPEAKERS:
+                turns.append((speaker, rest))
+            elif turns:
+                turns[-1] = (turns[-1][0], turns[-1][1] + "\n" + line)
+        return turns
 
     # Build one summary row, highlighting hospital and MOM cases in red
     def build_row(self, number, report) -> str:

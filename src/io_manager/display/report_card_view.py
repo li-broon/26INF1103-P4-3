@@ -1,4 +1,4 @@
-from src.io_manager.constants import BOLD, FULL_REPORT_FIELDS, GREEN, RED, RESET, UNDERLINE, YELLOW, YES_NO_COLUMNS
+from src.io_manager.constants import BOLD, CYAN, FULL_REPORT_FIELDS, GREEN, RED, RESET, UNDERLINE, YELLOW, YES_NO_COLUMNS
 
 
 #Prints One Report in Full: a Report Opened from the Table, or the Card a Worker Sees After Saving
@@ -21,6 +21,16 @@ class ReportCardView:
     def show_from_table(self, table, number: int) -> None:
         report = table.iloc[number - 1].fillna("-").to_dict()
         self.show(report, f"Report #{number}")
+
+    # Print a report's conversation exactly as the worker and the AI wrote it, untranslated (text=None means none was saved)
+    def show_transcript(self, text, title: str) -> None:
+        print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
+        if not text:
+            print(f"{YELLOW}No conversation transcript is saved for this report.{RESET}\n")
+            return
+        for speaker, message in self._formatter.transcript_turns(text):
+            print(f"{CYAN}{BOLD}{speaker}:{RESET} {message}")
+        print()
 
     # Tells the worker whether the report was really saved; if so, shows it back as a card with the score and MOM details (outcome is a SaveOutcome)
     def show_save_outcome(self, report: dict, outcome) -> None:

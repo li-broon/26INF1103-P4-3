@@ -2,6 +2,7 @@
 # Import and Setup
 # ---------------- #
 import os
+import re
 import json
 from unittest import mock
 
@@ -10,6 +11,7 @@ from src.ai_manager import AIManager, GeminiService, AIServiceError
 from src.ai_manager.constants import SEVERITY_LEVELS, UNKNOWN_VALUE
 from src.ai_manager.fields.text_field import TextField
 from src.ai_manager.fields.location_field import LocationField
+from src.ai_manager.conversation.transcript import Transcript
 from src.ai_manager.fields.date_field import DateField
 from src.ai_manager.fields.time_field import TimeField
 from src.ai_manager.fields.boolean_field import BooleanField
@@ -75,6 +77,46 @@ def test_location_without_area_is_followed_up():
     reply = new_conversation(service).send("it happened at Woodlands MRT Worksite")
     assert "location" in service.sent_messages[1]
     assert reply.is_complete is False
+
+# ---------------- #
+# Transcript Tests
+# ---------------- #
+
+# A Transcript Keeps the Turns in Order as "Worker: ..." / "AI: ..." Lines, and Can Give Back Just the Worker's Side
+def test_transcript_lines_and_worker_messages():
+    transcript = Transcript()
+    transcript.add_worker("saya jatuh")
+    transcript.add_ai("Maaf mendengarnya. Di mana?")
+    transcript.add_worker("di gudang")
+    assert transcript.as_text() == "Worker: saya jatuh\nAI: Maaf mendengarnya. Di mana?\nWorker: di gudang"
+    assert transcript.worker_messages() == ["saya jatuh", "di gudang"]
+
+# IDs Look Like 20261113-143022-3f9a (Sortable by Time) and Two Transcripts Never Share One
+def test_transcript_ids_are_timestamped_and_unique():
+    first, second = Transcript(), Transcript()
+    assert re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{4}", first.transcript_id)
+    assert first.transcript_id != second.transcript_id
+
+# The Conversation Records Every Exchange the Worker Saw, and Stamps its Transcript ID on the Finished Report Only
+def test_conversation_records_transcript_and_links_the_report():
+    service = FakeAIService([chat_reply({}, is_complete=False, reply="Where did it happen?"),
+                             chat_reply(dict(GOOD_WORKER_DETAILS, **GOOD_ANALYSIS))])
+    conversation = new_conversation(service)
+    first = conversation.send("I slipped")
+    assert "transcript_id" not in first.report
+    final = conversation.send("Tuas site, loading bay")
+    assert final.is_complete and final.report["transcript_id"] == conversation.transcript.transcript_id
+    assert conversation.transcript.as_text() == ("Worker: I slipped\nAI: Where did it happen?\n"
+                                                 "Worker: Tuas site, loading bay\nAI: Thank you!")
+
+# A Message the AI Could Not Answer (API Error) is Not in the Transcript, since the Worker is Asked to Resend it
+def test_failed_exchanges_are_not_in_the_transcript():
+    service = FakeAIService([AIServiceError("busy", 503, "UNAVAILABLE"), chat_reply({}, is_complete=False, reply="Hello")])
+    conversation = new_conversation(service)
+    assert conversation.send("hi").error == "busy"
+    assert conversation.transcript.as_text() == ""
+    conversation.send("hi again")
+    assert conversation.transcript.as_text() == "Worker: hi again\nAI: Hello"
 
 # Dates Must be Real YYYY-MM-DD Dates and Not in the Future; "unknown" is Not Allowed
 def test_date_field():

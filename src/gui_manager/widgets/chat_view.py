@@ -30,9 +30,10 @@ class ChatView(tk.Frame):
 
         self._inner.bind("<Configure>", self._update_scroll_region)
         self._canvas.bind("<Configure>", self._resize)
-        # Windows and macOS Send the Wheel as <MouseWheel>; Linux (and Docker) Send Buttons 4 (Up) and 5 (Down)
+        # Windows and macOS Send the Wheel as <MouseWheel>; Linux (and Docker) Send Buttons 4 (Up) and 5 (Down).
+        # Bound on this Chat's Own Window (Not the Whole App), so the Binding Goes Away with the Window
         for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
-            self.bind_all(sequence, self._mouse_wheel, add="+")
+            self.winfo_toplevel().bind(sequence, self._mouse_wheel, add="+")
 
     def _update_scroll_region(self, event=None):
         self._canvas.configure(scrollregion=self._canvas.bbox("all"))
@@ -60,6 +61,10 @@ class ChatView(tk.Frame):
         self.update_idletasks()
         self._update_scroll_region()
         self._canvas.yview_moveto(1.0)
+
+    # Back to the First Message (a Saved Conversation is Read from the Start)
+    def scroll_to_top(self):
+        self._canvas.yview_moveto(0.0)
 
     # Remove Every Message (for a New Report)
     def clear(self):

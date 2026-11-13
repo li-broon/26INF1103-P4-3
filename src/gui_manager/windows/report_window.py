@@ -10,18 +10,22 @@ from src.gui_manager.constants import (
     SUCCESS, SUCCESS_SOFT, SURFACE, TEXT,
 )
 from src.gui_manager.theme import badge, card, fit_window, font
+from src.gui_manager.windows.transcript_window import TranscriptWindow
 
 # ----- #
 # Class
 # ----- #
 
-# Pop-Up Window Showing One Full Report (a Report Opened from the Table, or the One Just Saved)
+# Pop-Up Window Showing One Full Report (a Report Opened from the Table, or the One Just Saved), with its Conversation a Click Away
 class ReportWindow(tk.Toplevel):
-    def __init__(self, parent, formatter, report: dict, title: str):
+    def __init__(self, parent, formatter, report: dict, title: str, transcript: str | None = None):
         super().__init__(parent, bg=BG)
         self.title(title)
         scale = fit_window(self, REPORT_WINDOW_WIDTH, REPORT_WINDOW_HEIGHT)
         self.transient(parent.winfo_toplevel())
+        self._formatter = formatter
+        self._transcript = transcript  # The Saved Conversation Text, or None for a Report Without One
+        self._title = title
         show = formatter.display_value
 
         # Header: Title, Who/Where/When, and Badges
@@ -62,6 +66,9 @@ class ReportWindow(tk.Toplevel):
         footer = tk.Frame(self, bg=BG)
         footer.pack(side="bottom", fill="x", padx=20, pady=(0, 20))
         ttk.Button(footer, text="Close", style="Secondary.TButton", command=self.destroy).pack(side="right")
+        if transcript:
+            ttk.Button(footer, text="View conversation", style="Secondary.TButton",
+                       command=self._open_transcript).pack(side="left")
 
         # Every Field, Label Above Value
         body = card(self, fill="both", expand=True, padx=20, pady=(0, 12))
@@ -83,3 +90,7 @@ class ReportWindow(tk.Toplevel):
         # Lambda Drops the Event Tkinter Passes, since destroy() Takes None
         self.bind("<Escape>", lambda event: self.destroy())
         self.focus_set()
+
+    # "View conversation" Button: the Untranslated Chat Behind this Report, in a Third Window
+    def _open_transcript(self):
+        TranscriptWindow(self, self._formatter.transcript_turns(self._transcript), f"Conversation for {self._title}")

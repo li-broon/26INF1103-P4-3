@@ -24,6 +24,9 @@ ALL_REPORTS = "All reports"
 # Columns Where the User Types a Keyword Instead of Picking a Saved Value
 KEYWORD_FILTER_COLUMNS = ("location",)
 
+# Under the Title of a Saved Conversation
+TRANSCRIPT_NOTE = "Exactly as the worker and the assistant wrote it, before any translation."
+
 # Grey Hint in the Empty Message Box
 PLACEHOLDER = "Describe what happened, then press Enter..."
 
@@ -79,6 +82,7 @@ STAT_CARDS = [
 # Chat Bubbles: Kind -> (Name Above the Bubble, Bubble Colour, Text Colour, Side of the Window)
 BUBBLE_STYLES = {
     "you": ("You", PRIMARY, "#ffffff", "e"),
+    "worker": ("Worker", PRIMARY, "#ffffff", "e"),  # The Worker's Side of a Saved Transcript, Read Back by Someone Else
     "ai": ("Assistant", AI_BUBBLE, TEXT, "w"),
     "error": ("Problem", DANGER_SOFT, DANGER, "w"),
     "good": ("Report saved", SUCCESS_SOFT, SUCCESS, "w"),

@@ -118,3 +118,19 @@ def test_mom_warning_upcoming():
 def test_mom_warning_overdue():
     due = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
     assert formatter.mom_warning({"mom_reportable": "Yes", "deadline": due}).startswith("OVERDUE")
+
+
+# transcript_turns Tests (shared with the terminal through ReportFormatter)
+
+# Test that a saved transcript splits back into (speaker, text) turns, with a multi-line AI reply kept together
+def test_transcript_turns_split_speakers_and_keep_continuation_lines():
+    text = "Worker: saya jatuh\nAI: Maaf mendengarnya.\nDi mana tepatnya?\nWorker: di gudang"
+    assert formatter.transcript_turns(text) == [
+        ("Worker", "saya jatuh"), ("AI", "Maaf mendengarnya.\nDi mana tepatnya?"), ("Worker", "di gudang"),
+    ]
+
+# Test that a worker message containing "AI: " stays one worker turn, and that nothing or None gives no turns
+def test_transcript_turns_edge_cases():
+    assert formatter.transcript_turns("Worker: the sign said AI: keep out") == [("Worker", "the sign said AI: keep out")]
+    assert formatter.transcript_turns("") == []
+    assert formatter.transcript_turns(None) == []

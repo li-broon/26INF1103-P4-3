@@ -13,6 +13,7 @@ import pandas as pd
 from src.data_manager.filters.default_filters import create_default_filters
 from src.data_manager.manager import DataManager
 from src.data_manager.storage.csv_record_store import CsvRecordStore
+from src.data_manager.storage.text_transcript_store import TextTranscriptStore
 from tests.data_manager.class_shout_filter import ShoutFilter
 
 # ------- #
@@ -53,10 +54,15 @@ def make_store():
     return CsvRecordStore(os.path.join(TEMP_FOLDER, f"data_{next(file_numbers)}.csv"))
 
 
+# A TextTranscriptStore on a New, Empty Folder (Each Test Gets Its Own, so the Real data/transcripts is Never Touched)
+def make_transcript_store():
+    return TextTranscriptStore(os.path.join(TEMP_FOLDER, f"transcripts_{next(file_numbers)}"))
+
+
 # A DataManager that Keeps its Reports in a Temporary CSV File. filters=None Means the App's Default Filters
 def make_manager(reports=None, filters=None):
     store = make_store()
-    manager = DataManager(store, create_default_filters() if filters is None else filters)
+    manager = DataManager(store, create_default_filters() if filters is None else filters, make_transcript_store())
     for report in (sample_reports() if reports is None else reports):
         assert manager.save_record(report)[0], report
     return manager
@@ -72,7 +78,7 @@ def names(table):
 # Saving, Loading and the Column Names All Go Through the Store the DataManager Was Given
 def test_saving_and_reading_go_through_the_store():
     store = make_store()
-    manager = DataManager(store, create_default_filters())
+    manager = DataManager(store, create_default_filters(), make_transcript_store())
     assert manager.save_record(make_report("Ann", 5)) == (True, "Record saved.")
     assert list(store.load_records()["reporter_name"]) == ["Ann"]
     assert manager.load_records().equals(store.load_records())
@@ -227,9 +233,9 @@ def test_the_filters_given_are_copied():
     assert names(manager.load_matching_records("location", "office")) == ["Fay", "Ben", "Cai"]
 
 
-# The Filters Must be Given, There is No Hidden Default That Would Quietly Change the Results
-def test_the_filters_are_required():
-    for arguments in ((make_store(),), (make_store(), None)):
+# The Filters and the Transcript Store Must be Given, There is No Hidden Default That Would Quietly Change the Results
+def test_the_filters_and_transcript_store_are_required():
+    for arguments in ((make_store(),), (make_store(), None, make_transcript_store()), (make_store(), create_default_filters())):
         try:
             DataManager(*arguments)
         except TypeError:
@@ -237,7 +243,52 @@ def test_the_filters_are_required():
         raise AssertionError(f"DataManager{arguments} should raise TypeError")
 
 
-# The Public Interface is the Five Methods in the UML (Everything Else is Private)
-def test_the_public_methods_are_the_five_in_the_uml():
+# The Public Interface is the Seven Methods in the UML (Everything Else is Private)
+def test_the_public_methods_are_the_ones_in_the_uml():
     public = sorted(name for name in dir(DataManager) if not name.startswith("_"))
-    assert public == ["get_column_names", "get_unique_values", "load_matching_records", "load_records", "save_record"]
+    assert public == ["get_column_names", "get_unique_values", "load_matching_records", "load_records", "load_transcript",
+                      "save_record", "save_transcript"]
+
+
+# ---------------- #
+# Transcript Tests
+# ---------------- #
+
+# A Transcript is Written to <folder>/<id>.txt (Folder Created on First Save) and Read Back Unchanged
+def test_transcript_is_saved_to_its_own_file_and_read_back():
+    store = make_transcript_store()
+    text = "Worker: saya jatuh\nAI: Maaf mendengarnya. Di mana?"
+    assert store.save("20261113-101010-ab12", text) == (True, "Transcript saved.")
+    with open(os.path.join(store._folder, "20261113-101010-ab12.txt"), encoding="utf-8") as file:
+        assert file.read() == text + "\n"
+    assert store.load("20261113-101010-ab12") == text
+
+
+# No File, a Blank ID, a Non-Text ID (e.g. NaN from an Old Row) or a Path Instead of an ID All Give None, Never a Crash
+def test_missing_or_bad_transcript_ids_give_none():
+    store = make_transcript_store()
+    for transcript_id in ("20261113-000000-none", "", None, float("nan"), "../data", "sub/dir"):
+        assert store.load(transcript_id) is None, transcript_id
+
+
+# An ID that is Not a Plain File Name is Refused on Save, so an Edited data.csv Cannot Write Outside the Folder
+def test_transcript_with_a_path_as_id_is_rejected():
+    saved, message = make_transcript_store().save("../escape", "Worker: hi")
+    assert saved is False and "invalid" in message
+
+
+# The Manager Hands Transcripts to the Store it was Given
+def test_manager_saves_and_loads_transcripts_through_its_store():
+    manager = make_manager(reports=[])
+    assert manager.save_transcript("20261113-101010-cd34", "Worker: hi\nAI: hello")[0] is True
+    assert manager.load_transcript("20261113-101010-cd34") == "Worker: hi\nAI: hello"
+    assert manager.load_transcript("20261113-101010-none") is None
+
+
+# Every Conversation has a New Transcript ID, so the Duplicate Check Must Ignore it or Nothing Could Ever be a Duplicate
+def test_duplicate_report_is_still_rejected_when_only_the_transcript_id_differs():
+    manager = make_manager(reports=[])
+    first = dict(make_report("Ann", 5), transcript_id="20261113-101010-0001")
+    second = dict(make_report("Ann", 5), transcript_id="20261113-101011-0002")
+    assert manager.save_record(first)[0] is True
+    assert manager.save_record(second) == (False, "Record rejected: an identical record already exists.")
