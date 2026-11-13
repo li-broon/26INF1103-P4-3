@@ -85,6 +85,22 @@ class ChartManager:
         del resizer
         return True, "Chart closed."
 
+    # Draws the chart on a figure that is NOT opened in a window, for a GUI to place inside its own window (e.g. the Charts tab).
+    # Takes the same chart_name and filter as show_chart. Returns (figure, message); the figure is None when there is nothing to draw
+    def build_chart(self, chart_name: str, filter_column: str | None = None, filter_value: str | None = None):
+        try:
+            from matplotlib.figure import Figure  # Not pyplot: pyplot would also try to open and manage a window of its own
+        except ImportError:
+            return None, "matplotlib is not installed. Run: pip install matplotlib"
+
+        prepared, message = self._prepare(chart_name, filter_column, filter_value)
+        if prepared is None:
+            return None, message
+        drawers, table, heading = prepared
+        figure = Figure(figsize=self._figure_size(drawers, for_window=True), layout="constrained")
+        self._draw_on(figure, drawers, table, heading)
+        return figure, "Chart drawn."
+
     # Checks the chart name and loads the reports to draw, shared by show_chart and build_chart.
     # Returns ((drawers, table, heading), "") or (None, why there is nothing to draw)
     def _prepare(self, chart_name: str, filter_column: str | None, filter_value: str | None):
