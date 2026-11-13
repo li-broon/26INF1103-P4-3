@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 
+# What process() hands back to the interface: whether the report was saved, why not if it was not, and what the rules decided.
 @dataclass
 class SaveOutcome:
     saved: bool

@@ -1,7 +1,7 @@
 from src.io_manager.menus.menu import Menu
 
 
-# Child Class of Menu(PageMenu)
+# The Menu Under a Filtered Table: Turn Pages, Open a Report or its Transcript, or Go Back
 class PageMenu(Menu):
     def title(self) -> str:
         return "Page Options"

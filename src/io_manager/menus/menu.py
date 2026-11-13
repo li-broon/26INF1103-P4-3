@@ -20,7 +20,7 @@ class Menu(ABC):
     def options(self) -> list:
         pass
 
-    # a child menu that needs one overrides this method
+    # Optional line under the title; a child menu that needs one overrides this method
     def subtitle(self) -> str:
         return ""
 

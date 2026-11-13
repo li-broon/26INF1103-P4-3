@@ -15,23 +15,24 @@ from src.io_manager.prompts.prompter import Prompter
 
 # User interface manager, handling all input and output, prompts, menu, pager
 class IOManager:
-    def __init__(self, ai_manager, logic_manager, data_manager, chart_manager, read=input, ):
-        # handed in by main() and used, but not created or owned by here (association)
+    def __init__(self, ai_manager, logic_manager, data_manager, chart_manager, read=input):
+        # Handed in by main() and used, but not created or owned by here (association)
         self._ai_manager = ai_manager
         self._logic_manager = logic_manager
         self._data_manager = data_manager
         self._chart_manager = chart_manager
 
-        # created here and owned by this IOManager (Composition)
+        # Created here and owned by this IOManager (Composition)
         self._prompter = Prompter(read)
         self._formatter = ReportFormatter()
         self._table_view = ReportTableView(self._formatter)
         self._card_view = ReportCardView(self._formatter)
-        self._menus = {"main" : MainMenu(self._prompter),
-                       "view" : ViewMenu(self._prompter),
+        self._menus = {"main": MainMenu(self._prompter),
+                       "view": ViewMenu(self._prompter),
                        "page": PageMenu(self._prompter),
-                       "filter": FilterMenu(self._prompter),}
+                       "filter": FilterMenu(self._prompter)}
 
+    # Move one page forward or back; says so (and returns False) when already on the last or first page
     def _turn_page(self, pager, forward: bool) -> bool:
         moved = pager.next() if forward else pager.previous()
         if not moved:
@@ -39,7 +40,7 @@ class IOManager:
             print(f"{YELLOW}You are already on the {end} page.{RESET}")
         return moved
 
-    # page through a filtered table: next, previous, open a report, or go back
+    # Page through a filtered table: next, previous, open a report, or go back
     def _browse_pages(self, table, title: str) -> None:
         pager = Pager(len(table))
         show_page = True
@@ -64,7 +65,7 @@ class IOManager:
             else:
                 return
 
-        # Show every saved report, most urgent first, with paging, filtering and full-report options
+    # Show every saved report, most urgent first, with paging, filtering and full-report options
     def _view_reports(self) -> None:
         table = self._data_manager.load_records()
 
@@ -132,7 +133,6 @@ class IOManager:
             return
 
         self._browse_pages(matches, f"Reports where {heading} matches '{value}' ({len(matches)} found, most urgent first)")
-
 
     # Chat with the worker until the AI has a complete report, then score it, save it and show the result
     def _run_chatbot(self) -> None:
@@ -203,7 +203,7 @@ class IOManager:
             print(f"   {BOLD}{RED}Message:{RESET} {result.error}")
             print(f"{YELLOW}This report couldn't be finished. Type 'quit' to go back, or tell your supervisor directly.{RESET}\n")
 
-    # Options 3 so the user can pick the chart option
+    # Main menu option 3: pick a chart (or all of them), then open it in a window or save it as a picture
     def _show_charts(self) -> None:
         options = self._chart_manager.get_chart_options() + [("all", "All charts on one page")]
         labels = [label for key, label in options]

@@ -118,6 +118,13 @@ def test_failed_exchanges_are_not_in_the_transcript():
     conversation.send("hi again")
     assert conversation.transcript.as_text() == "Worker: hi again\nAI: Hello"
 
+# If the AI Fails while Being Told to Fix an Unfinished Report, the Worker's Message Stays but No Empty "AI:" Line is Added
+def test_error_during_fix_request_adds_no_empty_ai_line():
+    service = FakeAIService([chat_reply({}), AIServiceError("busy", 503, "UNAVAILABLE")])
+    conversation = new_conversation(service)
+    assert conversation.send("I slipped").error == "busy"
+    assert conversation.transcript.as_text() == "Worker: I slipped"
+
 # Dates Must be Real YYYY-MM-DD Dates and Not in the Future; "unknown" is Not Allowed
 def test_date_field():
     field = DateField("incident_date", "date in YYYY-MM-DD")

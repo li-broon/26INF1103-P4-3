@@ -5,9 +5,8 @@
 import numpy as np
 import pandas as pd
 
-from src.data_manager.constants import SEVERITY_ORDER, SEVERITY_SCORES
 from src.data_manager.charts.time_chart_drawer import TimeChartDrawer
-from src.data_manager.constants import DATE_FIELD
+from src.data_manager.constants import DATE_FIELD, SEVERITY_ORDER, SEVERITY_SCORES
 
 # ----- #
 # Class

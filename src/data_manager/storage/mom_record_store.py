@@ -10,7 +10,7 @@ from datetime import date
 import pandas as pd
 
 from src.data_manager.constants import (
-    DATE_FORMAT, MOM_DATA_FILE, MOM_ID_FIELD, MOM_IDENTITY_FIELDS, MOM_REPORTED_FIELD, MOM_REPORTED_ON_FIELD,
+    DATE_FORMAT, DEADLINE_FIELD, MOM_DATA_FILE, MOM_ID_FIELD, MOM_IDENTITY_FIELDS, MOM_REPORTED_FIELD, MOM_REPORTED_ON_FIELD,
     URGENCY_COLUMN,
 )
 from src.data_manager.storage.record_cleaner import RecordCleaner
@@ -84,10 +84,12 @@ class MomRecordStore:
         if table.empty or MOM_ID_FIELD not in table.columns:
             return pd.DataFrame()
 
+        # A row with no id, or a second row with the same id (only possible in a file edited by hand), cannot be listed or ticked
+        table = table.dropna(subset=[MOM_ID_FIELD]).drop_duplicates(subset=[MOM_ID_FIELD])
         table[URGENCY_COLUMN] = pd.to_numeric(table[URGENCY_COLUMN], errors="coerce")
         table["_reported"] = table[MOM_REPORTED_FIELD].fillna("No").str.strip().str.lower().isin(YES_WORDS)
         # "Check incident date" and other non-dates become NaT, which sorts last
-        table["_due"] = pd.to_datetime(table["deadline"], format=DATE_FORMAT, errors="coerce")
+        table["_due"] = pd.to_datetime(table[DEADLINE_FIELD], format=DATE_FORMAT, errors="coerce")
 
         table = table.sort_values(by=["_reported", "_due", URGENCY_COLUMN], ascending=[True, True, False],
                                   na_position="last")
@@ -102,7 +104,7 @@ class MomRecordStore:
         return hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()[:12]
 
     # Read the register as text (so an id like "12e45" is never turned into a number); blank cells are NaN. An unreadable file, or one
-    # without the register's own columns (e.g. edited by hand), counts as empty, so the app still starts and the file gets backed up
+    # without the columns the register is sorted and ticked by (e.g. edited by hand), counts as empty, so the app still starts and the file gets backed up
     def _read(self) -> pd.DataFrame:
         if not os.path.exists(self._data_file) or os.path.getsize(self._data_file) == 0:
             return pd.DataFrame()
@@ -111,7 +113,7 @@ class MomRecordStore:
         except Exception as e:
             logger.error("Could not read '%s': %s", self._data_file, e)
             return pd.DataFrame()
-        missing = [column for column in (MOM_ID_FIELD, MOM_REPORTED_FIELD) if column not in table.columns]
+        missing = [column for column in (MOM_ID_FIELD, MOM_REPORTED_FIELD, URGENCY_COLUMN, DEADLINE_FIELD) if column not in table.columns]
         if missing:
             logger.warning("File '%s' is missing the register columns %s.", self._data_file, missing)
             return pd.DataFrame()

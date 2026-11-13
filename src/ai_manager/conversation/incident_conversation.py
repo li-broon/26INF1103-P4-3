@@ -112,9 +112,10 @@ Respond ONLY with JSON in this exact format:
                 break
             reply = self._ask(self._build_fix_message(invalid))
 
-        # Still Collecting Details (or an Error): Show the AI's Reply as Normal
+        # Still Collecting Details: Show the AI's Reply as Normal (an Error from the Fix Request has No Reply to Record)
         if not reply.is_complete:
-            self._transcript.add_ai(reply.reply)
+            if not reply.error:
+                self._transcript.add_ai(reply.reply)
             return reply
 
         # If AI Still Says "complete" with Worker Details Missing, Don't Show its "all done" Reply, Tell the Worker what is Missing

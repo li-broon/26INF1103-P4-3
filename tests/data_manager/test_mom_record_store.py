@@ -230,7 +230,8 @@ def test_logic_manager_fills_the_register_and_ticking_updates_it():
 # A Register File Edited by Hand into the Wrong Shape Must Not Stop the App Starting: it Reads as Empty, Ticking Says So,
 # and the First Save Backs the Bad File Up and Starts a Fresh Register
 def test_register_without_its_columns_is_treated_as_empty_and_backed_up():
-    for content in ("not,a,register\n1,2\n", "reporter_name,deadline\nAnn,2026-11-20\n", "mom_id,reporter_name\nabc,Ann\n"):
+    for content in ("not,a,register\n1,2\n", "reporter_name,deadline\nAnn,2026-11-20\n", "mom_id,reporter_name\nabc,Ann\n",
+                    "mom_id,safety_officer_reported\nabc,No\n"):  # Has the Tick Columns but Not the Score and Deadline it is Sorted By
         with tempfile.TemporaryDirectory() as folder:
             path = os.path.join(folder, "mom_data.csv")
             with open(path, "w", encoding="utf-8") as file:
@@ -241,3 +242,15 @@ def test_register_without_its_columns_is_treated_as_empty_and_backed_up():
             assert store.save_record(make_report("Ann"))[0] is True
             assert os.path.exists(os.path.join(folder, "mom_data_backup.csv"))
             assert len(store.load_records()) == 1
+
+
+# Rows Pasted in by Hand with No ID, or with an ID Already Used, are Left Out (the Table Could Not List or Tick Them)
+def test_rows_without_an_id_or_with_a_repeated_id_are_left_out():
+    def run(store, path):
+        store.save_record(make_report("Ann"))
+        table = pd.read_csv(path, dtype=str)
+        blank = table.iloc[[0]].assign(**{MOM_ID_FIELD: ""})
+        pd.concat([table, table, blank], ignore_index=True).to_csv(path, index=False)
+        register = store.load_records()
+        assert len(register) == 1 and register[MOM_ID_FIELD].notna().all()
+    with_store(run)

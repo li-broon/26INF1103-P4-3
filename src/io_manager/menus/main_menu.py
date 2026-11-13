@@ -1,7 +1,7 @@
 from src.io_manager.menus.menu import Menu
 
 
-# child class of Menu(Main Menu)
+# The First Menu Shown: Report, View Reports, Charts or Exit
 class MainMenu(Menu):
     def title(self) -> str:
         return "Main Menu"
