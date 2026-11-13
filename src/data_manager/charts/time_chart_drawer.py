@@ -7,7 +7,7 @@ from abc import ABC
 import pandas as pd
 
 from src.data_manager.charts.chart_drawer import ChartDrawer
-from src.data_manager.constants import COUNT_LABEL, MONTH_NAMES
+from src.data_manager.constants import COUNT_LABEL, DETAIL_GID, MONTH_NAMES, YEAR_LABEL_PAD
 from src.data_manager.constants import DATE_FIELD, DATE_FORMAT
 
 # ----- #
@@ -29,18 +29,24 @@ class TimeChartDrawer(ChartDrawer, ABC):
     def _month_range(months: pd.Series) -> pd.PeriodIndex:
         return pd.period_range(f"{months.min().year}-01", f"{months.max().year}-12", freq="M")
 
-    # Labels the month axis (one tick per month) and writes each year under its months, with a dashed line between years
+    # Labels the month axis (one tick per month) and writes each year under its months, with a dashed line between years.
+    # The years are the axis' minor tick labels, so the layout makes room for them whatever the window size
     @staticmethod
     def _mark_months(ax, months: pd.PeriodIndex) -> None:
         ax.set_xticks(range(len(months)))
         ax.set_xticklabels([MONTH_NAMES[month.month - 1] for month in months], rotation=90, fontsize=7)
         ax.set_xlim(-0.5, len(months) - 0.5)
-        for year in sorted({month.year for month in months}):
+        years = sorted({month.year for month in months})
+        centers = []
+        for year in years:
             positions = [i for i, month in enumerate(months) if month.year == year]
             if positions[0] > 0:
                 ax.axvline(positions[0] - 0.5, color="grey", linewidth=0.8, linestyle="--")
-            ax.annotate(str(year), xy=((positions[0] + positions[-1]) / 2, 0), xycoords=ax.get_xaxis_transform(),
-                        xytext=(0, -26), textcoords="offset points", ha="center", va="top", fontweight="bold", annotation_clip=False)
+            centers.append((positions[0] + positions[-1]) / 2)
+        ax.set_xticks(centers, labels=[str(year) for year in years], minor=True)
+        ax.tick_params(axis="x", which="minor", length=0, pad=YEAR_LABEL_PAD, labelsize=9)
+        for label in ax.get_xticklabels(minor=True):
+            label.set_fontweight("bold")
 
     # Draws one stacked bar per month, split by the values of group_column (e.g. each root cause), with the month's total on top
     def _draw_monthly_stacks(self, ax, data: pd.DataFrame, group_column: str, legend_title: str, title: str) -> None:
@@ -57,10 +63,11 @@ class TimeChartDrawer(ChartDrawer, ABC):
         if len(months) <= 36:  # Beyond that the totals would overlap
             for position, total in zip(positions, bottoms):
                 if total:
-                    ax.text(position, total, str(total), ha="center", va="bottom", fontsize=7)
+                    ax.text(position, total, str(total), ha="center", va="bottom", fontsize=7, gid=DETAIL_GID)
         ax.set_title(title)
         ax.set_ylabel(COUNT_LABEL)
         ax.set_ylim(0, max(bottoms) * 1.12 + 0.5)  # Room above the tallest bar for its total
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         self._mark_months(ax, months)
-        ax.legend(title=legend_title, fontsize=8, title_fontsize=8, loc="upper left", bbox_to_anchor=(1.01, 1))
+        # A long legend gets two columns, so it is not taller than the chart
+        ax.legend(title=legend_title, fontsize=8, title_fontsize=8, loc="upper left", bbox_to_anchor=(1.01, 1), ncol=1 if len(names) <= 8 else 2)

@@ -37,3 +37,10 @@ SEVERITY_SCORES = {level: number for number, level in enumerate(SEVERITY_ORDER, 
 MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 OTHER_LABEL = "Other"      # Where the locations outside the top ones are grouped
 MAX_LABEL_LENGTH = 28      # Longer location names are shortened so the legend stays readable
+
+# How the Charts React when their Window is Resized (Used by ChartResizer and the Chart Drawers)
+YEAR_LABEL_PAD = 22        # Points between the month labels and the year label under them (scaled with the window)
+DETAIL_GID = "detail"      # Tag put on small numbers (bar totals, cell numbers) so they can be hidden when the window is too small for them
+MIN_TEXT_SCALE = 0.6       # Text never shrinks below this fraction of its normal size
+MAX_TEXT_SCALE = 1.6       # ...or grows beyond this one
+DETAIL_MIN_SCALE = 0.7     # Below this fraction of the normal window size the small numbers are hidden instead of overlapping

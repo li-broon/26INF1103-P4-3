@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
-from src.data_manager.constants import BAR_COLOR, COUNT_LABEL, UNKNOWN_PREFIX
+from src.data_manager.constants import UNKNOWN_PREFIX
 
 # ----- #
 # Class
@@ -18,11 +18,13 @@ class ChartDrawer(ABC):
     # key is the name the user types (e.g. "severity"), title is the text shown in the chart menu and above an empty chart
     # required_columns are the columns this chart needs; if one is missing the chart says "No data to show" instead of crashing
     # panels is how many charts this one draws on top of each other (e.g. a monthly one and a yearly one)
-    def __init__(self, key: str, title: str, required_columns: tuple[str, ...] = (), panels: int = 1) -> None:
+    # height is how much room it needs next to other charts when they share a window (one panel by default is 1, so a 3 panel chart needs 3 times as much)
+    def __init__(self, key: str, title: str, required_columns: tuple[str, ...] = (), panels: int = 1, height: float | None = None) -> None:
         self._key = key
         self._title = title
         self._required_columns = required_columns
         self._panels = panels
+        self._height = float(panels if height is None else height)
 
     # The name of this chart (read only)
     @property
@@ -38,6 +40,11 @@ class ChartDrawer(ABC):
     @property
     def panels(self) -> int:
         return self._panels
+
+    # How much room this chart needs compared to the others (read only)
+    @property
+    def height(self) -> float:
+        return self._height
 
     # Draws the chart on ax. Returns False if there is nothing to draw (missing column or no data)
     def draw(self, ax, table: pd.DataFrame) -> bool:
@@ -83,25 +90,3 @@ class ChartDrawer(ABC):
         values = table[column].dropna().astype(str).str.strip()
         values = values[(values != "") & ~values.str.lower().str.startswith(UNKNOWN_PREFIX)]
         return values.value_counts()
-
-    # Draws a bar chart with the count written on each bar. Returns False if there is nothing to draw
-    @staticmethod
-    def _draw_bars(ax, counts: pd.Series, title: str, xlabel: str, horizontal: bool = False, colors=None) -> bool:
-        from matplotlib.ticker import MaxNLocator
-        if counts.empty:
-            return False
-        labels = [str(label) for label in counts.index]
-        if horizontal:
-            bars = ax.barh(labels, counts.values, color=colors or BAR_COLOR)
-            ax.invert_yaxis()  # Biggest bar on top
-            ax.set_xlabel(xlabel)
-        else:
-            bars = ax.bar(labels, counts.values, color=colors or BAR_COLOR)
-            ax.set_ylabel(xlabel)
-            ax.tick_params(axis="x", rotation=30)
-        ax.bar_label(bars, padding=2)
-        ax.set_title(title)
-        if xlabel == COUNT_LABEL:
-            # Counts are whole incidents, so never show ticks like 12.5
-            (ax.xaxis if horizontal else ax.yaxis).set_major_locator(MaxNLocator(integer=True))
-        return True
