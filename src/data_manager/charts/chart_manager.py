@@ -56,22 +56,10 @@ class ChartManager:
         if not save_path and matplotlib.get_backend().lower() in NO_SCREEN_BACKENDS:
             return False, "This computer has no screen to show charts on. Run with a display (see 'Running the GUI with Docker' in README.md)."
 
-        chart_name = str(chart_name).strip().lower()
-        if chart_name != "all" and chart_name not in self._drawers:
-            return False, f"Unknown chart '{chart_name}'. Choose from: all, " + ", ".join(self._drawers)
-
-        # Load all reports, or only the ones matching the filter
-        if filter_column is not None:
-            table = self._data_manager.load_matching_records(filter_column, filter_value)
-        else:
-            table = self._data_manager.load_records()
-        if table.empty:
-            return False, "No reports to chart" + (" for that filter." if filter_column is not None else " yet.")
-
-        heading = f"Incident Reports ({len(table)} reports)"
-        if filter_column is not None:
-            heading += f" where {filter_column} = {filter_value}"
-        drawers = list(self._drawers.values()) if chart_name == "all" else [self._drawers[chart_name]]
+        prepared, message = self._prepare(chart_name, filter_column, filter_value)
+        if prepared is None:
+            return False, message
+        drawers, table, heading = prepared
 
         if save_path:
             figure = self._build_figure(drawers, table, heading, for_window=False)
@@ -96,6 +84,27 @@ class ChartManager:
         plt.close(figure)
         del resizer
         return True, "Chart closed."
+
+    # Checks the chart name and loads the reports to draw, shared by show_chart and build_chart.
+    # Returns ((drawers, table, heading), "") or (None, why there is nothing to draw)
+    def _prepare(self, chart_name: str, filter_column: str | None, filter_value: str | None):
+        chart_name = str(chart_name).strip().lower()
+        if chart_name != "all" and chart_name not in self._drawers:
+            return None, f"Unknown chart '{chart_name}'. Choose from: all, " + ", ".join(self._drawers)
+
+        # Load all reports, or only the ones matching the filter
+        if filter_column is not None:
+            table = self._data_manager.load_matching_records(filter_column, filter_value)
+        else:
+            table = self._data_manager.load_records()
+        if table.empty:
+            return None, "No reports to chart" + (" for that filter." if filter_column is not None else " yet.")
+
+        heading = f"Incident Reports ({len(table)} reports)"
+        if filter_column is not None:
+            heading += f" where {filter_column} = {filter_value}"
+        drawers = list(self._drawers.values()) if chart_name == "all" else [self._drawers[chart_name]]
+        return (drawers, table, heading), ""
 
     # Draws the drawers on one new figure and returns it.
     # With several charts the figure is a dashboard of two columns as equal in height as possible, each keeping the menu order
