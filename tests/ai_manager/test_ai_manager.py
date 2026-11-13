@@ -251,14 +251,32 @@ def dummy_gemini_service() -> GeminiService:
     with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
         return GeminiService()
 
-# A Missing API Key is Reported Before Any Chat Starts
-def test_missing_api_key_raises():
+# A Missing API Key (Not Set and No .env File) is Reported Before Any Chat Starts
+def test_missing_api_key_raises(tmp_path):
     with mock.patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
         try:
-            GeminiService()
+            GeminiService(env_file=str(tmp_path / "missing.env"))
             assert False, "Expected AIServiceError"
         except AIServiceError as error:
             assert "GEMINI_API_KEY is missing" in error.message
+
+# The Key is Read from the .env File (Quotes and Comment Lines Handled) when it is Not Already Set
+def test_api_key_read_from_env_file(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("# comment\nOTHER=1\nGEMINI_API_KEY='file-key'\n", encoding="utf-8")
+    with mock.patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
+        with mock.patch.object(gemini_service.genai, "Client") as fake_client:
+            GeminiService(env_file=str(env_file))
+    assert fake_client.call_args.kwargs["api_key"] == "file-key"
+
+# A Key Already Set (e.g. by docker --env-file) Wins over the .env File
+def test_api_key_already_set_wins(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("GEMINI_API_KEY=file-key\n", encoding="utf-8")
+    with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "set-key"}):
+        with mock.patch.object(gemini_service.genai, "Client") as fake_client:
+            GeminiService(env_file=str(env_file))
+    assert fake_client.call_args.kwargs["api_key"] == "set-key"
 
 # Busy (503) and Rate Limited (429) Requests are Retried, then Succeed
 def test_busy_and_rate_limited_are_retried():

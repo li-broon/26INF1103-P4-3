@@ -1,4 +1,5 @@
 import textwrap  # Wraps Long Sentences onto Several Lines so Nothing is Cut Off
+from datetime import date, datetime  # Checks Whether a MOM Deadline has Passed
 
 from src.io_manager.constants import (
     ALERT_COLUMNS,
@@ -51,6 +52,14 @@ class ReportFormatter:
         if text in ("false", "no", "0", "0.0"):
             return "No"
         return "-"
+
+    # Check whether a MOM deadline has already passed (a deadline of today is not overdue yet)
+    def is_overdue(self, deadline, today=None) -> bool:
+        try:
+            due = datetime.strptime(str(deadline), "%Y-%m-%d").date()
+        except ValueError:
+            return False  # e.g. "Check incident date": no real date to compare
+        return due < (today or date.today())
 
     # Build one summary row, highlighting hospital and MOM cases in red
     def build_row(self, number, report) -> str:
