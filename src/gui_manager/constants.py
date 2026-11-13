@@ -21,9 +21,6 @@ THINKING_MS = 400
 # Shown in the Column Box when No Filter is Applied
 ALL_REPORTS = "All reports"
 
-# Columns Where the User Types a Keyword Instead of Picking a Saved Value
-KEYWORD_FILTER_COLUMNS = ("location",)
-
 # Under the Title of a Saved Conversation
 TRANSCRIPT_NOTE = "Exactly as the worker and the assistant wrote it, before any translation."
 

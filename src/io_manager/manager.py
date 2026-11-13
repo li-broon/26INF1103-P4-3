@@ -117,11 +117,12 @@ class IOManager:
 
         heading, column = FILTER_COLUMNS[choice - 1]
 
-        #Location is a free-text keyword search so users don't pick from a huge list (task 16 replaces this check once KeywordFilter offers no options)
-        if column in ["location"]:
-            value = self._prompter.ask_text(f"\n{BOLD}Enter a keyword to search in {heading}:{RESET} ")
+        # The column's filter decides: a pick list of saved values, or none for a keyword search (location), where a word is typed
+        values = self._data_manager.get_unique_values(column)
+        if values:
+            value = self._prompter.choose_from(f"Values saved under {heading}", values)
         else:
-            value = self._prompter.choose_from(f"Values saved under {heading}", self._data_manager.get_unique_values(column))
+            value = self._prompter.ask_text(f"\n{BOLD}Enter a keyword to search in {heading}:{RESET} ")
         if not value:
             return
 

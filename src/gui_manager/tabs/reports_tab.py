@@ -7,7 +7,7 @@ from tkinter import messagebox, ttk
 
 from src.io_manager.constants import FILTER_COLUMNS, TABLE_COLUMNS, TRANSCRIPT_COLUMN
 from src.gui_manager.constants import (
-    ALL_REPORTS, APP_TITLE, BG, DANGER, DANGER_SOFT, KEYWORD_FILTER_COLUMNS, MUTED, STAT_CARDS, SURFACE, SURFACE_ALT, TEXT,
+    ALL_REPORTS, APP_TITLE, BG, DANGER, DANGER_SOFT, MUTED, STAT_CARDS, SURFACE, SURFACE_ALT, TEXT,
 )
 from src.gui_manager.theme import card, font
 from src.gui_manager.windows.report_window import ReportWindow
@@ -102,18 +102,21 @@ class ReportsTab(ttk.Frame):
                 return heading, column
         return None, None
 
-    # Fill the Value Box for the Chosen Column: Saved Values to Pick, or Free Typing for Location
+    # Fill the Value Box for the Chosen Column: the Filter's Pick List, or Free Typing when it Offers None (a Keyword Search)
     def _column_changed(self, event=None):
         _, column = self._chosen_column()
         self._value_box.set("")
         if column is None:
             self._value_box.configure(state="disabled", values=[])
             self.refresh()
-        elif column in KEYWORD_FILTER_COLUMNS:
+            return
+        # The column's filter decides: a pick list of saved values, or none for a keyword search (location), where a word is typed
+        values = self._data_manager.get_unique_values(column)
+        if values:
+            self._value_box.configure(state="readonly", values=values)
+        else:
             self._value_box.configure(state="normal", values=[])
             self._value_box.focus_set()
-        else:
-            self._value_box.configure(state="readonly", values=self._data_manager.get_unique_values(column))
 
     # Put a Table of Reports into the Treeview, and Update the Summary Cards from Every Saved Report
     def _show(self, table, status, empty_message=""):

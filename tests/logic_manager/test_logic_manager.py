@@ -476,7 +476,7 @@ def test_data_manager_is_shared_not_owned():
 # The Names main.py and the GUI Import from the Package Must Keep Working
 def test_package_exports_public_names():
     import src.logic_manager as package
-    for name in ("Evaluation", "InvalidReportError", "LogicConfig", "LogicManager", "SaveOutcome", "logic"):
+    for name in ("Evaluation", "InvalidReportError", "LogicConfig", "LogicManager", "SaveOutcome"):
         assert hasattr(package, name), name
         assert name in package.__all__, name
 

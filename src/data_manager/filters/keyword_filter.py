@@ -24,3 +24,7 @@ class KeywordFilter(ReportFilter):
         found = table[self._column].astype(str).str.contains(keyword, case=False, regex=False, na=False)
 
         return table[found].reset_index(drop=True)
+
+    # No pick list: a keyword is typed, so the menus are given nothing to choose from (and know to ask for a word instead)
+    def _options(self, table: pd.DataFrame) -> list[str]:
+        return []

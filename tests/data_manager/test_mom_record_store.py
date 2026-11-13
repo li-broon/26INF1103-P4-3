@@ -200,7 +200,7 @@ def test_sync_keeps_existing_ticks():
 # Real LogicManager + Real Stores: a Critical Report Lands in Both Files, a Minor One Only in data.csv, and Ticking Updates mom_data.csv
 def test_logic_manager_fills_the_register_and_ticking_updates_it():
     import json
-    from src.data_manager import CsvRecordStore, DataManager, create_default_filters
+    from src.data_manager import CsvRecordStore, DataManager, TextTranscriptStore, create_default_filters
     from src.logic_manager import LogicManager
 
     samples = os.path.join(os.path.dirname(__file__), "..", "samples")
@@ -209,7 +209,8 @@ def test_logic_manager_fills_the_register_and_ticking_updates_it():
             return json.load(file)["report"]
 
     with tempfile.TemporaryDirectory() as folder:
-        data_manager = DataManager(CsvRecordStore(os.path.join(folder, "data.csv")), create_default_filters())
+        data_manager = DataManager(CsvRecordStore(os.path.join(folder, "data.csv")), create_default_filters(),
+                                   TextTranscriptStore(os.path.join(folder, "transcripts")))
         mom_store = MomRecordStore(os.path.join(folder, "mom_data.csv"))
         manager = LogicManager(data_manager, mom_store=mom_store)
 

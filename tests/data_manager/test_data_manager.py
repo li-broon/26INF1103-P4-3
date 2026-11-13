@@ -115,7 +115,11 @@ def test_other_columns_offer_the_saved_values_once_in_alphabetical_order():
     manager = make_manager()
     assert manager.get_unique_values("ai_severity") == ["Critical", "High", "Low", "Medium"]
     assert manager.get_unique_values("reporter_name") == ["Ann", "Ben", "Cai", "Dee", "Eli", "Fay"]
-    assert manager.get_unique_values("location") == ["Dock [North]", "Head Office", "Office", "Ubi Industrial Park, Block 1", "Warehouse (Level 2)"]
+
+
+# A Keyword Column (Location) Offers No Pick List: the Menus See an Empty List and Ask for a Word to Search For Instead
+def test_keyword_columns_offer_no_choices():
+    assert make_manager().get_unique_values("location") == []
 
 
 def test_a_column_that_does_not_exist_offers_nothing():
@@ -256,10 +260,11 @@ def test_the_public_methods_are_the_ones_in_the_uml():
 
 # A Transcript is Written to <folder>/<id>.txt (Folder Created on First Save) and Read Back Unchanged
 def test_transcript_is_saved_to_its_own_file_and_read_back():
-    store = make_transcript_store()
+    folder = os.path.join(TEMP_FOLDER, "transcripts_read_back")
+    store = TextTranscriptStore(folder)
     text = "Worker: saya jatuh\nAI: Maaf mendengarnya. Di mana?"
     assert store.save("20261113-101010-ab12", text) == (True, "Transcript saved.")
-    with open(os.path.join(store._folder, "20261113-101010-ab12.txt"), encoding="utf-8") as file:
+    with open(os.path.join(folder, "20261113-101010-ab12.txt"), encoding="utf-8") as file:
         assert file.read() == text + "\n"
     assert store.load("20261113-101010-ab12") == text
 
