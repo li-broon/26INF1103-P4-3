@@ -41,7 +41,7 @@ def main():
     logic_manager = OldLogicAdapter()
     data_manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters())
     chart_manager = ChartManager(data_manager, create_default_charts())
-    IOManager(ai_manager, OldLogicAdapter(), data_manager, chart_manager).run()
+    
 
     # "python main.py --gui" Opens the Tkinter Window, Otherwise the Terminal App Runs
     if "--gui" in sys.argv:
@@ -56,7 +56,7 @@ def main():
         except TclError as error:
             print(f"Could not open the GUI window ({error}). See 'Running the GUI with Docker' in README.md.")
     else:
-        IOManager(ai_manager, logic_manager, data_manager).run()
+        IOManager(ai_manager, logic_manager, data_manager, chart_manager).run()
 
 if __name__ == "__main__":
     main()
