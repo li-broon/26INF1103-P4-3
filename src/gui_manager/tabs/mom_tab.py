@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from src.data_manager.constants import MOM_ID_FIELD
+from src.io_manager.constants import TRANSCRIPT_COLUMN
 from src.gui_manager.constants import (
     APP_TITLE, BG, DANGER, DANGER_SOFT, MOM_SHOW_ALL, MOM_SHOW_PENDING, MOM_SHOW_REPORTED, MOM_STAT_CARDS,
     MOM_TABLE_COLUMNS, MUTED, SUCCESS, SUCCESS_SOFT, SURFACE, TEXT,
@@ -19,10 +20,11 @@ from src.gui_manager.windows.report_window import ReportWindow
 
 # Tab 3: the MOM Register. Only MOM Reportable Reports, with a Tick Box for "the Safety Officer has Reported This"; Ticking Writes Straight to mom_data.csv
 class MomTab(ttk.Frame):
-    def __init__(self, parent, mom_store, formatter):
+    def __init__(self, parent, mom_store, data_manager, formatter):
         super().__init__(parent)
         # Handed in by GUIManager, Used but Not Owned (Association)
         self._mom_store = mom_store
+        self._data_manager = data_manager  # Only for a report's conversation transcript; the register itself is the MOM store's
         self._formatter = formatter
         self._table = None  # The Register as Last Loaded (a DataFrame); Rows are Found by their mom_id
 
@@ -165,4 +167,6 @@ class MomTab(ttk.Frame):
             return
         matches = self._table[self._table[MOM_ID_FIELD] == selected[0]]
         if not matches.empty:
-            ReportWindow(self, self._formatter, matches.iloc[0].to_dict(), "MOM Report")
+            report = matches.iloc[0].to_dict()
+            transcript = self._data_manager.load_transcript(report.get(TRANSCRIPT_COLUMN))
+            ReportWindow(self, self._formatter, report, "MOM Report", transcript=transcript)
