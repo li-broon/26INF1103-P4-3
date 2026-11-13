@@ -5,10 +5,13 @@ import sys
 from types import SimpleNamespace
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
+from src.data_manager import CsvRecordStore, DataManager, create_default_filters
+from src.data_manager.charts.chart_manager import ChartManager
+from src.data_manager.charts.default_charts import create_default_charts
+from src.data_manager.constants import DATA_FILE
 from src.io_manager import IOManager
 from src.logic_manager import logic
-from src.data_manager import CsvRecordStore, DataManager, create_default_filters
-from src.data_manager.constants import DATA_FILE
+
 
 # TEMPORARY (task 18 replaces this): wraps the old logic() function so it has the process() method IOManager calls
 class OldLogicAdapter:
@@ -37,6 +40,8 @@ def main():
 
     logic_manager = OldLogicAdapter()
     data_manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters())
+    chart_manager = ChartManager(data_manager, create_default_charts())
+    IOManager(ai_manager, OldLogicAdapter(), data_manager, chart_manager).run()
 
     # "python main.py --gui" Opens the Tkinter Window, Otherwise the Terminal App Runs
     if "--gui" in sys.argv:

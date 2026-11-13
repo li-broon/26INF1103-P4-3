@@ -18,3 +18,22 @@ DEADLINE_FIELD = "deadline"
 # Finds the project's data folder no matter where the app is launched from (two levels up from src/data_manager/)
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
+
+# Shared Chart settings used by the Chart Classes
+
+TOP_LOCATIONS = 10         # How many locations the location chart shows
+MAX_STOPPAGE_HOURS = 24    # Same cap as logic_manager, so one odd value (e.g. 999) cannot flatten the chart
+
+SEVERITY_ORDER = ["Low", "Medium", "High", "Critical"]
+SEVERITY_COLORS = {"Low": "#7fb77e", "Medium": "#f2c14e", "High": "#f08a4b", "Critical": "#d1495b"}
+
+UNKNOWN_PREFIX = "unknown"
+BAR_COLOR = "#4c78a8"
+COUNT_LABEL = "Number of incidents"
+
+# Severity as a Number, so Mean and Median Can be Worked Out (Low = 1 ... Critical = 4)
+SEVERITY_SCORES = {level: number for number, level in enumerate(SEVERITY_ORDER, start=1)}
+
+MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+OTHER_LABEL = "Other"      # Where the locations outside the top ones are grouped
+MAX_LABEL_LENGTH = 28      # Longer location names are shortened so the legend stays readable

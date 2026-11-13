@@ -8,3 +8,4 @@ class SaveOutcome:
     importance_score: float
     mom_reportable: str
     deadline: str
+    priority: str = ""

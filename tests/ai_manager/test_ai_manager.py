@@ -9,6 +9,7 @@ from google.genai import errors
 from src.ai_manager import AIManager, GeminiService, AIServiceError
 from src.ai_manager.constants import SEVERITY_LEVELS, UNKNOWN_VALUE
 from src.ai_manager.fields.text_field import TextField
+from src.ai_manager.fields.location_field import LocationField
 from src.ai_manager.fields.date_field import DateField
 from src.ai_manager.fields.time_field import TimeField
 from src.ai_manager.fields.boolean_field import BooleanField
@@ -57,6 +58,23 @@ def test_text_field():
     assert field.is_valid("Tuas site")
     for bad in ["", "   ", None, 5, ["Tuas"]]:
         assert not field.is_valid(bad), bad
+
+# Locations Must be 2 or 3 Non-Empty Parts Split by Commas (Site, Area, Optional Exact Spot); an Unknown Area Keeps the Site
+def test_location_field():
+    field = LocationField("location", "site, area")
+    for good in ["Tuas site, loading bay 2", "Jurong Island, Block A, level 3", f"Woodlands MRT Worksite, {UNKNOWN_VALUE}"]:
+        assert field.is_valid(good), good
+    for bad in ["Woodlands MRT Worksite", ", loading bay", "Tuas site,  ", "Tuas, , bay 2", "Tuas, Block A, level 3, room 5",
+                "", None, UNKNOWN_VALUE]:
+        assert not field.is_valid(bad), bad
+
+# A Location Without the Exact Area is Sent Back to the AI to Ask the Worker, Not Saved
+def test_location_without_area_is_followed_up():
+    site_only = dict(GOOD_WORKER_DETAILS, location="Woodlands MRT Worksite")
+    service = FakeAIService([chat_reply(site_only), chat_reply(GOOD_WORKER_DETAILS, is_complete=False)])
+    reply = new_conversation(service).send("it happened at Woodlands MRT Worksite")
+    assert "location" in service.sent_messages[1]
+    assert reply.is_complete is False
 
 # Dates Must be Real YYYY-MM-DD Dates and Not in the Future; "unknown" is Not Allowed
 def test_date_field():
