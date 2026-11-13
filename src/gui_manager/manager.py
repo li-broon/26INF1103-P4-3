@@ -11,6 +11,7 @@ from src.gui_manager.constants import (
     WINDOW_WIDTH, WINDOWS_APP_ID,
 )
 from src.gui_manager.display.window_report_formatter import WindowReportFormatter
+from src.gui_manager.tabs.charts_tab import ChartsTab
 from src.gui_manager.tabs.chat_tab import ChatTab
 from src.gui_manager.tabs.mom_tab import MomTab
 from src.gui_manager.tabs.reports_tab import ReportsTab
@@ -53,7 +54,12 @@ class GUIManager(tk.Tk):
         tabs.add(self._reports_tab, text="Saved reports")
         if self._mom_tab is not None:
             tabs.add(self._mom_tab, text="MOM reporting")
+        self._charts_tab = ChartsTab(tabs, chart_manager)
+        tabs.add(self._charts_tab, text="Charts")
         tabs.pack(fill="both", expand=True)
+        # The Chart is Only Drawn when its Tab is Opened (Keeps Start-Up Fast), and Redrawn Each Time so New Reports Show
+        tabs.bind("<<NotebookTabChanged>>",
+                  lambda event: self._charts_tab.refresh() if tabs.select() == str(self._charts_tab) else None)
         # "View all charts" Button in the Tab Row, Just After the "Saved reports" Tab
         # (Each Tab is Its Text Plus 20px Padding on Both Sides, and the Row Starts 20px In, as Set in theme.py)
         tab_font = tkfont.Font(font=font(10, "bold"))
