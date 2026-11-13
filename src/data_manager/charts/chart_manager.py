@@ -75,6 +75,7 @@ class ChartManager:
 
         if save_path:
             figure = self._build_figure(drawers, table, heading, for_window=False)
+            ChartResizer(figure).update()  # A picture has one size, but its tick labels still have to fit their room
             figure.savefig(save_path, dpi=150, bbox_inches="tight")
             plt.close(figure)
             return True, f"Chart saved to {save_path}"
@@ -97,7 +98,7 @@ class ChartManager:
         return True, "Chart closed."
 
     # Draws the drawers on one new figure and returns it.
-    # With several charts the figure is a dashboard of two columns of equal height, with the charts in menu order
+    # With several charts the figure is a dashboard of two columns as equal in height as possible, each keeping the menu order
     # for_window: a window has to fit a screen; a saved picture can be taller
     def _build_figure(self, drawers: list[ChartDrawer], table, heading: str, for_window: bool):
         import matplotlib.pyplot as plt
@@ -123,12 +124,17 @@ class ChartManager:
         figure.suptitle(heading, fontsize=14, fontweight="bold")
         return figure
 
-    # Cuts the charts (keeping their order) into a left and a right column whose total height is as close as possible.
+    # Shares the charts between a left and a right column so the columns are as close in height as possible (a 3 panel chart
+    # is not stacked under a 2 panel one while 3 small charts share the other side), keeping the menu order inside each column.
     # One chart on its own stays in a single column
     @staticmethod
     def _split_into_columns(drawers: list[ChartDrawer]) -> list[list[ChartDrawer]]:
         if len(drawers) == 1:
             return [list(drawers)]
-        cuts = range(1, len(drawers))
-        best = min(cuts, key=lambda cut: abs(sum(d.height for d in drawers[:cut]) - sum(d.height for d in drawers[cut:])))
-        return [list(drawers[:best]), list(drawers[best:])]
+        columns = [[], []]
+        heights = [0.0, 0.0]
+        for drawer in sorted(drawers, key=lambda drawer: drawer.height, reverse=True):  # Tallest first, each into the shorter column
+            shorter = 0 if heights[0] <= heights[1] else 1
+            columns[shorter].append(drawer)
+            heights[shorter] += drawer.height
+        return [[drawer for drawer in drawers if drawer in column] for column in columns]

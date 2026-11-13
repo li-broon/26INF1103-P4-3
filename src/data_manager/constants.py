@@ -44,3 +44,5 @@ DETAIL_GID = "detail"      # Tag put on small numbers (bar totals, cell numbers)
 MIN_TEXT_SCALE = 0.6       # Text never shrinks below this fraction of its normal size
 MAX_TEXT_SCALE = 1.6       # ...or grows beyond this one
 DETAIL_MIN_SCALE = 0.7     # Below this fraction of the normal window size the small numbers are hidden instead of overlapping
+MIN_TICK_FONT_SIZE = 6     # Points. Tick labels shrink to fit their room down to this size; below it every 2nd, 3rd... label is shown instead
+TICK_LABEL_GAP = 1.5       # Points of clear space neighbouring tick labels must keep between them
