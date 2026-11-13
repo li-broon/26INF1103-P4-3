@@ -3,6 +3,7 @@
 # ------- #
 
 import tkinter as tk
+from tkinter import font as tkfont
 from tkinter import ttk
 
 from src.gui_manager.constants import (
@@ -49,6 +50,17 @@ class GUIManager(tk.Tk):
         tabs.add(self._chat_tab, text="Report an incident")
         tabs.add(self._reports_tab, text="Saved reports")
         tabs.pack(fill="both", expand=True)
+
+        # "View all charts" Button in the Tab Row, Just After the "Saved reports" Tab
+        # (Each Tab is its Text Plus 20px Padding on Both Sides, and the Row Starts 20px In, as Set in theme.py)
+        tab_font = tkfont.Font(font=font(10, "bold"))
+        tabs_end = 20 + sum(tab_font.measure(tabs.tab(tab, "text")) + 40 for tab in tabs.tabs())
+        ttk.Button(self, text="View all charts", style="Secondary.TButton",
+                   command=self._show_all_charts).place(in_=tabs, x=tabs_end + 16, y=8)
+
+    # Open Every Chart on One Page, Same as "All charts on one page" in the Terminal Menu (Waits Until the Chart Window is Closed)
+    def _show_all_charts(self):
+        self._chart_manager.show_chart("all")
 
     # Windows Only: Give the App its Own Taskbar Entry (Showing Our Icon, Not Python's), and Make Text Sharp on Scaled Screens
     def _set_up_windows_os(self):
