@@ -29,7 +29,7 @@ class TextTranscriptStore(TranscriptStore):
         try:
             os.makedirs(self._folder, exist_ok=True)
             with open(path, "w", encoding="utf-8") as file:
-                file.write(text + "\n")
+                file.write(str(text) + "\n")
         except OSError as error:
             logger.error("Could not write '%s': %s", path, error)
             return False, "Transcript could not be saved (file write error)."

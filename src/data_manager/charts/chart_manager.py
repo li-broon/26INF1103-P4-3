@@ -2,6 +2,8 @@
 # Imports
 # ------- #
 
+import os
+
 from src.data_manager.charts.chart_drawer import ChartDrawer
 from src.data_manager.charts.chart_resizer import ChartResizer
 
@@ -76,8 +78,13 @@ class ChartManager:
         if save_path:
             figure = self._build_figure(drawers, table, heading, for_window=False)
             ChartResizer(figure).update()  # A picture has one size, but its tick labels still have to fit their room
-            figure.savefig(save_path, dpi=150, bbox_inches="tight")
-            plt.close(figure)
+            try:
+                os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)  # e.g. the app was started outside the project folder
+                figure.savefig(save_path, dpi=150, bbox_inches="tight")
+            except OSError as error:
+                return False, f"Chart could not be saved to {save_path}: {error}"
+            finally:
+                plt.close(figure)
             return True, f"Chart saved to {save_path}"
 
         # One window, however many charts it holds

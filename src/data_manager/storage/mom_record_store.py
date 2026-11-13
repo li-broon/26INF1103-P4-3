@@ -101,15 +101,21 @@ class MomRecordStore:
             parts.append("" if value is None or pd.isna(value) else str(value).strip().lower())
         return hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()[:12]
 
-    # Read the register as text (so an id like "12e45" is never turned into a number); blank cells are NaN, an unreadable file is empty
+    # Read the register as text (so an id like "12e45" is never turned into a number); blank cells are NaN. An unreadable file, or one
+    # without the register's own columns (e.g. edited by hand), counts as empty, so the app still starts and the file gets backed up
     def _read(self) -> pd.DataFrame:
         if not os.path.exists(self._data_file) or os.path.getsize(self._data_file) == 0:
             return pd.DataFrame()
         try:
-            return pd.read_csv(self._data_file, dtype=str, keep_default_na=False, na_values=[""])
+            table = pd.read_csv(self._data_file, dtype=str, keep_default_na=False, na_values=[""])
         except Exception as e:
             logger.error("Could not read '%s': %s", self._data_file, e)
             return pd.DataFrame()
+        missing = [column for column in (MOM_ID_FIELD, MOM_REPORTED_FIELD) if column not in table.columns]
+        if missing:
+            logger.warning("File '%s' is missing the register columns %s.", self._data_file, missing)
+            return pd.DataFrame()
+        return table
 
     # Like _read, but an unreadable file is backed up first so saving never destroys it
     def _load_for_update(self) -> pd.DataFrame:

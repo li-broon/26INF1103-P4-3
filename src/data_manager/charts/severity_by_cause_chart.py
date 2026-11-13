@@ -25,7 +25,7 @@ class SeverityByCauseChart(TimeChartDrawer):
 
     def _draw(self, ax, table: pd.DataFrame) -> bool:
         data = self._dated(table)
-        scores = self._known_values(data, "ai_severity").str.title().map(SEVERITY_SCORES)  # "low" and "Low" count the same
+        scores = self._known_values(data, "ai_severity").map(self._severity_score)
         data = data.assign(cause=self._known_values(data, "root_cause_category"), score=scores).dropna(subset=["cause", "score"])
         if data.empty:
             return False
@@ -37,6 +37,13 @@ class SeverityByCauseChart(TimeChartDrawer):
         self._draw_heatmap(mean_ax, data, causes, months, "mean", "Mean severity per month")
         self._draw_heatmap(median_ax, data, causes, months, "median", "Median severity per month")
         return True
+
+    # The severity as a number ("low" and "Low" count the same); None for a blank or unknown level, so it is dropped
+    @staticmethod
+    def _severity_score(value):
+        if value is None or pd.isna(value):
+            return None
+        return SEVERITY_SCORES.get(str(value).title())
 
     # Panel 1: for each root cause, a bar (mean) and a diamond (median) for each year
     def _draw_yearly(self, ax, data: pd.DataFrame, causes: list[str]) -> None:

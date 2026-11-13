@@ -225,3 +225,19 @@ def test_logic_manager_fills_the_register_and_ticking_updates_it():
         mom_store.set_reported(register.iloc[0][MOM_ID_FIELD], True)
         assert MomRecordStore(os.path.join(folder, "mom_data.csv")).load_records().iloc[0][MOM_REPORTED_FIELD] == "Yes"
         assert "safety_officer_reported" not in data_manager.load_records().columns  # data.csv is untouched by ticking
+
+
+# A Register File Edited by Hand into the Wrong Shape Must Not Stop the App Starting: it Reads as Empty, Ticking Says So,
+# and the First Save Backs the Bad File Up and Starts a Fresh Register
+def test_register_without_its_columns_is_treated_as_empty_and_backed_up():
+    for content in ("not,a,register\n1,2\n", "reporter_name,deadline\nAnn,2026-11-20\n", "mom_id,reporter_name\nabc,Ann\n"):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "mom_data.csv")
+            with open(path, "w", encoding="utf-8") as file:
+                file.write(content)
+            store = MomRecordStore(path)
+            assert store.load_records().empty
+            assert store.set_reported("abc", True) == (False, "MOM register is empty.")
+            assert store.save_record(make_report("Ann"))[0] is True
+            assert os.path.exists(os.path.join(folder, "mom_data_backup.csv"))
+            assert len(store.load_records()) == 1
