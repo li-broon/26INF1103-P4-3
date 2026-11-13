@@ -55,6 +55,12 @@ class GUIManager(tk.Tk):
         if self._mom_tab is not None:
             tabs.add(self._mom_tab, text="MOM reporting")
         tabs.pack(fill="both", expand=True)
+        # "View all charts" Button in the Tab Row, Just After the "Saved reports" Tab
+        # (Each Tab is Its Text Plus 20px Padding on Both Sides, and the Row Starts 20px In, as Set in theme.py)
+        tab_font = tkfont.Font(font=font(10, "bold"))
+        tabs_end = 20 + sum(tab_font.measure(tabs.tab(tab, "text")) + 40 for tab in tabs.tabs())
+        ttk.Button(self, text="View all charts", style="Secondary.TButton",
+                    command=self._show_all_charts).place(in_=tabs, x=tabs_end + 24, y=8)
 
     # Called after a Report is Saved, so the Tables Show it Straight Away
     def _refresh_tabs(self):
@@ -62,12 +68,6 @@ class GUIManager(tk.Tk):
         if self._mom_tab is not None:
             self._mom_tab.refresh()
 
-        # "View all charts" Button in the Tab Row, Just After the "Saved reports" Tab
-        # (Each Tab is Its Text Plus 20px Padding on Both Sides, and the Row Starts 20px In, as Set in theme.py)
-        tab_font = tkfont.Font(font=font(10, "bold"))
-        tabs_end = 20 + sum(tab_font.measure(tabs.tab(tab, "text")) + 40 for tab in tabs.tabs())
-        ttk.Button(self, text="View all charts", style="Secondary.TButton",
-                   command=self._show_all_charts).place(in_=tabs, x=tabs_end + 16, y=8)
 
     # Open Every Chart on One Page, Same as "All charts on one page" in the Terminal Menu (Waits Until the Chart Window Is Closed)
     def _show_all_charts(self):
