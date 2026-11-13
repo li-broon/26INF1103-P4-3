@@ -45,7 +45,7 @@ def main():
 
         # No Screen Given to the Container (or No Display at All): Point to the README Instead of a Traceback
         try:
-            GUIManager(ai_manager, logic_manager, data_manager, chart_manager).mainloop()
+            GUIManager(ai_manager, logic_manager, data_manager, chart_manager, mom_store).mainloop()
         except TclError as error:
             print(f"Could not open the GUI window ({error}). See 'Running the GUI with Docker' in README.md.")
     else:

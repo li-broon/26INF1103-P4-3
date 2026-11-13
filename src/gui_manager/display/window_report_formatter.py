@@ -4,7 +4,8 @@
 
 from src.io_manager import ReportFormatter
 from src.io_manager.constants import FULL_REPORT_FIELDS, TABLE_COLUMNS, YES_NO_COLUMNS
-from src.gui_manager.constants import MUTED, SCORE_COLOURS, SURFACE_ALT
+from src.data_manager.constants import MOM_REPORTED_FIELD
+from src.gui_manager.constants import MOM_TABLE_COLUMNS, MUTED, SCORE_COLOURS, SURFACE_ALT, TICKED, UNTICKED
 
 # ----- #
 # Class
@@ -70,5 +71,40 @@ class WindowReportFormatter(ReportFormatter):
             if self.yes_no(report.get("mom_reportable")) == "YES":
                 stats["mom"] += 1
                 if self.is_overdue(self.display_value(report.get("deadline"))):
+                    stats["overdue"] += 1
+        return stats
+
+    # True if the Safety Officer has Ticked this MOM Report as Reported
+    def is_reported(self, report: dict) -> bool:
+        return self.yes_no(report.get(MOM_REPORTED_FIELD)) == "YES"
+
+    # "reported", "overdue" (Not Reported and Past its Deadline) or "pending": Decides the Row's Colour
+    def mom_row_state(self, report: dict) -> str:
+        if self.is_reported(report):
+            return "reported"
+        if self.is_overdue(self.display_value(report.get("deadline"))):
+            return "overdue"
+        return "pending"
+
+    # One MOM Table Row in MOM_TABLE_COLUMNS Order: the First Cell is the Tick Box
+    def mom_table_row_values(self, report: dict) -> list:
+        values = []
+        for _, column, _ in MOM_TABLE_COLUMNS:
+            if column == MOM_REPORTED_FIELD:
+                values.append(TICKED if self.is_reported(report) else UNTICKED)
+            else:
+                values.append(self.display_value(report.get(column)))
+        return values
+
+    # Counts for the Summary Cards above the MOM Table
+    def mom_stats(self, table) -> dict:
+        stats = {"total": len(table), "pending": 0, "overdue": 0, "reported": 0}
+        for report in table.to_dict("records"):
+            state = self.mom_row_state(report)
+            if state == "reported":
+                stats["reported"] += 1
+            else:
+                stats["pending"] += 1
+                if state == "overdue":
                     stats["overdue"] += 1
         return stats

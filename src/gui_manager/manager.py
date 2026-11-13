@@ -12,6 +12,7 @@ from src.gui_manager.constants import (
 )
 from src.gui_manager.display.window_report_formatter import WindowReportFormatter
 from src.gui_manager.tabs.chat_tab import ChatTab
+from src.gui_manager.tabs.mom_tab import MomTab
 from src.gui_manager.tabs.reports_tab import ReportsTab
 from src.gui_manager.theme import apply_theme, fit_window, font
 
@@ -21,7 +22,7 @@ from src.gui_manager.theme import apply_theme, fit_window, font
 
 # Main Window: the Same Managers as IOManager, Shown in Tabs Instead of the Terminal
 class GUIManager(tk.Tk):
-    def __init__(self, ai_manager, logic_manager, data_manager, chart_manager):
+    def __init__(self, ai_manager, logic_manager, data_manager, chart_manager, mom_store=None):
         self._set_up_windows_os()  # Must Happen Before the Window Exists
         super().__init__()
         self._chart_manager = chart_manager  # Handed in, Used but Not Owned (Association)
@@ -49,16 +50,24 @@ class GUIManager(tk.Tk):
         self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, data_manager, formatter, on_saved=self._reports_tab.refresh)
         tabs.add(self._chat_tab, text="Report an incident")
         tabs.add(self._reports_tab, text="Saved reports")
+        if self._mom_tab is not None:
+            tabs.add(self._mom_tab, text="MOM reporting")
         tabs.pack(fill="both", expand=True)
-
         # "View all charts" Button in the Tab Row, Just After the "Saved reports" Tab
-        # (Each Tab is its Text Plus 20px Padding on Both Sides, and the Row Starts 20px In, as Set in theme.py)
+        # (Each Tab is Its Text Plus 20px Padding on Both Sides, and the Row Starts 20px In, as Set in theme.py)
         tab_font = tkfont.Font(font=font(10, "bold"))
         tabs_end = 20 + sum(tab_font.measure(tabs.tab(tab, "text")) + 40 for tab in tabs.tabs())
         ttk.Button(self, text="View all charts", style="Secondary.TButton",
-                   command=self._show_all_charts).place(in_=tabs, x=tabs_end + 16, y=8)
+                    command=self._show_all_charts).place(in_=tabs, x=tabs_end + 24, y=8)
 
-    # Open Every Chart on One Page, Same as "All charts on one page" in the Terminal Menu (Waits Until the Chart Window is Closed)
+    # Called after a Report is Saved, so the Tables Show it Straight Away
+    def _refresh_tabs(self):
+        self._reports_tab.refresh()
+        if self._mom_tab is not None:
+            self._mom_tab.refresh()
+
+
+    # Open Every Chart on One Page, Same as "All charts on one page" in the Terminal Menu (Waits Until the Chart Window Is Closed)
     def _show_all_charts(self):
         self.configure(cursor="watch")  # Drawing the Charts Takes a Moment
         self.update_idletasks()
