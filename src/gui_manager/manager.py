@@ -4,7 +4,7 @@
 
 import tkinter as tk
 from tkinter import font as tkfont
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 from src.gui_manager.constants import (
     APP_SUBTITLE, APP_TITLE, DANGER, EMERGENCY_TEXT, HEADER_BG, HEADER_MUTED, HEADER_TEXT, ICON_FILE, WINDOW_HEIGHT,
@@ -60,7 +60,16 @@ class GUIManager(tk.Tk):
 
     # Open Every Chart on One Page, Same as "All charts on one page" in the Terminal Menu (Waits Until the Chart Window is Closed)
     def _show_all_charts(self):
-        self._chart_manager.show_chart("all")
+        self.configure(cursor="watch")  # Drawing the Charts Takes a Moment
+        self.update_idletasks()
+        try:
+            shown, message = self._chart_manager.show_chart("all")
+        finally:
+            self.configure(cursor="")  # Always Put the Normal Cursor Back, Even if Drawing Failed
+
+        # e.g. No Reports Saved Yet, or matplotlib Not Installed: Say Why Instead of Doing Nothing
+        if not shown:
+            messagebox.showinfo(APP_TITLE, message, parent=self)
 
     # Windows Only: Give the App its Own Taskbar Entry (Showing Our Icon, Not Python's), and Make Text Sharp on Scaled Screens
     def _set_up_windows_os(self):
