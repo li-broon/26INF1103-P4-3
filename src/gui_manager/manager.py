@@ -20,9 +20,10 @@ from src.gui_manager.theme import apply_theme, fit_window, font
 
 # Main Window: the Same Managers as IOManager, Shown in Tabs Instead of the Terminal
 class GUIManager(tk.Tk):
-    def __init__(self, ai_manager, logic_manager, data_manager):
+    def __init__(self, ai_manager, logic_manager, data_manager, chart_manager):
         self._set_up_windows_os()  # Must Happen Before the Window Exists
         super().__init__()
+        self._chart_manager = chart_manager  # Handed in, Used but Not Owned (Association)
         self.title(APP_TITLE)
 
         # True Gives the Report Windows the Icon Too; Tk Copies the Image, so it Need Not be Kept
