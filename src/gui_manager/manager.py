@@ -11,6 +11,7 @@ from src.gui_manager.constants import (
 )
 from src.gui_manager.display.window_report_formatter import WindowReportFormatter
 from src.gui_manager.tabs.chat_tab import ChatTab
+from src.gui_manager.tabs.mom_tab import MomTab
 from src.gui_manager.tabs.reports_tab import ReportsTab
 from src.gui_manager.theme import apply_theme, fit_window, font
 
@@ -20,7 +21,7 @@ from src.gui_manager.theme import apply_theme, fit_window, font
 
 # Main Window: the Same Managers as IOManager, Shown in Tabs Instead of the Terminal
 class GUIManager(tk.Tk):
-    def __init__(self, ai_manager, logic_manager, data_manager):
+    def __init__(self, ai_manager, logic_manager, data_manager, mom_store=None):
         self._set_up_windows_os()  # Must Happen Before the Window Exists
         super().__init__()
         self.title(APP_TITLE)
@@ -44,10 +45,20 @@ class GUIManager(tk.Tk):
         formatter = WindowReportFormatter()
         tabs = ttk.Notebook(self)
         self._reports_tab = ReportsTab(tabs, data_manager, formatter)
-        self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, formatter, on_saved=self._reports_tab.refresh)
+        # The MOM Tab Needs the MOM Register, so it is Left Out if none is Given
+        self._mom_tab = MomTab(tabs, mom_store, formatter) if mom_store is not None else None
+        self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, formatter, on_saved=self._refresh_tabs)
         tabs.add(self._chat_tab, text="Report an incident")
         tabs.add(self._reports_tab, text="Saved reports")
+        if self._mom_tab is not None:
+            tabs.add(self._mom_tab, text="MOM reporting")
         tabs.pack(fill="both", expand=True)
+
+    # Called after a Report is Saved, so the Tables Show it Straight Away
+    def _refresh_tabs(self):
+        self._reports_tab.refresh()
+        if self._mom_tab is not None:
+            self._mom_tab.refresh()
 
     # Windows Only: Give the App its Own Taskbar Entry (Showing Our Icon, Not Python's), and Make Text Sharp on Scaled Screens
     def _set_up_windows_os(self):

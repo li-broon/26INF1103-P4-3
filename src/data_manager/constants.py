@@ -19,6 +19,13 @@ DEADLINE_FIELD = "deadline"
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 DATA_FILE = os.path.join(DATA_FOLDER, "data.csv")
 
+# The MOM register: a second CSV holding only the MOM reportable reports, and whether the safety officer has reported each one
+MOM_DATA_FILE = os.path.join(DATA_FOLDER, "mom_data.csv")
+MOM_ID_FIELD = "mom_id"                              # Unique id the register gives each report (worked out from the fields below)
+MOM_REPORTED_FIELD = "safety_officer_reported"       # "Yes" once the safety officer has reported it to MOM, otherwise "No"
+MOM_REPORTED_ON_FIELD = "reported_on"                # The date it was ticked as reported (blank while pending)
+MOM_IDENTITY_FIELDS = ("reporter_name", "incident_date", "incident_time", "location", "description")
+
 # Shared Chart settings used by the Chart Classes
 
 TOP_LOCATIONS = 10         # How many locations the location chart shows

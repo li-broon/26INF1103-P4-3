@@ -3,6 +3,7 @@ from src.data_manager.constants import DATA_FILE
 from src.data_manager.filters.default_filters import create_default_filters
 from src.data_manager.manager import DataManager
 from src.data_manager.storage.csv_record_store import CsvRecordStore
+from src.data_manager.storage.mom_record_store import MomRecordStore
 from src.data_manager.storage.record_store import RecordStore
 import pandas as pd
 
@@ -23,6 +24,6 @@ def load_matching_records(column_name, value, ascending=False) -> pd.DataFrame:
 
 # The Package's Public Names
 __all__ = [
-    "DataManager", "RecordStore", "CsvRecordStore", "create_default_filters",
+    "DataManager", "RecordStore", "CsvRecordStore", "MomRecordStore", "create_default_filters",
     "save_record", "load_records", "get_unique_values", "load_matching_records",
 ]

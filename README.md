@@ -44,6 +44,8 @@ Users will type into the terminal similar to having a conversation with the AI. 
     -	Importance score: The various data points each have their own respective weights which is used to calculate each incident's importance. After calculation, the incidents are all sorted from most to least urgent, so safety officers see the most serious incidents first.
     -	Completeness check: A report is only accepted once every field is filled. If any are missing, the AI asks the worker for them in their language. If the worker cannot answer after being asked twice, the field is recorded as "unknown (worker could not say)".
 
+    -	MOM register: every saved report that is MOM reportable is also copied into a second file, `data/mom_data.csv`, marked as "not reported yet". In the GUI, the "MOM reporting" tab lists only these reports; the safety officer ticks a report once it has been reported to MOM, and the tick (with the date) is written straight to `mom_data.csv`.
+
 ## 5.	**Repository Link:**
 
 [https://github.com/li-broon/26INF1103-P4-3](https://github.com/li-broon/26INF1103-P4-3)

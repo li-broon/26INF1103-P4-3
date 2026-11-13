@@ -2,21 +2,15 @@
 # Import(s)
 # -------- #
 import sys
-from types import SimpleNamespace
 
 from src.ai_manager import AIManager, AIServiceError, GeminiService
-from src.data_manager import CsvRecordStore, DataManager, create_default_filters
+from src.data_manager import CsvRecordStore, DataManager, MomRecordStore, create_default_filters
 from src.data_manager.charts.chart_manager import ChartManager
 from src.data_manager.charts.default_charts import create_default_charts
-from src.data_manager.constants import DATA_FILE
+from src.data_manager.constants import DATA_FILE, MOM_DATA_FILE
 from src.io_manager import IOManager
-from src.logic_manager import logic
+from src.logic_manager import LogicManager
 
-
-# TEMPORARY (task 18 replaces this): wraps the old logic() function so it has the process() method IOManager calls
-class OldLogicAdapter:
-    def process(self, report):
-        return SimpleNamespace(**logic(report))
 
 # TEMPORARY (task 18 replaces this): reports a missing API key only when the chatbot opens, so the menu and saved reports still work without one
 class NoKeyAI:
@@ -38,8 +32,13 @@ def main():
     except AIServiceError as error:
         ai_manager = NoKeyAI(error)
 
-    logic_manager = OldLogicAdapter()
     data_manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters())
+
+    # The MOM register only holds MOM reportable reports; reports saved before it existed are copied in once here
+    mom_store = MomRecordStore(MOM_DATA_FILE)
+    mom_store.sync(data_manager.load_records())
+
+    logic_manager = LogicManager(data_manager, mom_store=mom_store)
     chart_manager = ChartManager(data_manager, create_default_charts())
     
 
@@ -52,7 +51,7 @@ def main():
 
         # No Screen Given to the Container (or No Display at All): Point to the README Instead of a Traceback
         try:
-            GUIManager(ai_manager, logic_manager, data_manager).mainloop()
+            GUIManager(ai_manager, logic_manager, data_manager, mom_store).mainloop()
         except TclError as error:
             print(f"Could not open the GUI window ({error}). See 'Running the GUI with Docker' in README.md.")
     else:

@@ -76,6 +76,30 @@ STAT_CARDS = [
     ("hospitalised", "HOSPITALISED", ORANGE),
 ]
 
+# MOM Tab Table: (Heading, Column in mom_data.csv, Width). The First Column is the Tick Box, Drawn from safety_officer_reported
+MOM_TABLE_COLUMNS = [
+    ("Reported", "safety_officer_reported", 12),
+    ("MOM Due", "deadline", 12),
+    ("Severity", "ai_severity", 9),
+    ("Score", "importance_score", 7),
+    ("Location", "location", 16),
+    ("Date", "incident_date", 12),
+    ("Reporter", "reporter_name", 16),
+    ("Reported On", "reported_on", 12),
+]
+TICKED, UNTICKED = "☑ Reported", "☐ Pending"
+
+# Choices in the MOM Tab's "Show" Box
+MOM_SHOW_ALL, MOM_SHOW_PENDING, MOM_SHOW_REPORTED = "All", "Not yet reported", "Reported"
+
+# Summary Cards above the MOM Table: (Key in mom_stats, Caption, Number Colour)
+MOM_STAT_CARDS = [
+    ("total", "MOM REPORTABLE", PRIMARY),
+    ("pending", "NOT YET REPORTED", WARNING),
+    ("overdue", "OVERDUE", DANGER),
+    ("reported", "REPORTED", SUCCESS),
+]
+
 # Chat Bubbles: Kind -> (Name Above the Bubble, Bubble Colour, Text Colour, Side of the Window)
 BUBBLE_STYLES = {
     "you": ("You", PRIMARY, "#ffffff", "e"),

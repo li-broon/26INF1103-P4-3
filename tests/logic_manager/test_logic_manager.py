@@ -485,3 +485,57 @@ def test_manager_prints_nothing():
     with contextlib.redirect_stdout(io.StringIO()) as output:
         make_manager()[0].process(load_sample_report("critical_electrical.json"))
     assert output.getvalue() == ""
+
+
+# MOM Register Tests
+
+# A Fake MOM Store: Remembers What it was Asked to Save, so no File is Touched
+class FakeMomStore:
+    def __init__(self, result=(True, "MOM record saved."), error=None):
+        self._result = result
+        self._error = error
+        self.saved_records = []
+
+    def save_record(self, record):
+        if self._error:
+            raise self._error
+        self.saved_records.append(record)
+        return self._result
+
+# A MOM Reportable Report is Copied to the MOM Store After the Main Save, with the Score and Deadline Already Added
+def test_mom_reportable_report_is_copied_to_mom_store():
+    mom_store = FakeMomStore()
+    manager = LogicManager(FakeDataManager(), None, mom_store)
+    outcome = manager.process(load_sample_report("critical_electrical.json"))
+    assert len(mom_store.saved_records) == 1
+    assert mom_store.saved_records[0]["mom_reportable"] == "Yes"
+    assert mom_store.saved_records[0]["deadline"] != "N/A"
+    assert outcome.message == "Record saved."
+
+# A Report that is Not MOM Reportable Never Reaches the MOM Store
+def test_non_reportable_report_is_not_copied_to_mom_store():
+    mom_store = FakeMomStore()
+    LogicManager(FakeDataManager(), None, mom_store).process(load_sample_report("near_miss_slip.json"))
+    assert mom_store.saved_records == []
+
+# If the Main Save Fails the MOM Store is Not Touched (it Must Never Hold a Report data.csv Does Not)
+def test_mom_store_is_skipped_when_main_save_fails():
+    mom_store = FakeMomStore()
+    data_manager = FakeDataManager(result=(False, "Record rejected."))
+    outcome = LogicManager(data_manager, None, mom_store).process(load_sample_report("critical_electrical.json"))
+    assert outcome.saved is False
+    assert mom_store.saved_records == []
+
+# A MOM Store Problem (False Result or OSError) Never Undoes the Main Save; it Only Adds a Note
+def test_mom_store_problem_does_not_undo_main_save():
+    for mom_store in (FakeMomStore(result=(False, "already there")), FakeMomStore(error=OSError("disk full"))):
+        data_manager = FakeDataManager()
+        outcome = LogicManager(data_manager, None, mom_store).process(load_sample_report("critical_electrical.json"))
+        assert outcome.saved is True
+        assert len(data_manager.saved_records) == 1
+        assert "MOM register not updated" in outcome.message
+
+# Without a MOM Store, Behaviour is Exactly as Before
+def test_no_mom_store_is_fine():
+    outcome = make_manager()[0].process(load_sample_report("critical_electrical.json"))
+    assert outcome.saved is True and outcome.message == "Record saved."
