@@ -5,7 +5,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from src.io_manager.constants import FILTER_COLUMNS, TABLE_COLUMNS
+from src.io_manager.constants import FILTER_COLUMNS, TABLE_COLUMNS, TRANSCRIPT_COLUMN
 from src.gui_manager.constants import (
     ALL_REPORTS, APP_TITLE, BG, DANGER, DANGER_SOFT, KEYWORD_FILTER_COLUMNS, MUTED, STAT_CARDS, SURFACE, SURFACE_ALT, TEXT,
 )
@@ -178,4 +178,6 @@ class ReportsTab(ttk.Frame):
         if not selected or self._table is None:
             return
         number = int(selected[0])
-        ReportWindow(self, self._formatter, self._table.iloc[number - 1].to_dict(), f"Report #{number}")
+        report = self._table.iloc[number - 1].to_dict()
+        transcript = self._data_manager.load_transcript(report.get(TRANSCRIPT_COLUMN))
+        ReportWindow(self, self._formatter, report, f"Report #{number}", transcript=transcript)

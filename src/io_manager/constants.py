@@ -1,4 +1,6 @@
 # Terminal Colour and Style Codes, Shared by Every IO Class (Constants Only, No Class, so the One-Class-per-File Rule Holds)
+from src.ai_manager.constants import AI_LABEL, WORKER_LABEL
+
 RESET = "\033[0m"
 BOLD = "\033[1m"
 UNDERLINE = "\033[4m"
@@ -90,6 +92,10 @@ FULL_REPORT_FIELDS = [
 
 # True/False Fields, Shown as YES/No in the Full Report
 YES_NO_COLUMNS = ("is_near_miss", "hospitalised", "lost_time_injury", "mom_reportable")
+
+# Column Naming a Report's Conversation File, and the Speaker Labels that Start Each Transcript Line ("Worker: ...", "AI: ...")
+TRANSCRIPT_COLUMN = "transcript_id"
+TRANSCRIPT_SPEAKERS = (WORKER_LABEL, AI_LABEL)
 
 FILTER_COLUMNS = [
     ("Score", "importance_score"),

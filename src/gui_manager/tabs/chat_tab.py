@@ -20,11 +20,12 @@ from src.gui_manager.windows.report_window import ReportWindow
 
 # Tab 1: Chat with the AI to Report an Incident, then Score and Save it
 class ChatTab(ttk.Frame):
-    def __init__(self, parent, ai_manager, logic_manager, formatter, on_saved):
+    def __init__(self, parent, ai_manager, logic_manager, data_manager, formatter, on_saved):
         super().__init__(parent)
         # Handed in by GUIManager, Used but Not Owned (Association)
         self._ai_manager = ai_manager
         self._logic_manager = logic_manager
+        self._data_manager = data_manager  # Only for the Transcript; the Report Itself is Saved through the Logic Manager
         self._formatter = formatter
         self._on_saved = on_saved      # Called after a Save, so the Reports Tab Refreshes
 
@@ -191,6 +192,12 @@ class ChatTab(ttk.Frame):
                                             "Please tell your supervisor about this incident directly.")
             return
 
+        # Keep the conversation next to the saved report (the report is already safe if only this part fails)
+        transcript = self._conversation.transcript
+        saved, message = self._data_manager.save_transcript(transcript.transcript_id, transcript.as_text())
+        if not saved:
+            self._chat.add_message("error", message)
+
         card_data = dict(report)
         for column in ("importance_score", "mom_reportable", "deadline"):
             card_data[column] = getattr(outcome, column)
@@ -202,4 +209,4 @@ class ChatTab(ttk.Frame):
         self._chat.add_message("good", "\n".join(lines))
 
         self._on_saved()
-        ReportWindow(self, self._formatter, card_data, "Your Saved Report")
+        ReportWindow(self, self._formatter, card_data, "Your Saved Report", transcript=transcript.as_text())

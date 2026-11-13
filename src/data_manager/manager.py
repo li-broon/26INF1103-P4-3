@@ -4,18 +4,28 @@ import pandas as pd
 from src.data_manager.filters.exact_text_filter import ExactTextFilter
 from src.data_manager.filters.report_filter import ReportFilter
 from src.data_manager.storage.record_store import RecordStore
+from src.data_manager.storage.transcript_store import TranscriptStore
 
-# The one place the rest of the app goes to save, read and filter reports (the RecordStore and ReportFilters it uses are passed in)
+# The one place the rest of the app goes to save, read and filter reports and their transcripts (the stores and filters it uses are passed in)
 class DataManager:
 
-    # store keeps the reports (a CSV file in the app) and filters maps each column to its filter; both are passed in so any store or filters work
-    def __init__(self, store: RecordStore, filters: dict[str, ReportFilter]) -> None:
+    # store keeps the reports (a CSV file in the app), transcripts keeps each report's conversation, and filters maps each column to its filter
+    def __init__(self, store: RecordStore, filters: dict[str, ReportFilter], transcripts: TranscriptStore) -> None:
         self._store = store
         self._filters = dict(filters)  # A copy, so changing the dictionary later changes nothing here
+        self._transcripts = transcripts
 
     # Saves one report. Returns (success, message)
     def save_record(self, record: dict) -> tuple[bool, str]:
         return self._store.save_record(record)
+
+    # Saves the conversation behind a report under its transcript ID. Returns (success, message)
+    def save_transcript(self, transcript_id: str, text: str) -> tuple[bool, str]:
+        return self._transcripts.save(transcript_id, text)
+
+    # The saved conversation for a transcript ID, or None if the report has none
+    def load_transcript(self, transcript_id) -> str | None:
+        return self._transcripts.load(transcript_id)
 
     # Reads all saved reports, sorted by urgency (highest first by default)
     def load_records(self, ascending: bool = False) -> pd.DataFrame:

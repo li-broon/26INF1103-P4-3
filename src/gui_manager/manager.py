@@ -47,9 +47,7 @@ class GUIManager(tk.Tk):
         formatter = WindowReportFormatter()
         tabs = ttk.Notebook(self)
         self._reports_tab = ReportsTab(tabs, data_manager, formatter)
-        # The MOM Tab Needs the MOM Register, so it is Left Out if none is Given
-        self._mom_tab = MomTab(tabs, mom_store, formatter) if mom_store is not None else None
-        self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, formatter, on_saved=self._refresh_tabs)
+        self._chat_tab = ChatTab(tabs, ai_manager, logic_manager, data_manager, formatter, on_saved=self._reports_tab.refresh)
         tabs.add(self._chat_tab, text="Report an incident")
         tabs.add(self._reports_tab, text="Saved reports")
         if self._mom_tab is not None:

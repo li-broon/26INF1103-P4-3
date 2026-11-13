@@ -13,3 +13,8 @@ DATE_FORMAT = "%Y-%m-%d"
 
 # Value the AI Stores when the Worker Really Does Not Know a Detail
 UNKNOWN_VALUE = "unknown (worker could not say)"
+
+# Report Field Linking a Saved Report to its Conversation Transcript, and the Speaker Labels in the Transcript Lines
+TRANSCRIPT_ID_FIELD = "transcript_id"
+WORKER_LABEL = "Worker"
+AI_LABEL = "AI"

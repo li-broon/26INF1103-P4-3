@@ -7,7 +7,7 @@ import os
 
 import pandas as pd
 
-from src.data_manager.constants import REQUIRED_FIELDS, URGENCY_COLUMN
+from src.data_manager.constants import REQUIRED_FIELDS, TRANSCRIPT_ID_FIELD, URGENCY_COLUMN
 from src.data_manager.storage.record_cleaner import RecordCleaner
 from src.data_manager.storage.record_store import RecordStore
 
@@ -106,6 +106,9 @@ class CsvRecordStore(RecordStore):
             row_matches = True  # Assume a match until a field proves otherwise
 
             for field, new_value in record.items():
+                # The transcript ID is new for every conversation, so it is left out (otherwise nothing could ever be a duplicate)
+                if field == TRANSCRIPT_ID_FIELD:
+                    continue
                 # Comparing the existing row's value and the new record's value
                 if self._cleaner.comparable(row.get(field)) != self._cleaner.comparable(new_value):
                     row_matches = False

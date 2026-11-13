@@ -4,13 +4,14 @@
 
 import json
 from datetime import datetime
-from src.ai_manager.constants import DATE_FORMAT, UNKNOWN_VALUE
+from src.ai_manager.constants import DATE_FORMAT, TRANSCRIPT_ID_FIELD, UNKNOWN_VALUE
 from src.ai_manager.fields.field import Field
 from src.ai_manager.fields.field_set import FieldSet
 from src.ai_manager.services.ai_service import AIService
 from src.ai_manager.services.ai_service_error import AIServiceError
 from src.ai_manager.conversation.ai_reply import AIReply
 from src.ai_manager.conversation.analysis_task import AnalysisTask
+from src.ai_manager.conversation.transcript import Transcript
 
 # ----- #
 # Class
@@ -83,7 +84,7 @@ Respond ONLY with JSON in this exact format:
         self._worker_fields = worker_fields
         self._analysis_fields = analysis_fields
         self._analysis_task = analysis_task
-        self._worker_messages = []
+        self._transcript = Transcript()  # The Chat as Written, Created and Owned Here (Composition)
         system_prompt = self.SYSTEM_PROMPT.format(
             unknown=UNKNOWN_VALUE,
             today=datetime.now().strftime(DATE_FORMAT),
@@ -92,12 +93,17 @@ Respond ONLY with JSON in this exact format:
         )
         self._chat = service.start_chat(system_prompt)
 
+    # The Untranslated Back-and-Forth so Far (Saved Next to the Report once it is Complete)
+    @property
+    def transcript(self) -> Transcript:
+        return self._transcript
+
     # Send One Worker Message and Return an AIReply (is_complete is Only True when Every Field is Valid)
     def send(self, user_text: str) -> AIReply:
         reply = self._ask(user_text)
         if reply.error:
             return reply
-        self._worker_messages.append(user_text)
+        self._transcript.add_worker(user_text)
 
         # If AI Says "complete" but Worker Details are Missing or Wrongly Formatted, Tell it to Fix Them, up to MAX_FIX_ATTEMPTS Times
         for _ in range(self.MAX_FIX_ATTEMPTS):
@@ -108,6 +114,7 @@ Respond ONLY with JSON in this exact format:
 
         # Still Collecting Details (or an Error): Show the AI's Reply as Normal
         if not reply.is_complete:
+            self._transcript.add_ai(reply.reply)
             return reply
 
         # If AI Still Says "complete" with Worker Details Missing, Don't Show its "all done" Reply, Tell the Worker what is Missing
@@ -118,11 +125,14 @@ Respond ONLY with JSON in this exact format:
 
         # If Worker Details Done, but the Analysis is Empty or Not Valid, Ask for it in a Separate Request
         if self._analysis_fields.invalid(reply.report):
-            analysis = self._analysis_task.run(reply.report, self._worker_messages)
+            analysis = self._analysis_task.run(reply.report, self._transcript.worker_messages())
             if analysis is None:
                 return AIReply(error=self.ANALYSIS_FAILED_MESSAGE)
             reply.report.update(analysis)
 
+        # Link the Finished Report to its Transcript, so the Saved Row Names the Transcript File
+        reply.report[TRANSCRIPT_ID_FIELD] = self._transcript.transcript_id
+        self._transcript.add_ai(reply.reply)
         return reply
 
     # Send One Message and Return the Parsed Reply (If it is Not in Our JSON Format, Ask the AI to Resend, up to MAX_FORMAT_RETRIES Times)

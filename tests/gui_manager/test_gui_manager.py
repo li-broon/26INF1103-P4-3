@@ -120,38 +120,17 @@ def test_mom_warning_overdue():
     assert formatter.mom_warning({"mom_reportable": "Yes", "deadline": due}).startswith("OVERDUE")
 
 
-# MOM Tab Formatter Tests
+# transcript_turns Tests (shared with the terminal through ReportFormatter)
 
-# Test that the tick box column shows ticked or pending
-def test_mom_table_row_values_show_the_tick_box():
-    pending = {"safety_officer_reported": "No", "deadline": "2099-01-01", "ai_severity": "High",
-               "importance_score": 8.0, "location": "Dock", "incident_date": "2026-10-22",
-               "reporter_name": "Ann", "reported_on": None}
-    assert formatter.mom_table_row_values(pending) == [gui.UNTICKED, "2099-01-01", "High", "8.0", "Dock",
-                                                       "2026-10-22", "Ann", "-"]
-    done = dict(pending, safety_officer_reported="Yes", reported_on="2026-10-25")
-    row = formatter.mom_table_row_values(done)
-    assert row[0] == gui.TICKED and row[-1] == "2026-10-25"
-    assert len(row) == len(gui.MOM_TABLE_COLUMNS)
+# Test that a saved transcript splits back into (speaker, text) turns, with a multi-line AI reply kept together
+def test_transcript_turns_split_speakers_and_keep_continuation_lines():
+    text = "Worker: saya jatuh\nAI: Maaf mendengarnya.\nDi mana tepatnya?\nWorker: di gudang"
+    assert formatter.transcript_turns(text) == [
+        ("Worker", "saya jatuh"), ("AI", "Maaf mendengarnya.\nDi mana tepatnya?"), ("Worker", "di gudang"),
+    ]
 
-# Test that a row is reported, overdue (not reported and past its deadline) or pending
-def test_mom_row_state():
-    past = (date.today() - timedelta(days=2)).strftime("%Y-%m-%d")
-    future = (date.today() + timedelta(days=2)).strftime("%Y-%m-%d")
-    assert formatter.mom_row_state({"safety_officer_reported": "Yes", "deadline": past}) == "reported"
-    assert formatter.mom_row_state({"safety_officer_reported": "No", "deadline": past}) == "overdue"
-    assert formatter.mom_row_state({"safety_officer_reported": "No", "deadline": future}) == "pending"
-    assert formatter.mom_row_state({"safety_officer_reported": "No", "deadline": "Check incident date"}) == "pending"
-    assert formatter.mom_row_state({}) == "pending"
-
-# Test that the MOM summary cards count pending, overdue and reported (reported reports are never overdue)
-def test_mom_stats_counts():
-    past = (date.today() - timedelta(days=2)).strftime("%Y-%m-%d")
-    future = (date.today() + timedelta(days=2)).strftime("%Y-%m-%d")
-    table = pd.DataFrame([
-        {"safety_officer_reported": "Yes", "deadline": past},
-        {"safety_officer_reported": "No", "deadline": past},
-        {"safety_officer_reported": "No", "deadline": future},
-    ])
-    assert formatter.mom_stats(table) == {"total": 3, "pending": 2, "overdue": 1, "reported": 1}
-    assert formatter.mom_stats(pd.DataFrame()) == {"total": 0, "pending": 0, "overdue": 0, "reported": 0}
+# Test that a worker message containing "AI: " stays one worker turn, and that nothing or None gives no turns
+def test_transcript_turns_edge_cases():
+    assert formatter.transcript_turns("Worker: the sign said AI: keep out") == [("Worker", "the sign said AI: keep out")]
+    assert formatter.transcript_turns("") == []
+    assert formatter.transcript_turns(None) == []

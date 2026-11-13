@@ -70,6 +70,20 @@ docker run -it --rm inf1103-p4 pytest tests/logic_manager
 to run only the `logic_manager` test cases (scoring, MOM rule and LogicManager), which fulfils the submission requirements.
 Each manager's tests are in their own folder, so `tests/ai_manager`, `tests/data_manager` or `tests/io_manager` work the same way.
 
+### Live translation check (optional, needs the API)
+
+`tests/ai_manager/test_translation_live.py` reports the same incident in English, Malay, Chinese and Tamil through the real AI and compares the four reports: the structured fields (date, time, hospitalised, hours, severity, root cause, near miss, lost-time injury) must come out identical, and the free-text fields get a similarity score against the English run. The normal `pytest` run skips it, so CI and the test commands above stay offline. To run it, with your `.env` in place:
+```bash
+LIVE_AI_TESTS=1 pytest tests/ai_manager/test_translation_live.py -s
+
+```
+or in Docker:
+```bash
+docker run -it --rm --env-file .env -e LIVE_AI_TESTS=1 inf1103-p4 pytest tests/ai_manager/test_translation_live.py -s
+
+```
+`-s` prints the comparison table for each language. It makes about 8 API calls, and the AI's wording of the free-text fields can change between runs, so read the similarity scores as a guide rather than a pass mark.
+
 ## Running the GUI with Docker
 
 The GUI (`python main.py --gui`) opens a window, so the container must be given your screen. Pick the command for your system (build the image first, as above).

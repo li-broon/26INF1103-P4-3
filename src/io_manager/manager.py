@@ -1,5 +1,7 @@
 from src.ai_manager import AIServiceError
-from src.io_manager.constants import BOLD, FILTER_BACK_OPTION, FILTER_COLUMNS, GOODBYE, RED, RESET, WELCOME, YELLOW, GREEN
+from src.io_manager.constants import (
+    BOLD, FILTER_BACK_OPTION, FILTER_COLUMNS, GOODBYE, GREEN, RED, RESET, TRANSCRIPT_COLUMN, WELCOME, YELLOW,
+)
 from src.io_manager.display.pager import Pager
 from src.io_manager.display.report_card_view import ReportCardView
 from src.io_manager.display.report_formatter import ReportFormatter
@@ -56,6 +58,9 @@ class IOManager:
                 self._card_view.show_from_table(table, number)
                 # Keep the full report on screen instead of printing the table over it
                 show_page = False
+            elif choice == 4:
+                self._show_transcript(table)
+                show_page = False
             else:
                 return
 
@@ -91,8 +96,18 @@ class IOManager:
                 self._card_view.show_from_table(table, number)
                 # Keep the full report on screen instead of printing the table over it
                 show_page = False
+            elif choice == 5:
+                self._show_transcript(table)
+                show_page = False
             else:
                 return
+
+    # Ask which report, then print the worker's conversation for it exactly as typed (untranslated)
+    def _show_transcript(self, table) -> None:
+        number = self._prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
+        transcript_id = table.iloc[number - 1].to_dict().get(TRANSCRIPT_COLUMN)
+        text = self._data_manager.load_transcript(transcript_id)
+        self._card_view.show_transcript(text, f"Conversation for Report #{number}")
 
     #Ask which column and value to filter by, then page through the matching reports
     def _filter_reports(self) -> None:
@@ -159,6 +174,13 @@ class IOManager:
             if result.is_complete:
                 outcome = self._logic_manager.process(result.report)
                 self._card_view.show_save_outcome(result.report, outcome)
+
+                # Keep the conversation next to the saved report (the report is already safe if only this part fails)
+                if outcome.saved:
+                    transcript = conversation.transcript
+                    saved, message = self._data_manager.save_transcript(transcript.transcript_id, transcript.as_text())
+                    if not saved:
+                        print(f"{YELLOW}{message}{RESET}")
 
                 if self._prompter.ask_yes_no("Would you like to view all saved reports now?"):
                     self._view_reports()
