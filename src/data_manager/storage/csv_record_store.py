@@ -35,13 +35,22 @@ class CsvRecordStore(RecordStore):
             return False, "Report rejected: missing or invalid required field."
 
         # Makes sure data folder exists
-        os.makedirs(self._data_folder, exist_ok=True)
+        try:
+            os.makedirs(self._data_folder, exist_ok=True)
+        except OSError as e:
+            logger.error("Could not create data folder '%s': %s", self._data_folder, e)
+            return False, "Report could not be saved (data folder unavailable)."
         existing_data = self._load_data_from_csv(self._data_file)
 
         # File exists but couldn't be read: keep a backup instead of overwriting it
         if existing_data.empty and os.path.exists(self._data_file) and os.path.getsize(self._data_file) > 0:
-            os.replace(self._data_file, self._data_file.replace(".csv", "_backup.csv"))
-            logger.warning("Unreadable data file backed up to '%s'.", self._data_file.replace(".csv", "_backup.csv"))
+            backup_file = self._data_file.replace(".csv", "_backup.csv")
+            try:
+                os.replace(self._data_file, backup_file)
+            except OSError as e:
+                logger.error("Could not back up '%s': %s", self._data_file, e)
+                return False, "Report could not be saved (file write error)."
+            logger.warning("Unreadable data file backed up to '%s'.", backup_file)
 
         # Checks if record is a duplicate
         if self._is_duplicate(existing_data, cleaned):
