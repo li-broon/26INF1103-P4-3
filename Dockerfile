@@ -1,7 +1,9 @@
 FROM python:3.12-slim
 
+# TZ: Singapore time, so "today" in the container matches the workers' date (the default clock is UTC, 8 hours behind)
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    TZ=Asia/Singapore
 
 WORKDIR /app
 

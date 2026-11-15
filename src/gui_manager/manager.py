@@ -80,7 +80,10 @@ class GUIManager(tk.Tk):
         try:
             shown, message = self._chart_manager.show_chart("all")
         finally:
-            self.configure(cursor="")  # Always Put the Normal Cursor Back, Even if Drawing Failed
+            try:
+                self.configure(cursor="")  # Always Put the Normal Cursor Back, Even if Drawing Failed
+            except tk.TclError:
+                pass  # The Main Window was Closed while the Chart Window was Still Open: No Cursor Left to Reset
 
         # e.g. No Reports Saved Yet, or matplotlib Not Installed: Say Why Instead of Doing Nothing
         if not shown:

@@ -72,7 +72,7 @@ SCORE_COLOURS = [
 STAT_CARDS = [
     ("total", "SAVED REPORTS", PRIMARY),
     ("mom", "MOM REPORTABLE", WARNING),
-    ("overdue", "MOM OVERDUE", DANGER),
+    ("overdue", "MOM DEADLINE PASSED", DANGER),  # Counts Every Passed Deadline, Reported or Not (the MOM Tab's "OVERDUE" Leaves Out the Reported Ones)
     ("hospitalised", "HOSPITALISED", ORANGE),
 ]
 
