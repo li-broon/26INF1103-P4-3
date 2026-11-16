@@ -1,17 +1,13 @@
-# ------- #
 # Imports
-# ------- #
 
 from src.io_manager import ReportFormatter
 from src.io_manager.constants import FULL_REPORT_FIELDS, TABLE_COLUMNS, YES_NO_COLUMNS
 from src.data_manager.constants import MOM_REPORTED_FIELD
 from src.gui_manager.constants import MOM_TABLE_COLUMNS, MUTED, SCORE_COLOURS, SURFACE_ALT, TICKED, UNTICKED
 
-# ----- #
-# Class
-# ----- #
+# Class 
 
-# Turns Report Data into What the Window Shows (Never Draws); Inherits the Terminal's YES/No Wording and Overdue Check
+# Turns Report Data into What the Window Shows 
 class WindowReportFormatter(ReportFormatter):
     # Cell as Display Text, with Blanks, None and NaN Shown as "-"
     def display_value(self, value) -> str:
@@ -51,7 +47,7 @@ class WindowReportFormatter(ReportFormatter):
             return f"OVERDUE: this incident had to be reported to MOM by {deadline}. Tell your supervisor now."
         return f"This incident must be reported to MOM by {deadline}."
 
-    # (Text Colour, Background) for a Score: Red for the Most Urgent, Green for the Least, Grey if Not a Number
+    # (Text Colour, Background),  for a Score: Red for the Most Urgent, Green for the Least, Grey if Not a Number
     def score_colours(self, score) -> tuple:
         try:
             value = float(score)

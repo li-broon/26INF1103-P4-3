@@ -1,6 +1,4 @@
-# ------- #
 # Imports
-# ------- #
 
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -12,20 +10,17 @@ from src.gui_manager.constants import (
 from src.gui_manager.theme import Theme
 from src.gui_manager.windows.report_window import ReportWindow
 
-# ----- #
 # Class
-# ----- #
 
-# Tab 2: Browse and Filter Saved Reports, Most Urgent First
+# Tab 2: view and filter saved reports, most urgent first
 class ReportsTab(ttk.Frame):
     def __init__(self, parent, data_manager, formatter):
         super().__init__(parent)
-        # Handed in by GUIManager, Used but Not Owned (Association)
         self._data_manager = data_manager
         self._formatter = formatter
-        self._table = None  # The Reports Currently Listed (a DataFrame, Most Urgent First)
+        self._table = None  # The reports currently in the table
 
-        # Summary Cards (Always Count Every Saved Report, Whatever the Filter)
+        # Summary cards (always count every saved report)
         stats_row = tk.Frame(self, bg=BG)
         stats_row.pack(fill="x", padx=24, pady=(20, 12))
         self._stat_labels = {}
@@ -38,7 +33,7 @@ class ReportsTab(ttk.Frame):
             number.pack(anchor="w", padx=18, pady=(0, 12))
             self._stat_labels[key] = number
 
-        # Filter Bar (Buttons Packed First so They Keep their Size when the Window is Narrow)
+        # Filter bar
         bar_card = Theme.card(self, fill="x", padx=24, pady=(0, 12))
         bar = tk.Frame(bar_card, bg=SURFACE)
         bar.pack(fill="x", padx=16, pady=12)
@@ -57,10 +52,10 @@ class ReportsTab(ttk.Frame):
         self._value_box = ttk.Combobox(bar, state="disabled", width=22, font=Theme.font(10))
         self._value_box.pack(side="left", padx=(10, 18))
         self._value_box.bind("<Return>", self.apply_filter)
-        self._value_box.bind("<KP_Enter>", self.apply_filter)  # The Number Pad's Enter on Linux and macOS
+        self._value_box.bind("<KP_Enter>", self.apply_filter)  # Number pad Enter
         self._value_box.bind("<<ComboboxSelected>>", self.apply_filter)
 
-        # Status Line and Hint
+        # Status line and hint
         info = tk.Frame(self, bg=BG)
         info.pack(fill="x", padx=26, pady=(0, 8))
         self._status = tk.Label(info, text="", font=Theme.font(10, "bold"), fg=TEXT, bg=BG)
@@ -68,7 +63,7 @@ class ReportsTab(ttk.Frame):
         tk.Label(info, text="Double-click a report to open it   ·   Red rows: hospitalised or MOM Reportable",
                  font=Theme.font(9), fg=MUTED, bg=BG).pack(side="right")
 
-        # Report Table
+        # Report table
         table_card = Theme.card(self, fill="both", expand=True, padx=24, pady=(0, 20))
         self._tree = ttk.Treeview(table_card, columns=["number"] + [column for _, column, _ in TABLE_COLUMNS],
                                   show="headings", selectmode="browse")
@@ -90,19 +85,19 @@ class ReportsTab(ttk.Frame):
         self._tree.bind("<Return>", self.open_selected)
         self._tree.bind("<KP_Enter>", self.open_selected)
 
-        # Shown over the Table when there is Nothing to List
+        # Shown when the table is empty
         self._empty = tk.Label(table_card, text="", font=Theme.font(11), fg=MUTED, bg=SURFACE)
 
         self.refresh()
 
-    # (Heading, data.csv Column) Chosen in the Column Box, or (None, None) for All Reports
+    # The chosen filter column, or (None, None) for all reports
     def _chosen_column(self):
         for heading, column in FILTER_COLUMNS:
             if heading == self._column_box.get():
                 return heading, column
         return None, None
 
-    # Fill the Value Box for the Chosen Column: the Filter's Pick List, or Free Typing when it Offers None (a Keyword Search)
+    # Fill the value box with choices for the chosen column
     def _column_changed(self, event=None):
         _, column = self._chosen_column()
         self._value_box.set("")
@@ -110,7 +105,7 @@ class ReportsTab(ttk.Frame):
             self._value_box.configure(state="disabled", values=[])
             self.refresh()
             return
-        # The column's filter decides: a pick list of saved values, or none for a keyword search (location), where a word is typed
+        # No choices means a keyword search (e.g. location), so the user types a word
         values = self._data_manager.get_unique_values(column)
         if values:
             self._value_box.configure(state="readonly", values=values)
@@ -118,7 +113,7 @@ class ReportsTab(ttk.Frame):
             self._value_box.configure(state="normal", values=[])
             self._value_box.focus_set()
 
-    # Put a Table of Reports into the Treeview, and Update the Summary Cards from Every Saved Report
+    # Fill the table and update the summary cards
     def _show(self, table, status, empty_message=""):
         self._table = table
         self._tree.delete(*self._tree.get_children())
@@ -139,7 +134,7 @@ class ReportsTab(ttk.Frame):
         for key, value in self._formatter.report_stats(self._data_manager.load_records()).items():
             self._stat_labels[key].configure(text=str(value))
 
-    # Reload Every Saved Report, Keeping the Current Filter if One is Applied
+    # Reload the reports, keeping the current filter
     def refresh(self):
         _, column = self._chosen_column()
         if column is not None and self._value_box.get().strip():
@@ -151,7 +146,7 @@ class ReportsTab(ttk.Frame):
             return
         self._show(table, f"All reports  ·  {len(table)} total, most urgent first")
 
-    # Show Only the Reports Matching the Chosen Column and Value
+    # Show only the reports that match the filter
     def apply_filter(self, event=None):
         heading, column = self._chosen_column()
         if column is None:
@@ -168,12 +163,12 @@ class ReportsTab(ttk.Frame):
             return
         self._show(matches, f"{heading}: {value}  ·  {len(matches)} found, most urgent first")
 
-    # Go Back to Showing Every Report
+    # Show all reports again
     def clear_filter(self):
         self._column_box.set(ALL_REPORTS)
         self._column_changed()
 
-    # Open the Highlighted Row in its Own Window (a Double-Click on the Headings or Empty Space is Ignored)
+    # Open the selected report in its own window
     def open_selected(self, event=None):
         if event is not None and event.num == 1 and self._tree.identify_region(event.x, event.y) != "cell":
             return

@@ -1,6 +1,4 @@
-# ------- #
 # Imports
-# ------- #
 
 import tkinter as tk
 from tkinter import ttk
@@ -8,21 +6,19 @@ from tkinter import ttk
 from src.gui_manager.constants import MUTED, PRIMARY_SOFT, SURFACE, TEXT
 from src.gui_manager.theme import Theme
 
-# ----- #
 # Class
-# ----- #
 
-# Tab 4: One Chart at a Time. Pick a Chart on the Left and it is Drawn Inside the Tab (No Extra Window, the App Keeps Working)
+# Tab 4: pick a chart from the list and it is drawn inside the tab
 class ChartsTab(ttk.Frame):
     def __init__(self, parent, chart_manager):
         super().__init__(parent)
-        self._chart_manager = chart_manager  # Handed in by GUIManager, Used but Not Owned (Association)
-        self._canvas = None                  # The Chart Currently Shown (a Matplotlib Tk Canvas), Replaced on Every Redraw
-        self._resizer = None                 # Keeps the Chart's Text Readable as the Tab Changes Size (Must be Kept Alive)
+        self._chart_manager = chart_manager
+        self._canvas = None    # The chart being shown
+        self._resizer = None   # Resizes the chart's text when the window changes size
         options = chart_manager.get_chart_options()
         self._choice = tk.StringVar(value=options[0][0] if options else "")
 
-        # Left: the List of Charts (Taken from the ChartManager, so a New Chart Shows Up Here Without Changing this Tab)
+        # Left side: list of charts to choose from
         picker = Theme.card(self, side="left", fill="y", padx=(24, 12), pady=20)
         tk.Label(picker, text="CHOOSE A CHART", font=Theme.font(8, "bold"), fg=MUTED, bg=SURFACE).pack(anchor="w", padx=18, pady=(16, 8))
         for key, title in options:
@@ -32,17 +28,17 @@ class ChartsTab(ttk.Frame):
         ttk.Button(picker, text="Refresh", style="Secondary.TButton", command=self.refresh).pack(
             side="bottom", fill="x", padx=18, pady=16)
 
-        # Right: the Chart Itself, or a Message Saying Why there is No Chart
+        # Right side: the chart, or a message if there is no chart
         self._chart_card = Theme.card(self, side="left", fill="both", expand=True, padx=(0, 24), pady=20)
         self._message = tk.Label(self._chart_card, text="Choose a chart on the left.", font=Theme.font(11), fg=MUTED, bg=SURFACE)
         self._message.place(relx=0.5, rely=0.5, anchor="center")
 
-    # Draw the Chosen Chart Again from the Saved Reports (Called on a Click, on Refresh, and Each Time the Tab is Opened)
+    # Draw the chosen chart using the latest saved reports
     def refresh(self):
         figure, message = self._chart_manager.build_chart(self._choice.get())
         self._clear_chart()
         if figure is None:
-            # e.g. No Reports Saved Yet, or matplotlib Not Installed: Say Why Instead of an Empty Space
+            # e.g. no reports yet, or matplotlib not installed
             self._message.configure(text=message)
             self._message.place(relx=0.5, rely=0.5, anchor="center")
             return
@@ -53,10 +49,10 @@ class ChartsTab(ttk.Frame):
         self._canvas = FigureCanvasTkAgg(figure, master=self._chart_card)
         self._canvas.get_tk_widget().configure(bg=SURFACE, highlightthickness=0)
         self._canvas.get_tk_widget().pack(fill="both", expand=True, padx=8, pady=8)
-        self._resizer = ChartResizer(figure)  # Refits the Text Each Time the Canvas is Resized
+        self._resizer = ChartResizer(figure)
         self._canvas.draw_idle()
 
-    # Remove the Old Chart so Redrawing Many Times Does Not Pile Up Canvases
+    # Remove the old chart before drawing a new one
     def _clear_chart(self):
         if self._canvas is not None:
             self._canvas.get_tk_widget().destroy()

@@ -1,9 +1,7 @@
-# ------- #
 # Imports
-# ------- #
 
-import queue  # Carries Gemini's Reply from the Background Thread to the Window
-import threading  # Gemini Replies Take Seconds, so They Run Off the Window's Thread
+import queue
+import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 
@@ -14,27 +12,24 @@ from src.gui_manager.theme import Theme
 from src.gui_manager.widgets.chat_view import ChatView
 from src.gui_manager.windows.report_window import ReportWindow
 
-# ----- #
 # Class
-# ----- #
 
-# Tab 1: Chat with the AI to Report an Incident, then Score and Save it
+# Tab 1: chat with the AI to report an incident, then score and save it
 class ChatTab(ttk.Frame):
     def __init__(self, parent, ai_manager, logic_manager, data_manager, formatter, on_saved):
         super().__init__(parent)
-        # Handed in by GUIManager, Used but Not Owned (Association)
         self._ai_manager = ai_manager
         self._logic_manager = logic_manager
-        self._data_manager = data_manager  # Only for the Transcript; the Report Itself is Saved through the Logic Manager
+        self._data_manager = data_manager  # Used to save the conversation
         self._formatter = formatter
-        self._on_saved = on_saved      # Called after a Save, so the Reports Tab Refreshes
+        self._on_saved = on_saved      # Called after a save so the other tabs refresh
 
         self._conversation = None
-        self._busy = False             # True while Waiting for Gemini, so Messages Aren't Sent Twice
-        self._finished = False         # True once the Report is Saved, until a New Report is Started
-        self._replies = queue.Queue()  # The Background Thread Leaves Gemini's Reply Here (Tkinter is Not Thread-Safe)
-        self._placeholder = False      # True while the Grey Hint is Showing in the Message Box
-        self._dots = 0                 # Animation Step for "Thinking..."
+        self._busy = False             # True while waiting for the AI, so a message is not sent twice
+        self._finished = False         # True once the report is saved
+        self._replies = queue.Queue()  # The background thread puts the AI's reply here
+        self._placeholder = False      # True while the grey hint is showing
+        self._dots = 0                 # Number of dots in "thinking..."
 
         self._chat = ChatView(self)
         self._chat.pack(fill="both", expand=True)
@@ -42,14 +37,14 @@ class ChatTab(ttk.Frame):
         self._thinking = tk.Label(self, text="", bg=BG, fg=MUTED, font=Theme.font(10, "italic"), anchor="w")
         self._thinking.pack(fill="x", padx=28, pady=(0, 4))
 
-        # Message Box and Buttons, in a Card along the Bottom
+        # Message box and buttons at the bottom
         input_card = Theme.card(self, fill="x", padx=24, pady=(0, 20))
         input_row = tk.Frame(input_card, bg=SURFACE)
         input_row.pack(fill="x", padx=12, pady=12)
         self._entry = ttk.Entry(input_row, font=Theme.font(11))
         self._entry.pack(side="left", fill="x", expand=True)
         self._entry.bind("<Return>", self.send)
-        self._entry.bind("<KP_Enter>", self.send)  # The Number Pad's Enter on Linux and macOS
+        self._entry.bind("<KP_Enter>", self.send)  # Number pad Enter
         self._entry.bind("<FocusIn>", self._hide_placeholder)
         self._entry.bind("<FocusOut>", self._show_placeholder)
         self._send_button = ttk.Button(input_row, text="Send", style="Primary.TButton", command=self.send)
@@ -59,7 +54,7 @@ class ChatTab(ttk.Frame):
 
         self.start_new_report()
 
-    # Grey Hint in the Empty Message Box
+    # Show the grey hint when the message box is empty
     def _show_placeholder(self, event=None):
         if not self._entry.get() and str(self._entry.cget("state")) == "normal":
             self._entry.insert(0, PLACEHOLDER)
@@ -72,11 +67,11 @@ class ChatTab(ttk.Frame):
             self._entry.configure(style="TEntry")
             self._placeholder = False
 
-    # What the Worker Typed (Never the Grey Hint)
+    # What the worker typed (not the grey hint)
     def _typed_text(self):
         return "" if self._placeholder else self._entry.get().strip()
 
-    # Turn the Message Box and Send Button On or Off Together (the Hint is Removed While Still Editable)
+    # Turn the message box and Send button on or off
     def _set_input(self, enabled):
         self._hide_placeholder()
         state = "normal" if enabled else "disabled"
@@ -85,7 +80,7 @@ class ChatTab(ttk.Frame):
         if enabled:
             self._entry.focus_set()
 
-    # Animated "Chatbot is thinking..." Line while Waiting for Gemini
+    # "Chatbot is thinking..." with moving dots while waiting
     def _animate_thinking(self):
         if not self._busy:
             self._thinking.configure(text="")
@@ -94,7 +89,7 @@ class ChatTab(ttk.Frame):
         self._thinking.configure(text="Chatbot is thinking" + "." * self._dots)
         self.after(THINKING_MS, self._animate_thinking)
 
-    # Clear the Chat and Start a Fresh Conversation (Shows the Error if the API Key is Missing)
+    # Clear the chat and start a new conversation
     def start_new_report(self):
         self._chat.clear()
         self._finished = False
@@ -102,14 +97,14 @@ class ChatTab(ttk.Frame):
 
         try:
             self._conversation = self._ai_manager.start_conversation()
-        except AIServiceError as error:
+        except AIServiceError as error:  # e.g. missing API key
             self._conversation = None
             self._chat.add_message("error", error.message)
             self._set_input(False)
             return
         self._set_input(True)
 
-    # "New report" Button: Confirm First if a Report is Half Done
+    # "New report" button: ask first if a report is not finished
     def ask_new_report(self):
         if self._busy:
             messagebox.showinfo(APP_TITLE, "Please wait for the chatbot to finish replying.", parent=self)
@@ -120,7 +115,7 @@ class ChatTab(ttk.Frame):
                 return
         self.start_new_report()
 
-    # Send the Worker's Message to Gemini in the Background
+    # Send the worker's message to the AI in the background
     def send(self, event=None):
         if self._busy or self._conversation is None or self._finished:
             return
@@ -129,7 +124,7 @@ class ChatTab(ttk.Frame):
             return
         self._entry.delete(0, "end")
 
-        # Typing "quit" Works the Same as in the Terminal
+        # Typing "quit" works like in the terminal
         if user_text.lower() in CANCEL_WORDS:
             self.ask_new_report()
             return
@@ -141,15 +136,15 @@ class ChatTab(ttk.Frame):
         threading.Thread(target=self._worker, args=(user_text,), daemon=True).start()
         self.after(POLL_MS, self._check_for_reply)
 
-    # Runs on the Background Thread: Never Touches Tkinter, Only Puts the Reply in the Queue
+    # Runs in the background thread, so it must not touch the window
     def _worker(self, user_text):
         try:
             reply = self._conversation.send(user_text)
-        except Exception as error:  # A Crash Here Would Otherwise Leave the Window Stuck on "Thinking..."
+        except Exception as error:  # Otherwise the window would be stuck on "thinking..."
             reply = error
         self._replies.put(reply)
 
-    # Runs on the Window's Thread: Check for Gemini's Reply, and Look Again Shortly if it Isn't Here Yet
+    # Check if the reply has arrived, and check again later if not
     def _check_for_reply(self):
         try:
             reply = self._replies.get_nowait()
@@ -158,7 +153,7 @@ class ChatTab(ttk.Frame):
             return
         self._show_reply(reply)
 
-    # Show the Reply, and Save the Report once it is Complete
+    # Show the reply, and save the report once it is complete
     def _show_reply(self, reply):
         self._busy = False
         self._thinking.configure(text="")
@@ -181,18 +176,17 @@ class ChatTab(ttk.Frame):
 
         self._save_report(reply.report)
 
-    # Score and Save the Finished Report through the Logic Manager, then Show the Worker What was Saved
+    # Score and save the report, then show the worker what was saved
     def _save_report(self, report):
         self._finished = True
         outcome = self._logic_manager.process(report)
 
-        # Only Claim Success when the Data Manager Actually Wrote the Record
         if not outcome.saved:
             self._chat.add_message("error", f"Your report was NOT saved. {outcome.message}\n"
                                             "Please tell your supervisor about this incident directly.")
             return
 
-        # Keep the conversation next to the saved report (the report is already safe if only this part fails)
+        # Save the conversation too (the report is already saved even if this fails)
         transcript = self._conversation.transcript
         saved, message = self._data_manager.save_transcript(transcript.transcript_id, transcript.as_text())
         if not saved:
