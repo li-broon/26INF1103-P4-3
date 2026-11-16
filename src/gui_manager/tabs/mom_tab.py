@@ -1,6 +1,4 @@
-# ------- #
 # Imports
-# ------- #
 
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -14,21 +12,18 @@ from src.gui_manager.constants import (
 from src.gui_manager.theme import Theme
 from src.gui_manager.windows.report_window import ReportWindow
 
-# ----- #
 # Class
-# ----- #
 
-# Tab 3: the MOM Register. Only MOM Reportable Reports, with a Tick Box for "the Safety Officer has Reported This"; Ticking Writes Straight to mom_data.csv
+# Tab 3: MOM reportable incidents, with a tick box for when the safety officer has reported them
 class MomTab(ttk.Frame):
     def __init__(self, parent, mom_store, data_manager, formatter):
         super().__init__(parent)
-        # Handed in by GUIManager, Used but Not Owned (Association)
         self._mom_store = mom_store
-        self._data_manager = data_manager  # Only for a report's conversation transcript; the register itself is the MOM store's
+        self._data_manager = data_manager  # Used to load a report's conversation
         self._formatter = formatter
-        self._table = None  # The Register as Last Loaded (a DataFrame); Rows are Found by their mom_id
+        self._table = None  # The MOM reports currently loaded
 
-        # Summary Cards (Always Count the Whole Register, Whatever "Show" is Set To)
+        # Summary cards (always count every MOM report)
         stats_row = tk.Frame(self, bg=BG)
         stats_row.pack(fill="x", padx=24, pady=(20, 12))
         self._stat_labels = {}
@@ -41,7 +36,7 @@ class MomTab(ttk.Frame):
             number.pack(anchor="w", padx=18, pady=(0, 12))
             self._stat_labels[key] = number
 
-        # Bar: Buttons Packed First so they Keep their Size when the Window is Narrow
+        # Buttons and the "Show" drop-down
         bar_card = Theme.card(self, fill="x", padx=24, pady=(0, 12))
         bar = tk.Frame(bar_card, bg=SURFACE)
         bar.pack(fill="x", padx=16, pady=12)
@@ -56,7 +51,7 @@ class MomTab(ttk.Frame):
         self._show_box.pack(side="left", padx=(10, 0))
         self._show_box.bind("<<ComboboxSelected>>", lambda event: self.refresh())
 
-        # Status Line and Hint
+        # Status line and hint
         info = tk.Frame(self, bg=BG)
         info.pack(fill="x", padx=26, pady=(0, 8))
         self._status = tk.Label(info, text="", font=Theme.font(10, "bold"), fg=TEXT, bg=BG)
@@ -64,7 +59,7 @@ class MomTab(ttk.Frame):
         tk.Label(info, text="Click a tick box (or press Space) once the safety officer has reported it   ·   Double-click a row to open it",
                  font=Theme.font(9), fg=MUTED, bg=BG).pack(side="right")
 
-        # MOM Table
+        # MOM table
         table_card = Theme.card(self, fill="both", expand=True, padx=24, pady=(0, 20))
         self._tree = ttk.Treeview(table_card, columns=[column for _, column, _ in MOM_TABLE_COLUMNS],
                                   show="headings", selectmode="browse")
@@ -86,12 +81,12 @@ class MomTab(ttk.Frame):
         self._tree.bind("<Return>", self.open_selected)
         self._tree.bind("<KP_Enter>", self.open_selected)
 
-        # Shown over the Table when there is Nothing to List
+        # Shown when the table is empty
         self._empty = tk.Label(table_card, text="", font=Theme.font(11), fg=MUTED, bg=SURFACE)
 
         self.refresh()
 
-    # Reload the Register from the File, Keeping the "Show" Choice and the Highlighted Row
+    # Reload the MOM reports from the file
     def refresh(self):
         selected = self._tree.selection()
         self._table = self._mom_store.load_records()
@@ -117,7 +112,7 @@ class MomTab(ttk.Frame):
         else:
             self._empty.place_forget()
 
-    # The Reports that Match the "Show" Box
+    # The reports that match the "Show" choice
     def _filtered(self, table):
         if table.empty or self._show_box.get() == MOM_SHOW_ALL:
             return table
@@ -125,7 +120,7 @@ class MomTab(ttk.Frame):
         keep = [self._formatter.is_reported(report) == wanted for report in table.to_dict("records")]
         return table[keep]
 
-    # A Click on the Tick Box Cell Ticks or Unticks that Row; a Click Anywhere Else Just Selects it
+    # Clicking the tick box ticks or unticks that row
     def _clicked(self, event):
         if self._tree.identify_region(event.x, event.y) != "cell" or self._tree.identify_column(event.x) != "#1":
             return
@@ -133,9 +128,9 @@ class MomTab(ttk.Frame):
         if row:
             self._tree.selection_set(row)
             self._toggle(row)
-            return "break"  # Stops Tk from Also Starting its Own Selection
+            return "break"  # Stop the normal click handling
 
-    # "Tick / untick selected" Button and the Space Key
+    # "Tick / untick selected" button and the Space key
     def toggle_selected(self, event=None):
         selected = self._tree.selection()
         if not selected:
@@ -144,7 +139,7 @@ class MomTab(ttk.Frame):
         self._toggle(selected[0])
         return "break"
 
-    # Flip the Reported Status of One Report and Save it to the Register File Straight Away
+    # Switch a report between reported and not reported, and save it
     def _toggle(self, mom_id):
         matches = self._table[self._table[MOM_ID_FIELD] == mom_id]
         if matches.empty:
@@ -157,11 +152,11 @@ class MomTab(ttk.Frame):
             messagebox.showerror(APP_TITLE, f"Could not update the MOM register. {message}", parent=self)
         self.refresh()
 
-    # Open the Double-Clicked or Highlighted Row in its Own Window (a Double-Click on the Headings or Empty Space is Ignored)
+    # Open the selected report in its own window
     def open_selected(self, event=None):
         if event is not None and event.num == 1:
             if self._tree.identify_region(event.x, event.y) != "cell" or self._tree.identify_column(event.x) == "#1":
-                return  # Headings, Empty Space and the Tick Box Column Never Open a Report
+                return  # Ignore headings, empty space and the tick box column
         selected = self._tree.selection()
         if not selected or self._table is None:
             return

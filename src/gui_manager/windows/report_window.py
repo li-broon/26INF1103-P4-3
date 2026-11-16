@@ -1,6 +1,4 @@
-# ------- #
 # Imports
-# ------- #
 
 import tkinter as tk
 from tkinter import ttk
@@ -12,11 +10,9 @@ from src.gui_manager.constants import (
 from src.gui_manager.theme import Theme
 from src.gui_manager.windows.transcript_window import TranscriptWindow
 
-# ----- #
 # Class
-# ----- #
 
-# Pop-Up Window Showing One Full Report (a Report Opened from the Table, or the One Just Saved), with its Conversation a Click Away
+# Pop-up window showing one full report
 class ReportWindow(tk.Toplevel):
     def __init__(self, parent, formatter, report: dict, title: str, transcript: str | None = None):
         super().__init__(parent, bg=BG)
@@ -24,11 +20,11 @@ class ReportWindow(tk.Toplevel):
         scale = Theme.fit_window(self, REPORT_WINDOW_WIDTH, REPORT_WINDOW_HEIGHT)
         self.transient(parent.winfo_toplevel())
         self._formatter = formatter
-        self._transcript = transcript  # The Saved Conversation Text, or None for a Report Without One
+        self._transcript = transcript  # The saved conversation, or None
         self._title = title
         show = formatter.display_value
 
-        # Header: Title, Who/Where/When, and Badges
+        # Header: title, who/where/when, and badges
         header = Theme.card(self, fill="x", padx=20, pady=(20, 12))
         inner = tk.Frame(header, bg=SURFACE)
         inner.pack(fill="x", padx=20, pady=16)
@@ -55,14 +51,14 @@ class ReportWindow(tk.Toplevel):
         for text, colour, background in badge_specs:
             Theme.badge(badges, text, colour, background).pack(side="left", padx=(0, 6))
 
-        # The MOM Deadline is a Legal Requirement, so it Sits Above Everything Else
+        # MOM deadline warning at the top
         warning = formatter.mom_warning(report)
         if warning:
             tk.Label(self, text=warning, fg=DANGER, bg=DANGER_SOFT, font=Theme.font(10, "bold"), anchor="w",
                      justify="left", padx=16, pady=10, wraplength=int(580 * scale),
                      highlightthickness=1, highlightbackground="#fecaca").pack(fill="x", padx=20, pady=(0, 12))
 
-        # Footer Packed Before the Body, so it Keeps its Place when the Window is Made Smaller
+        # Footer is packed first so it stays visible when the window is small
         footer = tk.Frame(self, bg=BG)
         footer.pack(side="bottom", fill="x", padx=20, pady=(0, 20))
         ttk.Button(footer, text="Close", style="Secondary.TButton", command=self.destroy).pack(side="right")
@@ -70,7 +66,7 @@ class ReportWindow(tk.Toplevel):
             ttk.Button(footer, text="View transcript", style="Secondary.TButton",
                        command=self._open_transcript).pack(side="left")
 
-        # Every Field, Label Above Value
+        # Every field, with its label above the value
         body = Theme.card(self, fill="both", expand=True, padx=20, pady=(0, 12))
         text = tk.Text(body, wrap="word", relief="flat", bd=0, bg=SURFACE, fg=TEXT, padx=20, pady=12,
                        font=Theme.font(11), highlightthickness=0, cursor="arrow")
@@ -85,12 +81,12 @@ class ReportWindow(tk.Toplevel):
         for label, value in formatter.full_report_lines(report):
             text.insert("end", label.upper() + "\n", "label")
             text.insert("end", value + "\n", "alert" if value == "YES" else "value")
-        text.configure(state="disabled")  # Read Only: Saved Reports are Not Edited Here
+        text.configure(state="disabled")  # Read only
 
-        # Lambda Drops the Event Tkinter Passes, since destroy() Takes None
+        # Esc closes the window
         self.bind("<Escape>", lambda event: self.destroy())
         self.focus_set()
 
-    # "View transcript" Button: the Untranslated Chat Behind this Report, in a Third Window
+    # "View transcript" button: opens the original conversation
     def _open_transcript(self):
         TranscriptWindow(self, self._formatter.transcript_turns(self._transcript), f"Transcript for {self._title}")

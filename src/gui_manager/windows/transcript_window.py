@@ -1,6 +1,4 @@
-# ------- #
 # Imports
-# ------- #
 
 import tkinter as tk
 from tkinter import ttk
@@ -10,11 +8,9 @@ from src.gui_manager.constants import BG, MUTED, REPORT_WINDOW_HEIGHT, REPORT_WI
 from src.gui_manager.theme import Theme
 from src.gui_manager.widgets.chat_view import ChatView
 
-# ----- #
 # Class
-# ----- #
 
-# Pop-Up Window Showing a Saved Conversation as Chat Bubbles, the Way the Chat Tab Showed it at the Time
+# Pop-up window showing a saved conversation as chat bubbles
 class TranscriptWindow(tk.Toplevel):
     def __init__(self, parent, turns: list, title: str):
         super().__init__(parent, bg=BG)
@@ -28,12 +24,12 @@ class TranscriptWindow(tk.Toplevel):
         tk.Label(inner, text=title, font=Theme.font(16, "bold"), fg=TEXT, bg=SURFACE).pack(anchor="w")
         tk.Label(inner, text=TRANSCRIPT_NOTE, font=Theme.font(10), fg=MUTED, bg=SURFACE).pack(anchor="w", pady=(2, 0))
 
-        # Footer Packed Before the Chat, so it Keeps its Place when the Window is Made Smaller
+        # Footer is packed first so it stays visible when the window is small
         footer = tk.Frame(self, bg=BG)
         footer.pack(side="bottom", fill="x", padx=20, pady=(0, 20))
         ttk.Button(footer, text="Close", style="Secondary.TButton", command=self.destroy).pack(side="right")
 
-        # The Same Bubble List as the Chat Tab: the Worker on the Right, the Chatbot on the Left
+        # Worker on the right, chatbot on the left
         chat = ChatView(self)
         chat.pack(fill="both", expand=True, pady=(0, 12))
         for speaker, text in turns:
