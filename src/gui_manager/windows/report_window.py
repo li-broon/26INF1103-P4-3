@@ -9,7 +9,7 @@ from src.gui_manager.constants import (
     BG, DANGER, DANGER_SOFT, MUTED, PRIMARY, PRIMARY_SOFT, REPORT_WINDOW_HEIGHT, REPORT_WINDOW_WIDTH,
     SUCCESS, SUCCESS_SOFT, SURFACE, TEXT,
 )
-from src.gui_manager.theme import badge, card, fit_window, font
+from src.gui_manager.theme import Theme
 from src.gui_manager.windows.transcript_window import TranscriptWindow
 
 # ----- #
@@ -21,7 +21,7 @@ class ReportWindow(tk.Toplevel):
     def __init__(self, parent, formatter, report: dict, title: str, transcript: str | None = None):
         super().__init__(parent, bg=BG)
         self.title(title)
-        scale = fit_window(self, REPORT_WINDOW_WIDTH, REPORT_WINDOW_HEIGHT)
+        scale = Theme.fit_window(self, REPORT_WINDOW_WIDTH, REPORT_WINDOW_HEIGHT)
         self.transient(parent.winfo_toplevel())
         self._formatter = formatter
         self._transcript = transcript  # The Saved Conversation Text, or None for a Report Without One
@@ -29,16 +29,16 @@ class ReportWindow(tk.Toplevel):
         show = formatter.display_value
 
         # Header: Title, Who/Where/When, and Badges
-        header = card(self, fill="x", padx=20, pady=(20, 12))
+        header = Theme.card(self, fill="x", padx=20, pady=(20, 12))
         inner = tk.Frame(header, bg=SURFACE)
         inner.pack(fill="x", padx=20, pady=16)
-        tk.Label(inner, text=title, font=font(16, "bold"), fg=TEXT, bg=SURFACE).pack(anchor="w")
+        tk.Label(inner, text=title, font=Theme.font(16, "bold"), fg=TEXT, bg=SURFACE).pack(anchor="w")
 
         when = " ".join(part for part in (show(report.get("incident_date")), show(report.get("incident_time"))) if part != "-")
         summary = "  ·  ".join(part for part in (show(report.get("reporter_name")), show(report.get("location")), when)
                                if part and part != "-")
         if summary:
-            tk.Label(inner, text=summary, font=font(10), fg=MUTED, bg=SURFACE,
+            tk.Label(inner, text=summary, font=Theme.font(10), fg=MUTED, bg=SURFACE,
                      wraplength=int(560 * scale), justify="left").pack(anchor="w", pady=(2, 10))
 
         badges = tk.Frame(inner, bg=SURFACE)
@@ -53,12 +53,12 @@ class ReportWindow(tk.Toplevel):
         else:
             badge_specs.append(("Not MOM Reportable", SUCCESS, SUCCESS_SOFT))
         for text, colour, background in badge_specs:
-            badge(badges, text, colour, background).pack(side="left", padx=(0, 6))
+            Theme.badge(badges, text, colour, background).pack(side="left", padx=(0, 6))
 
         # The MOM Deadline is a Legal Requirement, so it Sits Above Everything Else
         warning = formatter.mom_warning(report)
         if warning:
-            tk.Label(self, text=warning, fg=DANGER, bg=DANGER_SOFT, font=font(10, "bold"), anchor="w",
+            tk.Label(self, text=warning, fg=DANGER, bg=DANGER_SOFT, font=Theme.font(10, "bold"), anchor="w",
                      justify="left", padx=16, pady=10, wraplength=int(580 * scale),
                      highlightthickness=1, highlightbackground="#fecaca").pack(fill="x", padx=20, pady=(0, 12))
 
@@ -71,17 +71,17 @@ class ReportWindow(tk.Toplevel):
                        command=self._open_transcript).pack(side="left")
 
         # Every Field, Label Above Value
-        body = card(self, fill="both", expand=True, padx=20, pady=(0, 12))
+        body = Theme.card(self, fill="both", expand=True, padx=20, pady=(0, 12))
         text = tk.Text(body, wrap="word", relief="flat", bd=0, bg=SURFACE, fg=TEXT, padx=20, pady=12,
-                       font=font(11), highlightthickness=0, cursor="arrow")
+                       font=Theme.font(11), highlightthickness=0, cursor="arrow")
         scrollbar = ttk.Scrollbar(body, command=text.yview)
         text.configure(yscrollcommand=scrollbar.set)
         scrollbar.pack(side="right", fill="y")
         text.pack(side="left", fill="both", expand=True)
 
-        text.tag_configure("label", font=font(8, "bold"), foreground=MUTED, spacing1=12)
-        text.tag_configure("value", font=font(11), foreground=TEXT, spacing1=2, lmargin1=0)
-        text.tag_configure("alert", font=font(11, "bold"), foreground=DANGER, spacing1=2)
+        text.tag_configure("label", font=Theme.font(8, "bold"), foreground=MUTED, spacing1=12)
+        text.tag_configure("value", font=Theme.font(11), foreground=TEXT, spacing1=2, lmargin1=0)
+        text.tag_configure("alert", font=Theme.font(11, "bold"), foreground=DANGER, spacing1=2)
         for label, value in formatter.full_report_lines(report):
             text.insert("end", label.upper() + "\n", "label")
             text.insert("end", value + "\n", "alert" if value == "YES" else "value")

@@ -15,7 +15,7 @@ from src.gui_manager.tabs.charts_tab import ChartsTab
 from src.gui_manager.tabs.chat_tab import ChatTab
 from src.gui_manager.tabs.mom_tab import MomTab
 from src.gui_manager.tabs.reports_tab import ReportsTab
-from src.gui_manager.theme import apply_theme, fit_window, font
+from src.gui_manager.theme import Theme
 
 # ----- #
 # Class
@@ -31,17 +31,17 @@ class GUIManager(tk.Tk):
 
         # True Gives the Report Windows the Icon Too; Tk Copies the Image, so it Need Not be Kept
         self.iconphoto(True, tk.PhotoImage(file=ICON_FILE))
-        fit_window(self, WINDOW_WIDTH, WINDOW_HEIGHT)
-        apply_theme(self)
+        Theme.fit_window(self, WINDOW_WIDTH, WINDOW_HEIGHT)
+        Theme.apply(self)
 
         # Header Bar: App Name, then a Full-Width Red Strip with the Emergency Reminder
         header = tk.Frame(self, bg=HEADER_BG)
         header.pack(fill="x")
         titles = tk.Frame(header, bg=HEADER_BG)
         titles.pack(side="left", padx=24, pady=16)
-        tk.Label(titles, text=APP_TITLE, font=font(16, "bold"), fg=HEADER_TEXT, bg=HEADER_BG).pack(anchor="w")
-        tk.Label(titles, text=APP_SUBTITLE, font=font(10), fg=HEADER_MUTED, bg=HEADER_BG).pack(anchor="w")
-        tk.Label(self, text=f"⚠  {EMERGENCY_TEXT}", font=font(10, "bold"), fg="#ffffff", bg=DANGER,
+        tk.Label(titles, text=APP_TITLE, font=Theme.font(16, "bold"), fg=HEADER_TEXT, bg=HEADER_BG).pack(anchor="w")
+        tk.Label(titles, text=APP_SUBTITLE, font=Theme.font(10), fg=HEADER_MUTED, bg=HEADER_BG).pack(anchor="w")
+        tk.Label(self, text=f"⚠  {EMERGENCY_TEXT}", font=Theme.font(10, "bold"), fg="#ffffff", bg=DANGER,
                  pady=7).pack(fill="x")
 
         # Created and Owned by this Window (Composition); the Managers are Only Handed On
@@ -62,7 +62,7 @@ class GUIManager(tk.Tk):
                   lambda event: self._charts_tab.refresh() if tabs.select() == str(self._charts_tab) else None)
         # "View all charts" Button in the Tab Row, Just After the "Saved reports" Tab
         # (Each Tab is Its Text Plus 20px Padding on Both Sides, and the Row Starts 20px In, as Set in theme.py)
-        tab_font = tkfont.Font(font=font(10, "bold"))
+        tab_font = tkfont.Font(font=Theme.font(10, "bold"))
         tabs_end = 20 + sum(tab_font.measure(tabs.tab(tab, "text")) + 40 for tab in tabs.tabs())
         ttk.Button(self, text="View all charts", style="Secondary.TButton",
                     command=self._show_all_charts).place(in_=tabs, x=tabs_end + 24, y=8)

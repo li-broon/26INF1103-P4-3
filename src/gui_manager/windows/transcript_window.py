@@ -7,7 +7,7 @@ from tkinter import ttk
 
 from src.ai_manager.constants import WORKER_LABEL
 from src.gui_manager.constants import BG, MUTED, REPORT_WINDOW_HEIGHT, REPORT_WINDOW_WIDTH, SURFACE, TEXT, TRANSCRIPT_NOTE
-from src.gui_manager.theme import card, fit_window, font
+from src.gui_manager.theme import Theme
 from src.gui_manager.widgets.chat_view import ChatView
 
 # ----- #
@@ -19,14 +19,14 @@ class TranscriptWindow(tk.Toplevel):
     def __init__(self, parent, turns: list, title: str):
         super().__init__(parent, bg=BG)
         self.title(title)
-        fit_window(self, REPORT_WINDOW_WIDTH, REPORT_WINDOW_HEIGHT)
+        Theme.fit_window(self, REPORT_WINDOW_WIDTH, REPORT_WINDOW_HEIGHT)
         self.transient(parent.winfo_toplevel())
 
-        header = card(self, fill="x", padx=20, pady=(20, 12))
+        header = Theme.card(self, fill="x", padx=20, pady=(20, 12))
         inner = tk.Frame(header, bg=SURFACE)
         inner.pack(fill="x", padx=20, pady=16)
-        tk.Label(inner, text=title, font=font(16, "bold"), fg=TEXT, bg=SURFACE).pack(anchor="w")
-        tk.Label(inner, text=TRANSCRIPT_NOTE, font=font(10), fg=MUTED, bg=SURFACE).pack(anchor="w", pady=(2, 0))
+        tk.Label(inner, text=title, font=Theme.font(16, "bold"), fg=TEXT, bg=SURFACE).pack(anchor="w")
+        tk.Label(inner, text=TRANSCRIPT_NOTE, font=Theme.font(10), fg=MUTED, bg=SURFACE).pack(anchor="w", pady=(2, 0))
 
         # Footer Packed Before the Chat, so it Keeps its Place when the Window is Made Smaller
         footer = tk.Frame(self, bg=BG)

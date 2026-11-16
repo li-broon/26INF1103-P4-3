@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from src.gui_manager.constants import MUTED, PRIMARY_SOFT, SURFACE, TEXT
-from src.gui_manager.theme import card, font
+from src.gui_manager.theme import Theme
 
 # ----- #
 # Class
@@ -23,18 +23,18 @@ class ChartsTab(ttk.Frame):
         self._choice = tk.StringVar(value=options[0][0] if options else "")
 
         # Left: the List of Charts (Taken from the ChartManager, so a New Chart Shows Up Here Without Changing this Tab)
-        picker = card(self, side="left", fill="y", padx=(24, 12), pady=20)
-        tk.Label(picker, text="CHOOSE A CHART", font=font(8, "bold"), fg=MUTED, bg=SURFACE).pack(anchor="w", padx=18, pady=(16, 8))
+        picker = Theme.card(self, side="left", fill="y", padx=(24, 12), pady=20)
+        tk.Label(picker, text="CHOOSE A CHART", font=Theme.font(8, "bold"), fg=MUTED, bg=SURFACE).pack(anchor="w", padx=18, pady=(16, 8))
         for key, title in options:
-            tk.Radiobutton(picker, text=title, value=key, variable=self._choice, command=self.refresh, font=font(10),
+            tk.Radiobutton(picker, text=title, value=key, variable=self._choice, command=self.refresh, font=Theme.font(10),
                            fg=TEXT, bg=SURFACE, activebackground=PRIMARY_SOFT, selectcolor=SURFACE, anchor="w",
                            highlightthickness=0, padx=4, pady=4).pack(fill="x", padx=14)
         ttk.Button(picker, text="Refresh", style="Secondary.TButton", command=self.refresh).pack(
             side="bottom", fill="x", padx=18, pady=16)
 
         # Right: the Chart Itself, or a Message Saying Why there is No Chart
-        self._chart_card = card(self, side="left", fill="both", expand=True, padx=(0, 24), pady=20)
-        self._message = tk.Label(self._chart_card, text="Choose a chart on the left.", font=font(11), fg=MUTED, bg=SURFACE)
+        self._chart_card = Theme.card(self, side="left", fill="both", expand=True, padx=(0, 24), pady=20)
+        self._message = tk.Label(self._chart_card, text="Choose a chart on the left.", font=Theme.font(11), fg=MUTED, bg=SURFACE)
         self._message.place(relx=0.5, rely=0.5, anchor="center")
 
     # Draw the Chosen Chart Again from the Saved Reports (Called on a Click, on Refresh, and Each Time the Tab is Opened)

@@ -11,7 +11,7 @@ from src.gui_manager.constants import (
     APP_TITLE, BG, DANGER, DANGER_SOFT, MOM_SHOW_ALL, MOM_SHOW_PENDING, MOM_SHOW_REPORTED, MOM_STAT_CARDS,
     MOM_TABLE_COLUMNS, MUTED, SUCCESS, SUCCESS_SOFT, SURFACE, TEXT,
 )
-from src.gui_manager.theme import card, font
+from src.gui_manager.theme import Theme
 from src.gui_manager.windows.report_window import ReportWindow
 
 # ----- #
@@ -33,16 +33,16 @@ class MomTab(ttk.Frame):
         stats_row.pack(fill="x", padx=24, pady=(20, 12))
         self._stat_labels = {}
         for column, (key, caption, colour) in enumerate(MOM_STAT_CARDS):
-            stat = card(stats_row)
+            stat = Theme.card(stats_row)
             stat.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 12, 0))
             stats_row.columnconfigure(column, weight=1, uniform="mom_stats")
-            tk.Label(stat, text=caption, font=font(8, "bold"), fg=MUTED, bg=SURFACE).pack(anchor="w", padx=18, pady=(14, 0))
-            number = tk.Label(stat, text="0", font=font(22, "bold"), fg=colour, bg=SURFACE)
+            tk.Label(stat, text=caption, font=Theme.font(8, "bold"), fg=MUTED, bg=SURFACE).pack(anchor="w", padx=18, pady=(14, 0))
+            number = tk.Label(stat, text="0", font=Theme.font(22, "bold"), fg=colour, bg=SURFACE)
             number.pack(anchor="w", padx=18, pady=(0, 12))
             self._stat_labels[key] = number
 
         # Bar: Buttons Packed First so they Keep their Size when the Window is Narrow
-        bar_card = card(self, fill="x", padx=24, pady=(0, 12))
+        bar_card = Theme.card(self, fill="x", padx=24, pady=(0, 12))
         bar = tk.Frame(bar_card, bg=SURFACE)
         bar.pack(fill="x", padx=16, pady=12)
         ttk.Button(bar, text="Refresh", style="Secondary.TButton", command=self.refresh).pack(side="right")
@@ -50,7 +50,7 @@ class MomTab(ttk.Frame):
                    command=self.toggle_selected).pack(side="right", padx=8)
 
         ttk.Label(bar, text="SHOW", style="CardMuted.TLabel").pack(side="left")
-        self._show_box = ttk.Combobox(bar, state="readonly", width=18, font=font(10),
+        self._show_box = ttk.Combobox(bar, state="readonly", width=18, font=Theme.font(10),
                                       values=[MOM_SHOW_ALL, MOM_SHOW_PENDING, MOM_SHOW_REPORTED])
         self._show_box.set(MOM_SHOW_ALL)
         self._show_box.pack(side="left", padx=(10, 0))
@@ -59,13 +59,13 @@ class MomTab(ttk.Frame):
         # Status Line and Hint
         info = tk.Frame(self, bg=BG)
         info.pack(fill="x", padx=26, pady=(0, 8))
-        self._status = tk.Label(info, text="", font=font(10, "bold"), fg=TEXT, bg=BG)
+        self._status = tk.Label(info, text="", font=Theme.font(10, "bold"), fg=TEXT, bg=BG)
         self._status.pack(side="left")
         tk.Label(info, text="Click a tick box (or press Space) once the safety officer has reported it   ·   Double-click a row to open it",
-                 font=font(9), fg=MUTED, bg=BG).pack(side="right")
+                 font=Theme.font(9), fg=MUTED, bg=BG).pack(side="right")
 
         # MOM Table
-        table_card = card(self, fill="both", expand=True, padx=24, pady=(0, 20))
+        table_card = Theme.card(self, fill="both", expand=True, padx=24, pady=(0, 20))
         self._tree = ttk.Treeview(table_card, columns=[column for _, column, _ in MOM_TABLE_COLUMNS],
                                   show="headings", selectmode="browse")
         centred = ("safety_officer_reported", "importance_score", "ai_severity")
@@ -87,7 +87,7 @@ class MomTab(ttk.Frame):
         self._tree.bind("<KP_Enter>", self.open_selected)
 
         # Shown over the Table when there is Nothing to List
-        self._empty = tk.Label(table_card, text="", font=font(11), fg=MUTED, bg=SURFACE)
+        self._empty = tk.Label(table_card, text="", font=Theme.font(11), fg=MUTED, bg=SURFACE)
 
         self.refresh()
 
