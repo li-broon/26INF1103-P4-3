@@ -1,6 +1,4 @@
-# ------- #
 # Imports
-# ------- #
 
 import tkinter as tk
 from tkinter import ttk
@@ -10,11 +8,9 @@ from src.gui_manager.constants import (
 )
 from src.gui_manager.theme import Theme
 
-# ----- #
 # Class
-# ----- #
 
-# Scrolling List of Chat Bubbles, with the Welcome Card at the Top
+# Scrolling list of chat bubbles, with a welcome card at the top
 class ChatView(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg=BG)
@@ -26,31 +22,30 @@ class ChatView(tk.Frame):
 
         self._inner = tk.Frame(self._canvas, bg=BG)
         self._window = self._canvas.create_window((0, 0), window=self._inner, anchor="nw")
-        self._wrapped = []  # (Label, Share of the Width), so Text Re-Wraps when the Window is Resized
+        self._wrapped = []  # Bubbles whose text re-wraps when the window is resized
 
         self._inner.bind("<Configure>", self._update_scroll_region)
         self._canvas.bind("<Configure>", self._resize)
-        # Windows and macOS Send the Wheel as <MouseWheel>; Linux (and Docker) Send Buttons 4 (Up) and 5 (Down).
-        # Bound on this Chat's Own Window (Not the Whole App), so the Binding Goes Away with the Window
+        # Mouse wheel scrolling (Linux uses buttons 4 and 5 instead of <MouseWheel>)
         for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
             self.winfo_toplevel().bind(sequence, self._mouse_wheel, add="+")
 
     def _update_scroll_region(self, event=None):
         self._canvas.configure(scrollregion=self._canvas.bbox("all"))
 
-    # Keep the Bubbles as Wide as the Chat, and Re-Wrap their Text
+    # Re-wrap the bubbles when the chat changes width
     def _resize(self, event):
         self._canvas.itemconfigure(self._window, width=event.width)
         for label, share in self._wrapped:
             label.configure(wraplength=max(240, int(event.width * share)))
 
-    # Scroll Only when the Pointer is Over the Chat (the Table and Report Windows Scroll Themselves)
+    # Scroll only when the mouse is over the chat
     def _mouse_wheel(self, event):
         widget = self.winfo_containing(event.x_root, event.y_root)
         if widget is None or not str(widget).startswith(str(self._canvas)):
             return
         if self._canvas.yview() == (0.0, 1.0):
-            return  # Everything Already Fits
+            return  # Nothing to scroll
         scroll_up = event.num == 4 or event.delta > 0
         self._canvas.yview_scroll(-1 if scroll_up else 1, "units")
 
@@ -62,18 +57,18 @@ class ChatView(tk.Frame):
         self._update_scroll_region()
         self._canvas.yview_moveto(1.0)
 
-    # Back to the First Message (a Saved Conversation is Read from the Start)
+    # Scroll back to the first message
     def scroll_to_top(self):
         self._canvas.yview_moveto(0.0)
 
-    # Remove Every Message (for a New Report)
+    # Remove every message
     def clear(self):
         for child in self._inner.winfo_children():
             child.destroy()
         self._wrapped = []
         self._canvas.yview_moveto(0.0)
 
-    # Add One Chat Bubble: the Worker's on the Right, Everything Else on the Left
+    # Add a chat bubble (worker on the right, everything else on the left)
     def add_message(self, kind, text):
         name, bubble, ink, side = BUBBLE_STYLES[kind]
         row = tk.Frame(self._inner, bg=BG)
@@ -86,7 +81,7 @@ class ChatView(tk.Frame):
         self._wrapped.append((label, BUBBLE_SHARE))
         self._scroll_to_end()
 
-    # The Welcome Card at the Top of Each New Chat
+    # Welcome card at the top of each new chat
     def add_welcome(self):
         welcome = Theme.card(self._inner, fill="x", padx=24, pady=(20, 12))
         inner = tk.Frame(welcome, bg=SURFACE)
