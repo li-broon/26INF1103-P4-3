@@ -8,7 +8,7 @@ from tkinter import ttk
 from src.gui_manager.constants import (
     AI_BUBBLE, BG, BORDER, BUBBLE_SHARE, BUBBLE_STYLES, CARD_SHARE, LANGUAGE_GREETINGS, MUTED, PRIMARY, SURFACE, TEXT,
 )
-from src.gui_manager.theme import card, font
+from src.gui_manager.theme import Theme
 
 # ----- #
 # Class
@@ -78,8 +78,8 @@ class ChatView(tk.Frame):
         name, bubble, ink, side = BUBBLE_STYLES[kind]
         row = tk.Frame(self._inner, bg=BG)
         row.pack(fill="x", padx=24, pady=(4, 8))
-        tk.Label(row, text=name, bg=BG, fg=MUTED, font=font(9, "bold")).pack(anchor=side, padx=2)
-        label = tk.Label(row, text=text, bg=bubble, fg=ink, font=font(11), justify="left", anchor="w",
+        tk.Label(row, text=name, bg=BG, fg=MUTED, font=Theme.font(9, "bold")).pack(anchor=side, padx=2)
+        label = tk.Label(row, text=text, bg=bubble, fg=ink, font=Theme.font(11), justify="left", anchor="w",
                          padx=16, pady=10, wraplength=self._wrap_width(BUBBLE_SHARE),
                          highlightthickness=1 if bubble == AI_BUBBLE else 0, highlightbackground=BORDER)
         label.pack(anchor=side, pady=(3, 0))
@@ -88,25 +88,25 @@ class ChatView(tk.Frame):
 
     # The Welcome Card at the Top of Each New Chat
     def add_welcome(self):
-        welcome = card(self._inner, fill="x", padx=24, pady=(20, 12))
+        welcome = Theme.card(self._inner, fill="x", padx=24, pady=(20, 12))
         inner = tk.Frame(welcome, bg=SURFACE)
         inner.pack(fill="x", padx=22, pady=18)
 
-        tk.Label(inner, text="Hello! I'm here to help you report a workplace incident.", font=font(14, "bold"),
+        tk.Label(inner, text="Hello! I'm here to help you report a workplace incident.", font=Theme.font(14, "bold"),
                  fg=TEXT, bg=SURFACE).pack(anchor="w")
         intro = tk.Label(inner, text="Just tell me what happened, like you're talking to a friend. "
                                      "I'll ask a few questions if anything is missing.",
-                         font=font(10), fg=MUTED, bg=SURFACE, justify="left", wraplength=self._wrap_width(CARD_SHARE))
+                         font=Theme.font(10), fg=MUTED, bg=SURFACE, justify="left", wraplength=self._wrap_width(CARD_SHARE))
         intro.pack(anchor="w", pady=(4, 12))
         self._wrapped.append((intro, CARD_SHARE))
 
-        tk.Label(inner, text="Speak in YOUR language. Any language or a mix is OK.", font=font(10, "bold"),
+        tk.Label(inner, text="Speak in YOUR language. Any language or a mix is OK.", font=Theme.font(10, "bold"),
                  fg=PRIMARY, bg=SURFACE).pack(anchor="w", pady=(0, 6))
         languages = tk.Frame(inner, bg=SURFACE)
         languages.pack(anchor="w", fill="x")
         for row, (language, greeting) in enumerate(LANGUAGE_GREETINGS):
-            tk.Label(languages, text=language, font=font(10, "bold"), fg=TEXT, bg=SURFACE,
+            tk.Label(languages, text=language, font=Theme.font(10, "bold"), fg=TEXT, bg=SURFACE,
                      width=8, anchor="w").grid(row=row, column=0, sticky="w", pady=1)
-            tk.Label(languages, text=greeting, font=font(10), fg=MUTED, bg=SURFACE,
+            tk.Label(languages, text=greeting, font=Theme.font(10), fg=MUTED, bg=SURFACE,
                      anchor="w").grid(row=row, column=1, sticky="w", pady=1)
         self._scroll_to_end()
