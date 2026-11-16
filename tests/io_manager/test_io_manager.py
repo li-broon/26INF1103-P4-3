@@ -305,10 +305,16 @@ def test_charts_back_draws_nothing():
     assert charts.shown == []
 
 #When a chart can't be drawn, the Chart Manager's reason is shown to the user
-def test_charts_failure_message_is_shown():
-    charts = FakeCharts(result=(False, "No reports to chart yet."))
+#If the picture can't be written, the app says so instead of crashing
+def test_charts_save_error_is_reported():
+    charts = FakeCharts()
+    charts.show_chart = lambda key, **options: (_ for _ in ()).throw(PermissionError("file is in use"))
     text = printed(io_manager(charts=charts, answers=["3", "1", "n", "4"]).run)
-    assert "No reports to chart yet." in text
+    assert "could not be saved" in text
+    assert "Goodbye" in text
+
+
+
 
 #Prompter Tests
 

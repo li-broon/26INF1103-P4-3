@@ -213,12 +213,19 @@ class IOManager:
             return
         key = options[labels.index(label)][0]
 
-        if self._prompter.ask_yes_no("Open the chart in a window? (n saves it as a picture in the data folder)"):
-            saved, message = self._chart_manager.show_chart(key)
-        else:
-            saved, message = self._chart_manager.show_chart(key, save_path=f"data/chart_{key}.png")
+        try: #for saved picture so including docker
 
+            if self._prompter.ask_yes_no("Open the chart in a window? (n saves it as a picture in the data folder)"):
+                saved, message = self._chart_manager.show_chart(key)
+            else:
+                saved, message = self._chart_manager.show_chart(key, save_path=f"data/chart_{key}.png")
+
+        except OSError as error: #picture is open in another program, OS errors covers every file, missing folder
+            saved, message = False, f"The chard could not be saved {error}"   
+        
         print(f"{GREEN if saved else YELLOW}{message}{RESET}")
+
+           
 
     # Start the app: show the main menu until the user exits (Ctrl+C also exits cleanly)
     def run(self) -> None:
