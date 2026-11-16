@@ -21,11 +21,8 @@ THINKING_MS = 400
 # Shown in the Column Box when No Filter is Applied
 ALL_REPORTS = "All reports"
 
-# Columns Where the User Types a Keyword Instead of Picking a Saved Value
-KEYWORD_FILTER_COLUMNS = ("location",)
-
 # Under the Title of a Saved Conversation
-TRANSCRIPT_NOTE = "Exactly as the worker and the assistant wrote it, before any translation."
+TRANSCRIPT_NOTE = "Exactly as the worker and the chatbot wrote it, before any translation."
 
 # Grey Hint in the Empty Message Box
 PLACEHOLDER = "Describe what happened, then press Enter..."
@@ -75,7 +72,7 @@ SCORE_COLOURS = [
 STAT_CARDS = [
     ("total", "SAVED REPORTS", PRIMARY),
     ("mom", "MOM REPORTABLE", WARNING),
-    ("overdue", "MOM OVERDUE", DANGER),
+    ("overdue", "MOM DEADLINE PASSED", DANGER),  # Counts Every Passed Deadline, Reported or Not (the MOM Tab's "OVERDUE" Leaves Out the Reported Ones)
     ("hospitalised", "HOSPITALISED", ORANGE),
 ]
 
@@ -107,7 +104,7 @@ MOM_STAT_CARDS = [
 BUBBLE_STYLES = {
     "you": ("You", PRIMARY, "#ffffff", "e"),
     "worker": ("Worker", PRIMARY, "#ffffff", "e"),  # The Worker's Side of a Saved Transcript, Read Back by Someone Else
-    "ai": ("Assistant", AI_BUBBLE, TEXT, "w"),
+    "ai": ("Chatbot", AI_BUBBLE, TEXT, "w"),
     "error": ("Problem", DANGER_SOFT, DANGER, "w"),
     "good": ("Report saved", SUCCESS_SOFT, SUCCESS, "w"),
 }

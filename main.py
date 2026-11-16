@@ -3,39 +3,26 @@
 # -------- #
 import sys
 
-from src.ai_manager import AIManager, AIServiceError, GeminiService
-from src.data_manager import CsvRecordStore, DataManager, TextTranscriptStore, MomRecordStore,create_default_filters
+from src.ai_manager import AIManager, GeminiService
+from src.data_manager import CsvRecordStore, DataManager, MomRecordStore, TextTranscriptStore, create_default_filters
 from src.data_manager.charts.chart_manager import ChartManager
 from src.data_manager.charts.default_charts import create_default_charts
-from src.data_manager.constants import DATA_FILE, TRANSCRIPT_FOLDER, MOM_DATA_FILE
+from src.data_manager.constants import DATA_FILE, MOM_DATA_FILE, TRANSCRIPT_FOLDER
 from src.io_manager import IOManager
 from src.logic_manager import LogicManager
-
-# TEMPORARY (task 18 replaces this): reports a missing API key only when the chatbot opens, so the menu and saved reports still work without one
-class NoKeyAI:
-    def __init__(self, error):
-        self._error = error
-
-    def start_conversation(self):
-        raise self._error
 
 # --------- #
 # Start App
 # --------- #
 
-# Create every manager once and hand them to the IO Manager or GUI Manager (UML Figure 1)
+# Create every manager once and hand them to the IO Manager or GUI Manager
 def main():
-    try:
-        ai_manager = AIManager(GeminiService())
-
-    except AIServiceError as error:
-        ai_manager = NoKeyAI(error)
-
+    ai_manager = AIManager(GeminiService())
     data_manager = DataManager(CsvRecordStore(DATA_FILE), create_default_filters(), TextTranscriptStore(TRANSCRIPT_FOLDER))
-    logic_manager = LogicManager(data_manager)
-    chart_manager = ChartManager(data_manager, create_default_charts())
     mom_store = MomRecordStore(MOM_DATA_FILE)
     mom_store.sync(data_manager.load_records())
+    logic_manager = LogicManager(data_manager, mom_store=mom_store)
+    chart_manager = ChartManager(data_manager, create_default_charts())
 
     # "python main.py --gui" Opens the Tkinter Window, Otherwise the Terminal App Runs
     if "--gui" in sys.argv:

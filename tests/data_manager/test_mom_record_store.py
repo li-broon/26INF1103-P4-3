@@ -36,7 +36,7 @@ def test_saves_only_mom_reportable_reports():
     def run(store, path):
         assert store.save_record(make_report("Ann"))[0] is True
         saved, message = store.save_record(make_report("Ben", mom="No"))
-        assert saved is False and "not MOM reportable" in message
+        assert saved is False and "not MOM Reportable" in message
         table = store.load_records()
         assert list(table["reporter_name"]) == ["Ann"]
         assert table.iloc[0][MOM_REPORTED_FIELD] == "No"
@@ -200,7 +200,7 @@ def test_sync_keeps_existing_ticks():
 # Real LogicManager + Real Stores: a Critical Report Lands in Both Files, a Minor One Only in data.csv, and Ticking Updates mom_data.csv
 def test_logic_manager_fills_the_register_and_ticking_updates_it():
     import json
-    from src.data_manager import CsvRecordStore, DataManager, create_default_filters
+    from src.data_manager import CsvRecordStore, DataManager, TextTranscriptStore, create_default_filters
     from src.logic_manager import LogicManager
 
     samples = os.path.join(os.path.dirname(__file__), "..", "samples")
@@ -209,7 +209,8 @@ def test_logic_manager_fills_the_register_and_ticking_updates_it():
             return json.load(file)["report"]
 
     with tempfile.TemporaryDirectory() as folder:
-        data_manager = DataManager(CsvRecordStore(os.path.join(folder, "data.csv")), create_default_filters())
+        data_manager = DataManager(CsvRecordStore(os.path.join(folder, "data.csv")), create_default_filters(),
+                                   TextTranscriptStore(os.path.join(folder, "transcripts")))
         mom_store = MomRecordStore(os.path.join(folder, "mom_data.csv"))
         manager = LogicManager(data_manager, mom_store=mom_store)
 
@@ -224,3 +225,32 @@ def test_logic_manager_fills_the_register_and_ticking_updates_it():
         mom_store.set_reported(register.iloc[0][MOM_ID_FIELD], True)
         assert MomRecordStore(os.path.join(folder, "mom_data.csv")).load_records().iloc[0][MOM_REPORTED_FIELD] == "Yes"
         assert "safety_officer_reported" not in data_manager.load_records().columns  # data.csv is untouched by ticking
+
+
+# A Register File Edited by Hand into the Wrong Shape Must Not Stop the App Starting: it Reads as Empty, Ticking Says So,
+# and the First Save Backs the Bad File Up and Starts a Fresh Register
+def test_register_without_its_columns_is_treated_as_empty_and_backed_up():
+    for content in ("not,a,register\n1,2\n", "reporter_name,deadline\nAnn,2026-11-20\n", "mom_id,reporter_name\nabc,Ann\n",
+                    "mom_id,safety_officer_reported\nabc,No\n"):  # Has the Tick Columns but Not the Score and Deadline it is Sorted By
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "mom_data.csv")
+            with open(path, "w", encoding="utf-8") as file:
+                file.write(content)
+            store = MomRecordStore(path)
+            assert store.load_records().empty
+            assert store.set_reported("abc", True) == (False, "MOM register is empty.")
+            assert store.save_record(make_report("Ann"))[0] is True
+            assert os.path.exists(os.path.join(folder, "mom_data_backup.csv"))
+            assert len(store.load_records()) == 1
+
+
+# Rows Pasted in by Hand with No ID, or with an ID Already Used, are Left Out (the Table Could Not List or Tick Them)
+def test_rows_without_an_id_or_with_a_repeated_id_are_left_out():
+    def run(store, path):
+        store.save_record(make_report("Ann"))
+        table = pd.read_csv(path, dtype=str)
+        blank = table.iloc[[0]].assign(**{MOM_ID_FIELD: ""})
+        pd.concat([table, table, blank], ignore_index=True).to_csv(path, index=False)
+        register = store.load_records()
+        assert len(register) == 1 and register[MOM_ID_FIELD].notna().all()
+    with_store(run)

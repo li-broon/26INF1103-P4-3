@@ -33,7 +33,7 @@ class TranscriptWindow(tk.Toplevel):
         footer.pack(side="bottom", fill="x", padx=20, pady=(0, 20))
         ttk.Button(footer, text="Close", style="Secondary.TButton", command=self.destroy).pack(side="right")
 
-        # The Same Bubble List as the Chat Tab: the Worker on the Right, the Assistant on the Left
+        # The Same Bubble List as the Chat Tab: the Worker on the Right, the Chatbot on the Left
         chat = ChatView(self)
         chat.pack(fill="both", expand=True, pady=(0, 12))
         for speaker, text in turns:

@@ -32,20 +32,29 @@ class CsvRecordStore(RecordStore):
         # Attempts to clean record
         cleaned = self._cleaner.clean(record)
         if cleaned is None:
-            return False, "Record rejected: missing or invalid required field."
+            return False, "Report rejected: missing or invalid required field."
 
         # Makes sure data folder exists
-        os.makedirs(self._data_folder, exist_ok=True)
+        try:
+            os.makedirs(self._data_folder, exist_ok=True)
+        except OSError as e:
+            logger.error("Could not create data folder '%s': %s", self._data_folder, e)
+            return False, "Report could not be saved (data folder unavailable)."
         existing_data = self._load_data_from_csv(self._data_file)
 
         # File exists but couldn't be read: keep a backup instead of overwriting it
         if existing_data.empty and os.path.exists(self._data_file) and os.path.getsize(self._data_file) > 0:
-            os.replace(self._data_file, self._data_file.replace(".csv", "_backup.csv"))
-            logger.warning("Unreadable data file backed up to '%s'.", self._data_file.replace(".csv", "_backup.csv"))
+            backup_file = self._data_file.replace(".csv", "_backup.csv")
+            try:
+                os.replace(self._data_file, backup_file)
+            except OSError as e:
+                logger.error("Could not back up '%s': %s", self._data_file, e)
+                return False, "Report could not be saved (file write error)."
+            logger.warning("Unreadable data file backed up to '%s'.", backup_file)
 
         # Checks if record is a duplicate
         if self._is_duplicate(existing_data, cleaned):
-            return False, "Record rejected: an identical record already exists."
+            return False, "Report rejected: an identical report already exists."
 
         new_row = pd.DataFrame([cleaned])
 
@@ -61,9 +70,9 @@ class CsvRecordStore(RecordStore):
             os.replace(temp_file, self._data_file)
         except OSError as e:
             logger.error("Could not write '%s': %s", self._data_file, e)
-            return False, "Record could not be saved (file write error)."
+            return False, "Report could not be saved (file write error)."
 
-        return True, "Record saved."
+        return True, "Report saved."
 
     # Reads all reports for display: cleans each row, drops invalid or duplicate rows and sorts by urgency, without changing the file
     def load_records(self, ascending: bool = False) -> pd.DataFrame:
@@ -115,9 +124,9 @@ class CsvRecordStore(RecordStore):
                     break
 
             # If all fields matched, there's a duplicate
-            if row_matches: 
+            if row_matches:
                 return True
-        # Returns false, meaning the new record is a unique record    
+        # Returns false, meaning the new record is a unique record
         return False
 
     # Safe reading of the CSV file

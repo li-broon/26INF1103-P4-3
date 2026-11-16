@@ -79,7 +79,7 @@ def names(table):
 def test_saving_and_reading_go_through_the_store():
     store = make_store()
     manager = DataManager(store, create_default_filters(), make_transcript_store())
-    assert manager.save_record(make_report("Ann", 5)) == (True, "Record saved.")
+    assert manager.save_record(make_report("Ann", 5)) == (True, "Report saved.")
     assert list(store.load_records()["reporter_name"]) == ["Ann"]
     assert manager.load_records().equals(store.load_records())
     assert manager.get_column_names() == store.get_column_names()
@@ -115,7 +115,11 @@ def test_other_columns_offer_the_saved_values_once_in_alphabetical_order():
     manager = make_manager()
     assert manager.get_unique_values("ai_severity") == ["Critical", "High", "Low", "Medium"]
     assert manager.get_unique_values("reporter_name") == ["Ann", "Ben", "Cai", "Dee", "Eli", "Fay"]
-    assert manager.get_unique_values("location") == ["Dock [North]", "Head Office", "Office", "Ubi Industrial Park, Block 1", "Warehouse (Level 2)"]
+
+
+# A Keyword Column (Location) Offers No Pick List: the Menus See an Empty List and Ask for a Word to Search For Instead
+def test_keyword_columns_offer_no_choices():
+    assert make_manager().get_unique_values("location") == []
 
 
 def test_a_column_that_does_not_exist_offers_nothing():
@@ -256,10 +260,11 @@ def test_the_public_methods_are_the_ones_in_the_uml():
 
 # A Transcript is Written to <folder>/<id>.txt (Folder Created on First Save) and Read Back Unchanged
 def test_transcript_is_saved_to_its_own_file_and_read_back():
-    store = make_transcript_store()
+    folder = os.path.join(TEMP_FOLDER, "transcripts_read_back")
+    store = TextTranscriptStore(folder)
     text = "Worker: saya jatuh\nAI: Maaf mendengarnya. Di mana?"
     assert store.save("20261113-101010-ab12", text) == (True, "Transcript saved.")
-    with open(os.path.join(store._folder, "20261113-101010-ab12.txt"), encoding="utf-8") as file:
+    with open(os.path.join(folder, "20261113-101010-ab12.txt"), encoding="utf-8") as file:
         assert file.read() == text + "\n"
     assert store.load("20261113-101010-ab12") == text
 
@@ -291,4 +296,31 @@ def test_duplicate_report_is_still_rejected_when_only_the_transcript_id_differs(
     first = dict(make_report("Ann", 5), transcript_id="20261113-101010-0001")
     second = dict(make_report("Ann", 5), transcript_id="20261113-101011-0002")
     assert manager.save_record(first)[0] is True
-    assert manager.save_record(second) == (False, "Record rejected: an identical record already exists.")
+    assert manager.save_record(second) == (False, "Report rejected: an identical report already exists.")
+
+
+# A data folder that cannot be created (its parent is a file) gives a clean failure instead of a crash
+def test_saving_fails_cleanly_when_the_data_folder_cannot_be_created():
+    blocker = os.path.join(TEMP_FOLDER, f"blocker_{next(file_numbers)}")
+    with open(blocker, "w") as file:
+        file.write("not a folder")
+    store = CsvRecordStore(os.path.join(blocker, "sub", "data.csv"))
+
+    saved, message = store.save_record(make_report("Ann", 50))
+
+    assert saved is False
+    assert "could not be saved" in message
+
+
+# An unreadable data file that cannot be backed up also gives a clean failure instead of a crash
+def test_saving_fails_cleanly_when_the_unreadable_file_cannot_be_backed_up():
+    store = make_store()
+    with open(store._data_file, "wb") as file:
+        file.write(b"\x00\x01 not a csv \xff")
+    # A folder already sitting where the backup file would go makes the backup rename fail
+    os.makedirs(store._data_file.replace(".csv", "_backup.csv"))
+
+    saved, message = store.save_record(make_report("Ann", 50))
+
+    assert saved is False
+    assert "could not be saved" in message

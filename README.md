@@ -50,6 +50,43 @@ Users will type into the terminal similar to having a conversation with the AI. 
 
 [https://github.com/li-broon/26INF1103-P4-3](https://github.com/li-broon/26INF1103-P4-3)
 
+## Features
+
+The terminal app and the GUI (`python main.py --gui`) share the same four managers, so every feature below works through the same code.
+
+| Feature | What it does | Where to use it | Main classes | Tests |
+|---|---|---|---|---|
+| Conversational reporting in any language | The worker chats in their own language. The AI asks for missing fields (twice at most), then returns a validated JSON record in English. | Terminal chat, GUI "Chat" tab | `AIManager`, `GeminiService`, `IncidentConversation` | `tests/ai_manager` |
+| Importance scoring and priority | Weighted factors give each report a score. Reports are sorted most urgent first. | Report list in both interfaces | `LogicManager`, `ImportanceScorer`, `PriorityClassifier` | `tests/logic_manager` |
+| MOM reporting rule and register | Reports that meet the MOM rule are copied to `data/mom_data.csv`. Officers tick them off with a date once reported. | GUI "MOM reporting" tab | `MomReportingRule`, `MomRecordStore` | `tests/logic_manager`, `tests/data_manager/test_mom_record_store.py` |
+| Search and filtering | Filter saved reports by keyword, exact text, date range, deadline or score band. | Filter menu (terminal), "Reports" tab (GUI) | `DataManager`, `ReportFilter` and its subclasses | `tests/data_manager/test_data_manager.py` |
+| Transcript storage | The full chat is saved as a text file for each report and can be viewed later. | "View transcript" button (GUI) | `Transcript`, `TextTranscriptStore` | `tests/data_manager` |
+| Charts dashboard | Charts for causes, locations, languages, months and severity by cause. | GUI "Charts" tab | `ChartManager`, `ChartDrawer` and its subclasses | `tests/data_manager/test_charts.py` |
+| GUI (advanced feature) | Tkinter window with a worker thread, so the screen does not freeze while the AI replies. | `python main.py --gui` | `GUIManager` and the `tabs` classes | `tests/gui_manager` |
+| Configurable business rules | Weights and thresholds can be loaded from a JSON file. | `LogicConfig.from_json` | `LogicConfig` | `tests/logic_manager` |
+
+Records are saved to `data/data.csv`. A missing or corrupt file is handled without a crash.
+
+## Setup and API key
+
+The AI features need a Gemini API key. Never commit it.
+
+1. Create a file called `.env` in the project folder.
+2. Add one line: `GEMINI_API_KEY=your_key_here`
+3. Run the app locally with `pip install -r requirements.txt` then `python main.py`, or use Docker (below).
+
+If the key is missing, the app shows a clear message when you start a chat. The automated tests never need a key, because they use fake AI services.
+
+## Continuous Integration (CI)
+
+A GitHub Actions workflow in `.github/workflows/ci.yml` runs the full test suite automatically.
+
+- **When it runs:** on every push to `main` and every pull request into `main` that changes a `.py` file, `requirements.txt`, `pytest.ini` or the workflow itself.
+- **What it does:** checks out the code, sets up Python 3.12, installs `requirements.txt`, then runs `pytest` from the project root.
+- **No live AI:** all tests use fake AI responses, and the live translation test is skipped unless `LIVE_AI_TESTS=1` is set. CI therefore needs no API key.
+- **Reading the result:** open the repository's "Actions" tab. A green tick means every test passed. A red cross means at least one failed, so fix it before merging.
+- **Run the same checks yourself:** `pytest` locally, or `docker run -it --rm inf1103-p4 pytest` as shown below.
+
 ## Running with Docker
 
 ```bash
@@ -114,4 +151,3 @@ docker run -it --rm -e DISPLAY=host.docker.internal:0 -v "$(pwd)/data:/app/data"
 ```
 
 The same `DISPLAY=host.docker.internal:0` command also works on any Windows version if an X server such as VcXsrv is running (with access control disabled).
-

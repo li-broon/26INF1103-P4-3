@@ -10,7 +10,7 @@ from datetime import date
 import pandas as pd
 
 from src.data_manager.constants import (
-    DATE_FORMAT, MOM_DATA_FILE, MOM_ID_FIELD, MOM_IDENTITY_FIELDS, MOM_REPORTED_FIELD, MOM_REPORTED_ON_FIELD,
+    DATE_FORMAT, DEADLINE_FIELD, MOM_DATA_FILE, MOM_ID_FIELD, MOM_IDENTITY_FIELDS, MOM_REPORTED_FIELD, MOM_REPORTED_ON_FIELD,
     URGENCY_COLUMN,
 )
 from src.data_manager.storage.record_cleaner import RecordCleaner
@@ -38,9 +38,9 @@ class MomRecordStore:
     def save_record(self, record: dict) -> tuple[bool, str]:
         cleaned = self._cleaner.clean(record)
         if cleaned is None:
-            return False, "MOM record rejected: missing or invalid required field."
+            return False, "MOM report rejected: missing or invalid required field."
         if str(cleaned.get("mom_reportable", "")).strip().lower() not in YES_WORDS:
-            return False, "MOM record rejected: the report is not MOM reportable."
+            return False, "MOM report rejected: the report is not MOM Reportable."
 
         cleaned[MOM_ID_FIELD] = self.make_id(cleaned)
         cleaned[MOM_REPORTED_FIELD] = "No"
@@ -48,11 +48,11 @@ class MomRecordStore:
 
         table = self._load_for_update()
         if not table.empty and cleaned[MOM_ID_FIELD] in set(table[MOM_ID_FIELD].dropna()):
-            return False, "MOM record rejected: this report is already in the MOM register."
+            return False, "MOM report rejected: this report is already in the MOM register."
 
         new_row = pd.DataFrame([cleaned])
         table = new_row if table.empty else pd.concat([table, new_row], ignore_index=True)
-        return self._write(table, "MOM record saved.")
+        return self._write(table, "MOM report saved.")
 
     # Adds every MOM reportable report in 'table' that is not in the register yet (used once at start-up, so reports saved before the register existed show up too). Returns how many were added
     def sync(self, table: pd.DataFrame) -> int:
@@ -84,10 +84,12 @@ class MomRecordStore:
         if table.empty or MOM_ID_FIELD not in table.columns:
             return pd.DataFrame()
 
+        # A row with no id, or a second row with the same id (only possible in a file edited by hand), cannot be listed or ticked
+        table = table.dropna(subset=[MOM_ID_FIELD]).drop_duplicates(subset=[MOM_ID_FIELD])
         table[URGENCY_COLUMN] = pd.to_numeric(table[URGENCY_COLUMN], errors="coerce")
         table["_reported"] = table[MOM_REPORTED_FIELD].fillna("No").str.strip().str.lower().isin(YES_WORDS)
         # "Check incident date" and other non-dates become NaT, which sorts last
-        table["_due"] = pd.to_datetime(table["deadline"], format=DATE_FORMAT, errors="coerce")
+        table["_due"] = pd.to_datetime(table[DEADLINE_FIELD], format=DATE_FORMAT, errors="coerce")
 
         table = table.sort_values(by=["_reported", "_due", URGENCY_COLUMN], ascending=[True, True, False],
                                   na_position="last")
@@ -101,15 +103,21 @@ class MomRecordStore:
             parts.append("" if value is None or pd.isna(value) else str(value).strip().lower())
         return hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()[:12]
 
-    # Read the register as text (so an id like "12e45" is never turned into a number); blank cells are NaN, an unreadable file is empty
+    # Read the register as text (so an id like "12e45" is never turned into a number); blank cells are NaN. An unreadable file, or one
+    # without the columns the register is sorted and ticked by (e.g. edited by hand), counts as empty, so the app still starts and the file gets backed up
     def _read(self) -> pd.DataFrame:
         if not os.path.exists(self._data_file) or os.path.getsize(self._data_file) == 0:
             return pd.DataFrame()
         try:
-            return pd.read_csv(self._data_file, dtype=str, keep_default_na=False, na_values=[""])
+            table = pd.read_csv(self._data_file, dtype=str, keep_default_na=False, na_values=[""])
         except Exception as e:
             logger.error("Could not read '%s': %s", self._data_file, e)
             return pd.DataFrame()
+        missing = [column for column in (MOM_ID_FIELD, MOM_REPORTED_FIELD, URGENCY_COLUMN, DEADLINE_FIELD) if column not in table.columns]
+        if missing:
+            logger.warning("File '%s' is missing the register columns %s.", self._data_file, missing)
+            return pd.DataFrame()
+        return table
 
     # Like _read, but an unreadable file is backed up first so saving never destroys it
     def _load_for_update(self) -> pd.DataFrame:

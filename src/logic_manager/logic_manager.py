@@ -1,5 +1,4 @@
 from collections.abc import Mapping
-from dataclasses import asdict
 
 from .exceptions import InvalidReportError
 from .models.evaluation import Evaluation
@@ -10,14 +9,11 @@ from .rules.priority_classifier import PriorityClassifier
 from .scoring.importance_scorer import ImportanceScorer
 
 
+# Applies the business rules to an AI-enriched report and hands it on to be saved.
+# - Composition: it builds and owns its scorer, reporting rule and classifier.
+# - Aggregation: the DataManager is injected and lives on independently of it.
+# - Aggregation: the optional MOM store (any object with save_record) is injected too; MOM reportable reports are copied into it after the main save.
 class LogicManager:
-    """Applies the business rules to an AI-enriched report and hands it on to be saved.
-
-    - Composition: it builds and owns its scorer, reporting rule and classifier.
-    - Aggregation: the DataManager is injected and lives on independently of it.
-    - Aggregation: the optional MOM store (any object with save_record) is injected too; MOM reportable reports are copied into it after the main save.
-    """
-
     def __init__(self, data_manager, config=None, mom_store=None):
         config = config or LogicConfig()
         self._data_manager = data_manager                       # aggregation (your DataManager, or any object with save_record)
@@ -54,7 +50,7 @@ class LogicManager:
         try:
             saved, message = self._data_manager.save_record(record)
         except OSError as error:
-            saved, message = False, f"Could not save record: {error}"
+            saved, message = False, f"Could not save report: {error}"
 
         # Once the main save worked, copy MOM reportable reports into the MOM register
         if saved and evaluation.mom_reportable == "Yes" and self._mom_store is not None:
@@ -76,11 +72,3 @@ class LogicManager:
         except OSError as error:
             mom_saved, mom_message = False, str(error)
         return message if mom_saved else f"{message} (MOM register not updated: {mom_message})"
-
-
-# TEMPORARY: old function style entry point still used by main.py and the GUI. Builds a LogicManager that saves
-# through the shared functions in src.data_manager, and returns the outcome as a dictionary.
-def logic(report):
-    from src import data_manager  # Imported here so LogicManager itself never depends on the data manager package
-
-    return asdict(LogicManager(data_manager).process(report))

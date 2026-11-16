@@ -4,9 +4,8 @@ from ..field_parser import FieldParser
 from .reporting_rule import ReportingRule
 
 
+# Decides if an incident must be reported to MOM and works out the deadline.
 class MomReportingRule(ReportingRule):
-    """Decides if an incident must be reported to MOM and works out the deadline."""
-
     # Shown in the deadline column if no report needed
     NO_DEADLINE = "N/A"
 

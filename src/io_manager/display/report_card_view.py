@@ -1,7 +1,9 @@
-from src.io_manager.constants import BOLD, CYAN, FULL_REPORT_FIELDS, GREEN, RED, RESET, UNDERLINE, YELLOW, YES_NO_COLUMNS
+from src.io_manager.constants import (
+    BOLD, CYAN, FULL_REPORT_FIELDS, GREEN, RED, RESET, SPEAKER_DISPLAY_NAMES, UNDERLINE, YELLOW, YES_NO_COLUMNS,
+)
 
 
-#Prints One Report in Full: a Report Opened from the Table, or the Card a Worker Sees After Saving
+# Prints One Report in Full: a Report Opened from the Table, or the Card a Worker Sees After Saving
 class ReportCardView:
     def __init__(self, formatter):
         self._formatter = formatter   # The shared ReportFormatter, handed in (association)
@@ -26,10 +28,10 @@ class ReportCardView:
     def show_transcript(self, text, title: str) -> None:
         print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
         if not text:
-            print(f"{YELLOW}No conversation transcript is saved for this report.{RESET}\n")
+            print(f"{YELLOW}No transcript is saved for this report.{RESET}\n")
             return
         for speaker, message in self._formatter.transcript_turns(text):
-            print(f"{CYAN}{BOLD}{speaker}:{RESET} {message}")
+            print(f"{CYAN}{BOLD}{SPEAKER_DISPLAY_NAMES.get(speaker, speaker)}:{RESET} {message}")
         print()
 
     # Tells the worker whether the report was really saved; if so, shows it back as a card with the score and MOM details (outcome is a SaveOutcome)

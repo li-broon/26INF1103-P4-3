@@ -80,12 +80,12 @@ class ChartResizer:
             label.set_visible(True)  # Start from every label shown, undoing the thinning done at an earlier size
         self._thinned.clear()
         for ax in self._figure.axes:
-            self._fit_axis(ax, ax.xaxis, True, renderer)
-            self._fit_axis(ax, ax.yaxis, False, renderer)
+            self._fit_axis(ax.xaxis, True, renderer)
+            self._fit_axis(ax.yaxis, False, renderer)
 
     # Shrinks one axis' tick labels until neighbours no longer touch; if even the smallest readable size does not fit, keeps that size
     # and shows every 2nd, 3rd... label instead. along_x says whether the axis runs left to right (x) or bottom to top (y)
-    def _fit_axis(self, ax, axis, along_x: bool, renderer) -> None:
+    def _fit_axis(self, axis, along_x: bool, renderer) -> None:
         labels = [label for label in axis.get_majorticklabels() if label.get_text()]  # Only the labels the chart shows
         if len(labels) < 2:
             return

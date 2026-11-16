@@ -31,12 +31,19 @@ Create a file called '.env' in the project folder containing:
 Then run the program again. With Docker, pass the file in:
     docker run -it --rm --env-file .env -v "$(pwd)/data:/app/data" inf1103-p4"""
 
-    # Uses GEMINI_API_KEY if Set, Otherwise the .env File's (so the App also Runs Outside Docker); Raises AIServiceError if Neither Has One
+    # Finds the Key Now (GEMINI_API_KEY if Set, Otherwise the .env File's, so the App also Runs Outside Docker) but Only Connects on
+    # the First Request, so a Missing Key is Reported when the Chatbot Opens and the Rest of the App Still Works Without One
     def __init__(self, env_file: str = ENV_FILE):
-        api_key = os.environ.get("GEMINI_API_KEY", "") or self._read_key(env_file)
-        if not api_key:
-            raise AIServiceError(self.MISSING_KEY_MESSAGE)
-        self._client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=self.TIMEOUT_MS))
+        self._api_key = os.environ.get("GEMINI_API_KEY", "") or self._read_key(env_file)
+        self._client = None
+
+    # The Gemini Client, Made on First Use. Raises AIServiceError if There is No Key
+    def _connect(self):
+        if self._client is None:
+            if not self._api_key:
+                raise AIServiceError(self.MISSING_KEY_MESSAGE)
+            self._client = genai.Client(api_key=self._api_key, http_options=types.HttpOptions(timeout=self.TIMEOUT_MS))
+        return self._client
 
     # The GEMINI_API_KEY Value in the .env File, Without Quotes ("" if There is No File or No Key)
     def _read_key(self, env_file: str) -> str:
@@ -55,7 +62,7 @@ Then run the program again. With Docker, pass the file in:
             response_mime_type="application/json",
             temperature=0,  # Same Output across Runs
         )
-        return self._client.chats.create(model=self.MODEL, config=config)
+        return self._connect().chats.create(model=self.MODEL, config=config)
 
     # A Failed Call is Not Saved in the Chat History, so Retrying Does Not Affect the Conversation
     def send_chat_message(self, chat, message: str) -> str:
@@ -85,5 +92,5 @@ Then run the program again. With Docker, pass the file in:
             response_schema=schema,
             temperature=0,
         )
-        one_off_chat = self._client.chats.create(model=self.MODEL, config=config)
+        one_off_chat = self._connect().chats.create(model=self.MODEL, config=config)
         return self.send_chat_message(one_off_chat, prompt)

@@ -1,17 +1,27 @@
 # ---------------- #
 # Import and Setup
 # ---------------- #
+import os
+import tempfile
+from types import SimpleNamespace
+
 import matplotlib
 matplotlib.use("agg")  # Draw to memory: no screen is needed (CI and the Docker test command have none)
 import matplotlib.pyplot as plt
+import pandas as pd
 
+from src.data_manager.charts.chart_manager import ChartManager
 from src.data_manager.charts.chart_resizer import ChartResizer
+from src.data_manager.charts.default_charts import create_default_charts
 from src.data_manager.constants import MIN_TICK_FONT_SIZE
 
 # Ten root causes, the longest category list the charts show
 CAUSES = ["Struck by Object", "Electrical", "Safety Procedure Breach", "Chemical", "Fall from Height",
           "Water", "Fire", "Machinery", "Slip or Trip", "Other"]
 LABEL_SIZE = 8
+
+REPORT = {"reporter_name": "Ann", "incident_date": "2026-10-01", "importance_score": 5, "location": "Tuas, bay 2",
+          "root_cause_category": "Fire", "detected_language": "English", "ai_severity": "High", "work_stoppage_hours": 1}
 
 
 # ------------ #
@@ -37,10 +47,15 @@ def drawn_labels(ax):
 def none_touch(labels):
     return all(lower.y1 <= upper.y0 for (_, lower), (_, upper) in zip(labels, labels[1:]))
 
+# A ChartManager fed by a Data Manager that always gives the same table
+def manager_for(table):
+    return ChartManager(SimpleNamespace(load_records=lambda ascending=False: table, load_matching_records=lambda c, v: table),
+                        create_default_charts())
 
-# ----- #
-# Tests
-# ----- #
+
+# ------------------- #
+# ChartResizer Tests
+# ------------------- #
 
 # With room to spare the labels keep the size the chart gave them, and all of them are shown
 def test_labels_with_enough_room_keep_their_size():
@@ -79,3 +94,23 @@ def test_labels_are_thinned_out_when_too_small_to_fit_then_restored():
     assert len(labels) == len(CAUSES)
     assert all(size == LABEL_SIZE for size, _ in labels)
     plt.close(figure)
+
+
+# ------------------- #
+# ChartManager Tests
+# ------------------- #
+
+# Reports with every severity blank still give a picture (the severity panels say "No data") instead of a crash
+def test_blank_severities_do_not_crash_the_severity_chart():
+    table = pd.DataFrame([dict(REPORT, ai_severity=float("nan"))] * 3)
+    with tempfile.TemporaryDirectory() as folder:
+        for chart in ("severity_by_cause", "all"):
+            saved, message = manager_for(table).show_chart(chart, save_path=os.path.join(folder, f"{chart}.png"))
+            assert saved is True, message
+
+# Saving into a folder that does not exist yet (the app started outside the project folder) creates it rather than crashing
+def test_saving_a_chart_creates_the_folder():
+    with tempfile.TemporaryDirectory() as folder:
+        path = os.path.join(folder, "new", "deeper", "chart.png")
+        saved, message = manager_for(pd.DataFrame([REPORT])).show_chart("language", save_path=path)
+        assert saved is True and os.path.getsize(path) > 0

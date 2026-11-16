@@ -16,7 +16,7 @@ class TranscriptStore(ABC):
     def save(self, transcript_id: str, text: str) -> tuple[bool, str]:
         pass
 
-    # Return the Saved Conversation for an ID, or None if There is None
+    # Return the Saved Transcript for an ID, or None if There is None
     @abstractmethod
     def load(self, transcript_id) -> str | None:
         pass

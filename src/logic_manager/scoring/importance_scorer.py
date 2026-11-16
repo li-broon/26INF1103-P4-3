@@ -3,9 +3,8 @@ from .factors.choice_factor import ChoiceFactor
 from .factors.hours_factor import HoursFactor
 
 
+# Adds up the contribution of every factor it owns and caps the result.
 class ImportanceScorer:
-    """Adds up the contribution of every factor it owns and caps the result."""
-
     def __init__(self, factors, max_score):
         self._factors = list(factors)
         self._max_score = max_score
