@@ -1,33 +1,33 @@
-# --Window Text, Sizes and Colours Shared by Every GUI Class (Constants Only, No Class)-- #
+# Text, sizes and colours used by the GUI
 
 import os
 
 APP_TITLE = "Workplace Incident Reporting Assistant"
 
-# Window and Taskbar Icon (Two Folders Up from src/gui_manager/), and the Windows App ID that Lets the Taskbar Use it
+# App icon, and the ID Windows uses to show it in the taskbar
 ICON_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "icon.png")
 WINDOWS_APP_ID = "P4-3.IncidentReportingAssistant"
 APP_SUBTITLE = "Report what happened in any language."
 EMERGENCY_TEXT = "Someone still in danger? Call 995 and your supervisor FIRST"
 
-# Window Sizes at 100% Display Scaling (fit_window Grows Them to Match the Screen)
+# Window sizes at 100% scaling
 WINDOW_WIDTH, WINDOW_HEIGHT = 1060, 720
 REPORT_WINDOW_WIDTH, REPORT_WINDOW_HEIGHT = 660, 720
 
-# Milliseconds Between Checks for Gemini's Reply, and Between "Thinking..." Dots
+# Milliseconds between checks for the AI's reply, and between "thinking..." dots
 POLL_MS = 100
 THINKING_MS = 400
 
-# Shown in the Column Box when No Filter is Applied
+# Filter option for no filter
 ALL_REPORTS = "All reports"
 
-# Under the Title of a Saved Conversation
+# Shown under the title of a saved conversation
 TRANSCRIPT_NOTE = "Exactly as the worker and the chatbot wrote it, before any translation."
 
-# Grey Hint in the Empty Message Box
+# Grey hint in the empty message box
 PLACEHOLDER = "Describe what happened, then press Enter..."
 
-# Greetings in Singapore's Four Official Languages, on the Welcome Card
+# Greetings in Singapore's four official languages
 LANGUAGE_GREETINGS = [
     ("English", "You can talk to me in your own language."),
     ("Melayu", "Anda boleh bercakap dalam bahasa anda sendiri."),
@@ -38,9 +38,9 @@ LANGUAGE_GREETINGS = [
 FONT = "Segoe UI"
 
 # Colours
-BG = "#f3f5f9"            # Window Background
-SURFACE = "#ffffff"       # Cards, Table, Message Box
-SURFACE_ALT = "#f8fafc"   # Every Other Table Row
+BG = "#f3f5f9"            # Window background
+SURFACE = "#ffffff"       # Cards, tables, message box
+SURFACE_ALT = "#f8fafc"   # Every other table row
 BORDER = "#dfe4ec"
 TEXT = "#1e293b"
 MUTED = "#64748b"
@@ -60,7 +60,7 @@ SUCCESS = "#15803d"
 SUCCESS_SOFT = "#f0fdf4"
 AI_BUBBLE = "#ffffff"
 
-# Score Colours, Highest First: (Lowest Score, Text Colour, Background)
+# Score colours, highest first: (lowest score, text colour, background)
 SCORE_COLOURS = [
     (8, DANGER, DANGER_SOFT),
     (6, ORANGE, ORANGE_SOFT),
@@ -68,15 +68,15 @@ SCORE_COLOURS = [
     (0, SUCCESS, SUCCESS_SOFT),
 ]
 
-# Summary Cards above the Reports Table: (Key in report_stats, Caption, Number Colour)
+# Summary cards on the Reports tab: (key, caption, colour)
 STAT_CARDS = [
     ("total", "SAVED REPORTS", PRIMARY),
     ("mom", "MOM REPORTABLE", WARNING),
-    ("overdue", "MOM DEADLINE PASSED", DANGER),  # Counts Every Passed Deadline, Reported or Not (the MOM Tab's "OVERDUE" Leaves Out the Reported Ones)
+    ("overdue", "MOM DEADLINE PASSED", DANGER),  # Includes reports already sent to MOM
     ("hospitalised", "HOSPITALISED", ORANGE),
 ]
 
-# MOM Tab Table: (Heading, Column in mom_data.csv, Width). The First Column is the Tick Box, Drawn from safety_officer_reported
+# MOM table columns: (heading, column, width). The first column is the tick box
 MOM_TABLE_COLUMNS = [
     ("Reported", "safety_officer_reported", 12),
     ("MOM Due", "deadline", 12),
@@ -89,10 +89,10 @@ MOM_TABLE_COLUMNS = [
 ]
 TICKED, UNTICKED = "☑ Reported", "☐ Pending"
 
-# Choices in the MOM Tab's "Show" Box
+# Choices in the MOM tab's "Show" drop-down
 MOM_SHOW_ALL, MOM_SHOW_PENDING, MOM_SHOW_REPORTED = "All", "Not yet reported", "Reported"
 
-# Summary Cards above the MOM Table: (Key in mom_stats, Caption, Number Colour)
+# Summary cards on the MOM tab: (key, caption, colour)
 MOM_STAT_CARDS = [
     ("total", "MOM REPORTABLE", PRIMARY),
     ("pending", "NOT YET REPORTED", WARNING),
@@ -100,15 +100,15 @@ MOM_STAT_CARDS = [
     ("reported", "REPORTED", SUCCESS),
 ]
 
-# Chat Bubbles: Kind -> (Name Above the Bubble, Bubble Colour, Text Colour, Side of the Window)
+# Chat bubbles: kind -> (name, bubble colour, text colour, side)
 BUBBLE_STYLES = {
     "you": ("You", PRIMARY, "#ffffff", "e"),
-    "worker": ("Worker", PRIMARY, "#ffffff", "e"),  # The Worker's Side of a Saved Transcript, Read Back by Someone Else
+    "worker": ("Worker", PRIMARY, "#ffffff", "e"),  # Worker's messages in a saved conversation
     "ai": ("Chatbot", AI_BUBBLE, TEXT, "w"),
     "error": ("Problem", DANGER_SOFT, DANGER, "w"),
     "good": ("Report saved", SUCCESS_SOFT, SUCCESS, "w"),
 }
 
-# Share of the Chat's Width a Bubble or the Welcome Card Text may Use Before Wrapping
+# How much of the chat's width text can use before wrapping
 BUBBLE_SHARE = 0.62
 CARD_SHARE = 0.86

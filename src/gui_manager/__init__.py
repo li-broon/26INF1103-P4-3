@@ -1,5 +1,4 @@
-# Public Parts of the GUI Manager
+# What other packages can import from gui_manager
 from src.gui_manager.manager import GUIManager
 
-# The Package's Public Names
 __all__ = ["GUIManager"]
