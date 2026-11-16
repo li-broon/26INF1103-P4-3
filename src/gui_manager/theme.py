@@ -106,11 +106,3 @@ class Theme:
     @staticmethod
     def badge(parent, text, colour, background):
         return tk.Label(parent, text=text, fg=colour, bg=background, font=Theme.font(9, "bold"), padx=10, pady=3)
-
-
-# TEMPORARY: the Old Function Names, so Files Not Yet Switched to Theme Keep Working. Removed Once Every File Uses Theme
-font = Theme.font
-apply_theme = Theme.apply
-fit_window = Theme.fit_window
-card = Theme.card
-badge = Theme.badge
