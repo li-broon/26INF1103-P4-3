@@ -10,7 +10,7 @@ from tkinter import messagebox, ttk
 from src.ai_manager import AIServiceError
 from src.io_manager.constants import CANCEL_WORDS
 from src.gui_manager.constants import APP_TITLE, BG, MUTED, PLACEHOLDER, POLL_MS, SURFACE, THINKING_MS
-from src.gui_manager.theme import card, font
+from src.gui_manager.theme import Theme
 from src.gui_manager.widgets.chat_view import ChatView
 from src.gui_manager.windows.report_window import ReportWindow
 
@@ -39,14 +39,14 @@ class ChatTab(ttk.Frame):
         self._chat = ChatView(self)
         self._chat.pack(fill="both", expand=True)
 
-        self._thinking = tk.Label(self, text="", bg=BG, fg=MUTED, font=font(10, "italic"), anchor="w")
+        self._thinking = tk.Label(self, text="", bg=BG, fg=MUTED, font=Theme.font(10, "italic"), anchor="w")
         self._thinking.pack(fill="x", padx=28, pady=(0, 4))
 
         # Message Box and Buttons, in a Card along the Bottom
-        input_card = card(self, fill="x", padx=24, pady=(0, 20))
+        input_card = Theme.card(self, fill="x", padx=24, pady=(0, 20))
         input_row = tk.Frame(input_card, bg=SURFACE)
         input_row.pack(fill="x", padx=12, pady=12)
-        self._entry = ttk.Entry(input_row, font=font(11))
+        self._entry = ttk.Entry(input_row, font=Theme.font(11))
         self._entry.pack(side="left", fill="x", expand=True)
         self._entry.bind("<Return>", self.send)
         self._entry.bind("<KP_Enter>", self.send)  # The Number Pad's Enter on Linux and macOS

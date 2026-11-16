@@ -9,7 +9,7 @@ from src.io_manager.constants import FILTER_COLUMNS, TABLE_COLUMNS, TRANSCRIPT_C
 from src.gui_manager.constants import (
     ALL_REPORTS, APP_TITLE, BG, DANGER, DANGER_SOFT, KEYWORD_FILTER_COLUMNS, MUTED, STAT_CARDS, SURFACE, SURFACE_ALT, TEXT,
 )
-from src.gui_manager.theme import card, font
+from src.gui_manager.theme import Theme
 from src.gui_manager.windows.report_window import ReportWindow
 
 # ----- #
@@ -30,16 +30,16 @@ class ReportsTab(ttk.Frame):
         stats_row.pack(fill="x", padx=24, pady=(20, 12))
         self._stat_labels = {}
         for column, (key, caption, colour) in enumerate(STAT_CARDS):
-            stat = card(stats_row)
+            stat = Theme.card(stats_row)
             stat.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 12, 0))
             stats_row.columnconfigure(column, weight=1, uniform="stats")
-            tk.Label(stat, text=caption, font=font(8, "bold"), fg=MUTED, bg=SURFACE).pack(anchor="w", padx=18, pady=(14, 0))
-            number = tk.Label(stat, text="0", font=font(22, "bold"), fg=colour, bg=SURFACE)
+            tk.Label(stat, text=caption, font=Theme.font(8, "bold"), fg=MUTED, bg=SURFACE).pack(anchor="w", padx=18, pady=(14, 0))
+            number = tk.Label(stat, text="0", font=Theme.font(22, "bold"), fg=colour, bg=SURFACE)
             number.pack(anchor="w", padx=18, pady=(0, 12))
             self._stat_labels[key] = number
 
         # Filter Bar (Buttons Packed First so They Keep their Size when the Window is Narrow)
-        bar_card = card(self, fill="x", padx=24, pady=(0, 12))
+        bar_card = Theme.card(self, fill="x", padx=24, pady=(0, 12))
         bar = tk.Frame(bar_card, bg=SURFACE)
         bar.pack(fill="x", padx=16, pady=12)
         ttk.Button(bar, text="Refresh", style="Secondary.TButton", command=self.refresh).pack(side="right")
@@ -47,14 +47,14 @@ class ReportsTab(ttk.Frame):
         ttk.Button(bar, text="Apply", style="Primary.TButton", command=self.apply_filter).pack(side="right")
 
         ttk.Label(bar, text="FILTER BY", style="CardMuted.TLabel").pack(side="left")
-        self._column_box = ttk.Combobox(bar, state="readonly", width=15, font=font(10),
+        self._column_box = ttk.Combobox(bar, state="readonly", width=15, font=Theme.font(10),
                                         values=[ALL_REPORTS] + [heading for heading, _ in FILTER_COLUMNS])
         self._column_box.set(ALL_REPORTS)
         self._column_box.pack(side="left", padx=(10, 18))
         self._column_box.bind("<<ComboboxSelected>>", self._column_changed)
 
         ttk.Label(bar, text="VALUE", style="CardMuted.TLabel").pack(side="left")
-        self._value_box = ttk.Combobox(bar, state="disabled", width=22, font=font(10))
+        self._value_box = ttk.Combobox(bar, state="disabled", width=22, font=Theme.font(10))
         self._value_box.pack(side="left", padx=(10, 18))
         self._value_box.bind("<Return>", self.apply_filter)
         self._value_box.bind("<KP_Enter>", self.apply_filter)  # The Number Pad's Enter on Linux and macOS
@@ -63,13 +63,13 @@ class ReportsTab(ttk.Frame):
         # Status Line and Hint
         info = tk.Frame(self, bg=BG)
         info.pack(fill="x", padx=26, pady=(0, 8))
-        self._status = tk.Label(info, text="", font=font(10, "bold"), fg=TEXT, bg=BG)
+        self._status = tk.Label(info, text="", font=Theme.font(10, "bold"), fg=TEXT, bg=BG)
         self._status.pack(side="left")
         tk.Label(info, text="Double-click a report to open it   ·   Red rows: hospitalised or MOM reportable",
-                 font=font(9), fg=MUTED, bg=BG).pack(side="right")
+                 font=Theme.font(9), fg=MUTED, bg=BG).pack(side="right")
 
         # Report Table
-        table_card = card(self, fill="both", expand=True, padx=24, pady=(0, 20))
+        table_card = Theme.card(self, fill="both", expand=True, padx=24, pady=(0, 20))
         self._tree = ttk.Treeview(table_card, columns=["number"] + [column for _, column, _ in TABLE_COLUMNS],
                                   show="headings", selectmode="browse")
         self._tree.heading("number", text="NO.")
@@ -91,7 +91,7 @@ class ReportsTab(ttk.Frame):
         self._tree.bind("<KP_Enter>", self.open_selected)
 
         # Shown over the Table when there is Nothing to List
-        self._empty = tk.Label(table_card, text="", font=font(11), fg=MUTED, bg=SURFACE)
+        self._empty = tk.Label(table_card, text="", font=Theme.font(11), fg=MUTED, bg=SURFACE)
 
         self.refresh()
 
