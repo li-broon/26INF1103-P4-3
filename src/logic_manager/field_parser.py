@@ -1,19 +1,19 @@
 import math
 
 
-# Turns messy AI generated values into clean Python ones (never raises).
+# turns messy AI generated values into clean python values
 class FieldParser:
     # Text the AI may use for "true"
     TRUE_WORDS = frozenset({"true", "yes", "y", "1"})
 
-    # Convert an AI generated value to a boolean
+    # convert an AI generated value to a boolean
     @staticmethod
     def to_bool(value):
         if isinstance(value, str):
             return value.strip().lower() in FieldParser.TRUE_WORDS
         return bool(value)
 
-    # Convert an AI generated value to a float, anything that is not a usable number becomes 0.0
+    # convert an AI generated value to a float, anything that is not a usable number becomes 0.0
     @staticmethod
     def to_float(value):
         try:

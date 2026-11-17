@@ -9,20 +9,17 @@ from .rules.priority_classifier import PriorityClassifier
 from .scoring.importance_scorer import ImportanceScorer
 
 
-# Applies the business rules to an AI-enriched report and hands it on to be saved.
-# - Composition: it builds and owns its scorer, reporting rule and classifier.
-# - Aggregation: the DataManager is injected and lives on independently of it.
-# - Aggregation: the optional MOM store (any object with save_record) is injected too; MOM reportable reports are copied into it after the main save.
+# applies the business rules to an AI-enriched report and hands it on to be saved
 class LogicManager:
     def __init__(self, data_manager, config=None, mom_store=None):
         config = config or LogicConfig()
-        self._data_manager = data_manager                       # aggregation (your DataManager, or any object with save_record)
-        self._mom_store = mom_store                             # aggregation (the MOM register, or None to skip it)
-        self._scorer = ImportanceScorer.from_config(config)     # composition
+        self._data_manager = data_manager                        
+        self._mom_store = mom_store                              
+        self._scorer = ImportanceScorer.from_config(config)     
         self._reporting_rule = MomReportingRule.from_config(config)
         self._classifier = PriorityClassifier.from_config(config)
 
-    # Apply every business rule to the report. Pure: nothing is saved or changed.
+    # apply every business rule to the report
     def evaluate(self, report):
         if not isinstance(report, Mapping) or not report:
             raise InvalidReportError("Report must be a non-empty dictionary.")
@@ -37,7 +34,7 @@ class LogicManager:
             score_breakdown=self._scorer.breakdown(report),
         )
 
-    # Evaluate the report, save it, and return the outcome so 'io_manager' can show it
+    # evaluate the report, save it and return the outcome
     def process(self, report):
         try:
             evaluation = self.evaluate(report)
@@ -52,7 +49,7 @@ class LogicManager:
         except OSError as error:
             saved, message = False, f"Could not save report: {error}"
 
-        # Once the main save worked, copy MOM reportable reports into the MOM register
+        # once the main save worked copies MOM reportable reports into the MOM register
         if saved and evaluation.mom_reportable == "Yes" and self._mom_store is not None:
             message = self._save_to_mom_store(record, message)
 
@@ -65,7 +62,7 @@ class LogicManager:
             priority=evaluation.priority,
         )
 
-    # Copy one report into the MOM register. The report is already safely saved, so a problem here only adds a note to the message
+    # copies one report into the MOM register. if the save fails a message will be added to the save message
     def _save_to_mom_store(self, record, message):
         try:
             mom_saved, mom_message = self._mom_store.save_record(record)

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 
-# What the business rules decided about one report (nothing has been saved yet).
+# business rules decision for one report
 @dataclass
 class Evaluation:
     importance_score: float
@@ -10,7 +10,7 @@ class Evaluation:
     priority: str
     score_breakdown: dict = field(default_factory=dict)
 
-    # The fields added to the report before it is saved
+    # fields added to the report before it is saved
     def record_fields(self):
         return {
             "importance_score": self.importance_score,

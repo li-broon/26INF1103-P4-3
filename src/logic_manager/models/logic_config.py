@@ -2,9 +2,7 @@ import json
 from dataclasses import dataclass, field, fields
 
 
-# Every weight, threshold and deadline the Logic Manager uses, in one place.
-# The defaults reproduce the original Phase 1 behaviour. A JSON file can override
-# any of them (see from_json), so business rules are configurable without code changes.
+# all the weight, threshold and deadline values the Logic Manager uses
 @dataclass(frozen=True)
 class LogicConfig:
     # Weight for each value the AI can return for ai_severity / root_cause_category
@@ -22,32 +20,32 @@ class LogicConfig:
     near_miss_weights: tuple = (2, 0)
     lost_time_injury_weights: tuple = (8, 1)
 
-    # How much each field contributes to the final importance score
+    # how much each field contributes to the final importance score
     field_importance: dict = field(default_factory=lambda: {
         "ai_severity": 0.30,
         "root_cause_category": 0.20,
         "hospitalised": 0.20,
         "is_near_miss": 0.10,
         "lost_time_injury": 0.20,
-        "work_stoppage_hours": 0.05,  # applied directly to the hours
+        "work_stoppage_hours": 0.05,  
     })
 
-    # The importance score is capped at this value
+    # the importance score is capped at this value
     max_score: float = 10
-    # Work stoppage hours above this number will not increase the importance score
+    # work stoppage hours above this number will not increase the importance score
     max_stoppage_hours: float = 24
 
-    # Minimum importance score for each priority band (highest band that fits is used)
+    # minimum importance score for each priority band 
     priority_bands: dict = field(default_factory=lambda: {
         "Urgent": 7.0, "Elevated": 4.0, "Routine": 0.0,
     })
 
-    # A report is flagged for MOM if the severity is in this set
+    # a report is flagged for MOM if the severity is in this set
     mom_severities: frozenset = frozenset({"Critical", "High"})
-    # Days after the incident date which the MOM report must be submitted
+    # days after the incident date which the MOM report must be submitted
     mom_deadline_days: int = 10
 
-    # Load overrides from a JSON file. A missing or corrupt file, or a bad value,
+    # function to load overrides from a JSON file. A missing or corrupt file, or a bad value,
     # falls back to the defaults instead of crashing.
     @classmethod
     def from_json(cls, path):
@@ -69,7 +67,7 @@ class LogicConfig:
                 overrides[item.name] = value
         return cls(**overrides)
 
-    # Check a JSON value has the same shape as the default, returns (ok, converted value)
+    # check a JSON value has the same shape as the default
     @staticmethod
     def _coerce(default, value):
         def is_number(item):

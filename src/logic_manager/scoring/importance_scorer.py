@@ -3,13 +3,13 @@ from .factors.choice_factor import ChoiceFactor
 from .factors.hours_factor import HoursFactor
 
 
-# Adds up the contribution of every factor it owns and caps the result.
+# calculate the contribution of each field to the total importance score
 class ImportanceScorer:
     def __init__(self, factors, max_score):
         self._factors = list(factors)
         self._max_score = max_score
 
-    # Builds the scorer, and the factor objects it owns, from the configured weights
+    # builds an ImportanceScorer from a LogicConfig object
     @classmethod
     def from_config(cls, config):
         importance = config.field_importance
@@ -26,13 +26,13 @@ class ImportanceScorer:
         )
 
     def score(self, report):
-        # An empty report has no data to score (missing fields would otherwise count as False)
+        # an empty report has no data to score 
         if not report:
             return 0
         total = sum(factor.contribution(report) for factor in self._factors)
         return round(min(total, self._max_score), 2)
 
-    # How many points each field added (before the cap), so a score can be explained
+    # makes the score explainable by showing the contribution of each field 
     def breakdown(self, report):
         if not report:
             return {}
