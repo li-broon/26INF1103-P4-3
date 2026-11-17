@@ -86,6 +86,7 @@ def test_saving_and_reading_go_through_the_store():
     assert manager.save_record(make_report("Ann", 5))[0] is False  # the store's duplicate check is what answers
 
 
+# urgency is determined based on the importance_score
 def test_reports_are_most_urgent_first_unless_ascending():
     manager = make_manager()
     assert names(manager.load_records()) == ["Eli", "Ann", "Fay", "Ben", "Cai", "Dee"]
@@ -149,7 +150,7 @@ def test_location_is_a_keyword_search():
     assert manager.load_matching_records("location", "").empty
     assert manager.load_matching_records("location", "canteen").empty
 
-
+# Score matches the fixed bands(the range)
 def test_score_bands():
     manager = make_manager()
     assert names(manager.load_matching_records("importance_score", "8+")) == ["Eli", "Ann"]
@@ -159,7 +160,7 @@ def test_score_bands():
     assert names(manager.load_matching_records("importance_score", "0 to under 2")) == ["Dee"]
     assert manager.load_matching_records("importance_score", "").empty      # used to crash
 
-
+# Date mathches the fixed ranges
 def test_date_ranges():
     manager = make_manager()
     assert names(manager.load_matching_records("incident_date", "Last 7 Days")) == ["Eli", "Ann", "Fay"]
@@ -177,7 +178,7 @@ def test_deadline_windows():
     assert names(manager.load_matching_records("deadline", "All upcoming")) == ["Eli", "Ann", "Dee"]
     assert manager.load_matching_records("deadline", "N/A").empty
 
-
+# Filtered results follow the sort by urgency flag
 def test_filtered_results_follow_the_ascending_flag():
     manager = make_manager()
     assert names(manager.load_matching_records("location", "office", ascending=True)) == ["Cai", "Ben", "Fay"]
@@ -190,6 +191,7 @@ def test_nothing_found_or_no_such_column_gives_an_empty_table():
     assert manager.load_matching_records("no_such_column", "x").empty
 
 
+# Ensure filtered results index start from zero and have all the columns of the original table
 def test_matching_reports_keep_all_columns_and_are_numbered_from_zero():
     manager = make_manager()
     result = manager.load_matching_records("ai_severity", "high")
@@ -206,7 +208,7 @@ def test_new_reports_are_found_straight_away():
     assert "Gus" in manager.get_unique_values("reporter_name")
 
 # ------------------------------- #
-# The Filters it is Given
+# The Filters injection test
 # ------------------------------- #
 
 # The Filters are Passed in, so Without Any the Special Columns Fall Back to Exact Text Too
