@@ -1,7 +1,3 @@
-# ------- #
-# Imports
-# ------- #
-
 import math
 import weakref
 
@@ -10,10 +6,6 @@ from matplotlib.text import Text
 from src.data_manager.constants import (
     DETAIL_GID, DETAIL_MIN_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MIN_TICK_FONT_SIZE, TICK_LABEL_GAP, YEAR_LABEL_PAD,
 )
-
-# ----- #
-# Class
-# ----- #
 
 # Keeps one chart readable at any size, in a window or a saved picture.
 # Text sizes are fixed in points, so without this the labels would keep their size while the window shrinks and pile on top of each other.
@@ -31,7 +23,7 @@ class ChartResizer:
         figure.canvas.mpl_connect("resize_event", self._on_resize)
 
     # Stops the user shrinking the window below the point where the chart is still readable (fraction of its normal size).
-    # Only some window systems allow this (Tk and Qt do); on the others the window can be shrunk freely and nothing happens here
+    # Only some window systems allow this; on the others the window can be shrunk freely and nothing happens here
     def limit_window_size(self, fraction: float = MIN_TEXT_SCALE) -> None:
         width = int(self._design_size[0] * self._figure.dpi * fraction)
         height = int(self._design_size[1] * self._figure.dpi * fraction)

@@ -1,15 +1,7 @@
-# ------- #
-# Imports
-# ------- #
-
 import os
 
 from src.data_manager.charts.chart_drawer import ChartDrawer
 from src.data_manager.charts.chart_resizer import ChartResizer
-
-# --------- #
-# Constants
-# --------- #
 
 # Window sizes in inches (a window is 100 pixels per inch, so these fit a normal laptop screen)
 WINDOW_WIDTH = 11                 # One chart on its own
@@ -23,10 +15,6 @@ ALL_SAVED_HEIGHT = 12             # A saved picture has no screen to fit, so it 
 ALL_MIN_WINDOW_SCALE = 0.75       # With five charts in it the window cannot be shrunk as far as a window with one
 
 NO_SCREEN_BACKENDS = ("agg", "cairo", "pdf", "pgf", "ps", "svg", "template")  # Matplotlib backends that can only write files
-
-# ----- #
-# Class
-# ----- #
 
 # Shows the chart the user asks for: gets the reports from the DataManager and draws them with the matching ChartDrawer(s)
 class ChartManager:

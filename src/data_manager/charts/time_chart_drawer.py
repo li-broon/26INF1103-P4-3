@@ -1,17 +1,9 @@
-# ------- #
-# Imports
-# ------- #
-
 from abc import ABC
 
 import pandas as pd
 
 from src.data_manager.charts.chart_drawer import ChartDrawer
 from src.data_manager.constants import COUNT_LABEL, DATE_FIELD, DATE_FORMAT, DETAIL_GID, MONTH_NAMES, YEAR_LABEL_PAD
-
-# ----- #
-# Class
-# ----- #
 
 # Base Class for the Charts that Group Incidents by Month and Year: Does the Date Handling and the Month Axis, Each Subclass Says What it Counts
 class TimeChartDrawer(ChartDrawer, ABC):

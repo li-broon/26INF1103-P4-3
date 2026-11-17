@@ -1,16 +1,8 @@
-# ------- #
-# Imports
-# ------- #
-
 import numpy as np
 import pandas as pd
 
 from src.data_manager.charts.time_chart_drawer import TimeChartDrawer
 from src.data_manager.constants import DATE_FIELD, SEVERITY_ORDER, SEVERITY_SCORES
-
-# ----- #
-# Class
-# ----- #
 
 # How severe each root cause is on average, in three panels. Severity is a number: Low = 1, Medium = 2, High = 3, Critical = 4.
 #   1. per year   : bars for the mean and a diamond for the median, one group per root cause

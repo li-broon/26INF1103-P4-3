@@ -1,15 +1,7 @@
-# ------- #
-# Imports
-# ------- #
-
 import pandas as pd
 
 from src.data_manager.charts.time_chart_drawer import TimeChartDrawer
 from src.data_manager.constants import DATE_FIELD
-
-# ----- #
-# Class
-# ----- #
 
 # How often each root cause happened in each month: one stacked bar per month, with every year laid out Jan to Dec
 class RootCauseChart(TimeChartDrawer):

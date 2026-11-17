@@ -1,15 +1,7 @@
-# ------- #
-# Imports
-# ------- #
-
 import pandas as pd
 
 from src.data_manager.charts.time_chart_drawer import TimeChartDrawer
 from src.data_manager.constants import COUNT_LABEL, DATE_FIELD, MONTH_NAMES
-
-# ----- #
-# Class
-# ----- #
 
 # Incidents per month: one line for each year (Jan to Dec), so the years can be compared
 class MonthlyChart(TimeChartDrawer):

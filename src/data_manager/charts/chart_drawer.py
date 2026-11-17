@@ -1,23 +1,15 @@
-# ------- #
-# Imports
-# ------- #
-
 from abc import ABC, abstractmethod
 
 import pandas as pd
 
 from src.data_manager.constants import UNKNOWN_PREFIX
 
-# ----- #
-# Class
-# ----- #
-
 # Base Class for the Charts the User can Ask For (One per Chart): Does the Shared Checks and Helpers, Each Subclass Only Says How its Chart is Drawn
 class ChartDrawer(ABC):
 
     # key is the name the user types (e.g. "severity"), title is the text shown in the chart menu and above an empty chart
     # required_columns are the columns this chart needs; if one is missing the chart says "No data to show" instead of crashing
-    # panels is how many charts this one draws on top of each other (e.g. a monthly one and a yearly one)
+    # panels is how many charts this one draws on top of each other (example: a monthly one and a yearly one)
     # height is how much room it needs next to other charts when they share a window (one panel by default is 1, so a 3 panel chart needs 3 times as much)
     def __init__(self, key: str, title: str, required_columns: tuple[str, ...] = (), panels: int = 1, height: float | None = None) -> None:
         self._key = key

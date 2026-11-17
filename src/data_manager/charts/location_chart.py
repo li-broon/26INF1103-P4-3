@@ -1,15 +1,7 @@
-# ------- #
-# Imports
-# ------- #
-
 import pandas as pd
 
 from src.data_manager.charts.time_chart_drawer import TimeChartDrawer
 from src.data_manager.constants import COUNT_LABEL, DATE_FIELD, MAX_LABEL_LENGTH, OTHER_LABEL, TOP_LOCATIONS
-
-# ----- #
-# Class
-# ----- #
 
 # Where incidents happened, in two panels: per month (stacked, every year Jan to Dec) and per year (bars).
 # Only the TOP_LOCATIONS places with the most incidents are named; every other place is grouped as "Other"
