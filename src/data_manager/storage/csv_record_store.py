@@ -14,18 +14,16 @@ from src.data_manager.storage.record_store import RecordStore
 # Used for debugging to log warnings and errors instead of printing them to the console
 logger = logging.getLogger(__name__)
 
-# ----- #
-# Class
-# ----- #
-
-# Keeps the reports in one CSV file (the RecordStore the app uses)
+# Class that implements the RecordStore interface, saving and loading reports to a CSV file.
 class CsvRecordStore(RecordStore):
 
     # data_file is the CSV file the reports are stored in
     def __init__(self, data_file: str) -> None:
         self._data_file = data_file
         self._data_folder = os.path.dirname(data_file)
-        self._cleaner = RecordCleaner()  # Created and owned by this store
+        # Created and owned by this store (Composition) 
+        # Responsible for cleaning and validating reports before saving or showing them
+        self._cleaner = RecordCleaner()  
 
     # Adds one report to the CSV file
     def save_record(self, record: dict) -> tuple[bool, str]:

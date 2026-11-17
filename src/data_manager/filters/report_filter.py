@@ -6,35 +6,32 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
-# ----- #
-# Class
-# ----- #
-
-# Base Class for the Filters the User can Apply to Saved Reports (One per Column): Does the Shared Checks, Each Subclass Only Says How a Report Matches
+# Base Class for the Filters the User can Apply to Saved Reports (One per Column)
+# Sub classes determine how the filter works (e.g. by a fixed range, or by matching a keyword, or by exact text)
 class ReportFilter(ABC):
 
     # column is the column of the reports this filter works on
     def __init__(self, column: str) -> None:
         self._column = column
 
-    # The column this filter works on (read only)
+    # Column getter
     @property
     def column(self) -> str:
         return self._column
 
-    # Keeps the Reports that Match the Chosen Value. Gives an Empty Table if the Column is Not in the Table
+    # Applies the filter to the reports table, returning only the matching reports (or an empty table if the column is not there)
     def apply(self, table: pd.DataFrame, value: str) -> pd.DataFrame:
         if self._column not in table.columns:
             return pd.DataFrame()
         return self._match(table, value)
 
-    # The Choices to Show the User for this Column. Gives an Empty List if the Column is Not in the Table
+    # Provide options for multiple choice filters (e.g. "Last 7 Days", "Overdue", "High Severity")
     def options(self, table: pd.DataFrame) -> list[str]:
         if self._column not in table.columns:
             return []
         return self._options(table)
 
-    # How a Report Matches the Chosen Value (Every Subclass Must Say)
+    # determine how value in the column is matched each sub class (filter) implements this
     @abstractmethod
     def _match(self, table: pd.DataFrame, value: str) -> pd.DataFrame:
         pass

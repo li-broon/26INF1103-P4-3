@@ -12,7 +12,7 @@ class DataManager:
     # store keeps the reports (a CSV file in the app), transcripts keeps each report's conversation, and filters maps each column to its filter
     def __init__(self, store: RecordStore, filters: dict[str, ReportFilter], transcripts: TranscriptStore) -> None:
         self._store = store
-        self._filters = dict(filters)  # A copy, so changing the dictionary later changes nothing here
+        self._filters = dict(filters)  # Aggregation: the manager owns the filters, copy of filters from outside
         self._transcripts = transcripts
 
     # Saves one report. Returns (success, message)

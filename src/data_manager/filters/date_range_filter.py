@@ -16,9 +16,7 @@ from src.data_manager.filters.report_filter import ReportFilter
 # Predefined date ranges for filtering, counting back from today
 DATE_RANGES = {"Last 7 Days": 7, "Last 30 Days": 30, "Last 90 Days": 90, "Last 180 Days": 180, "Last 365 Days": 365}
 
-# ----- #
-# Class
-# ----- #
+
 
 # Keeps the reports from the last N days (the user picks a range such as "Last 7 Days")
 class DateRangeFilter(ReportFilter):
@@ -28,7 +26,7 @@ class DateRangeFilter(ReportFilter):
         super().__init__(column)
         self._ranges = dict(ranges)
 
-    # Keeps records from the last N days
+    # Keeps records from the last N days (stated in the ranges stated in the DATA_RANGES constant)
     def _match(self, table: pd.DataFrame, value: str) -> pd.DataFrame:
         days = self._ranges.get(value)
         # Returns empty table if unknown label

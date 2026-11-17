@@ -19,11 +19,7 @@ DEADLINE_FILTERS = {
     "All upcoming": (0, None),
 }
 
-# ----- #
-# Class
-# ----- #
-
-# Keeps the reports whose MOM deadline falls in a window (e.g. "Overdue", or "Due within 7 days")
+# Filter that keeps reports whose MOM deadline falls within the specified window
 class DeadlineFilter(ReportFilter):
 
     # windows maps each choice shown to the user to (earliest, latest) days from today
@@ -31,13 +27,14 @@ class DeadlineFilter(ReportFilter):
         super().__init__(column)
         self._windows = dict(windows)
 
-    # Keeps records whose MOM deadline fall within a window
+    # Filter reports that have a MOM deadline within the chosen window
     def _match(self, table: pd.DataFrame, value: str) -> pd.DataFrame:
         # Deadline windows are gotten from the windows this filter was given
         limits = self._windows.get(value)
         if limits is None:
             return pd.DataFrame()
 
+        # Retrieved from DEADLINE_FILTERS dict tuple
         earliest, latest = limits
         today = pd.Timestamp.today().normalize()
         deadlines = pd.to_datetime(table[self._column], format=DATE_FORMAT, errors="coerce")

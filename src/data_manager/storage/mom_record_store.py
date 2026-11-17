@@ -21,10 +21,6 @@ logger = logging.getLogger(__name__)
 # Text Values that Mean "Yes" in the mom_reportable Column
 YES_WORDS = ("yes", "true", "1", "1.0")
 
-# ----- #
-# Class
-# ----- #
-
 # The MOM Register: a Second CSV File that Only Holds the MOM Reportable Reports, Plus Whether the Safety Officer Has Reported Each One
 class MomRecordStore:
 

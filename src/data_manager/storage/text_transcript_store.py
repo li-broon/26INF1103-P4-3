@@ -10,9 +10,7 @@ from src.data_manager.storage.transcript_store import TranscriptStore
 # Used for debugging to log warnings and errors instead of printing them to the console
 logger = logging.getLogger(__name__)
 
-# ----- #
-# Class
-# ----- #
+
 
 # Keeps Each Conversation in its Own Text File, <folder>/<transcript_id>.txt (the TranscriptStore the App Uses)
 class TextTranscriptStore(TranscriptStore):

@@ -4,11 +4,7 @@
 
 from abc import ABC, abstractmethod
 
-# ----- #
-# Class
-# ----- #
-
-# Contract Every Transcript Store Must Follow (Text Files in the App, a Fake in the Tests)
+# Interface: Every Transcript Store Must Follow (Text Files in the App, a Fake in the Tests)
 class TranscriptStore(ABC):
 
     # Save One Conversation under its ID. Returns (success, message), it Never Crashes.

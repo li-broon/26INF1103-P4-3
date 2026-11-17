@@ -6,11 +6,8 @@ import pandas as pd
 
 from src.data_manager.filters.report_filter import ReportFilter
 
-# ----- #
-# Class
-# ----- #
-
-# Keeps the reports whose text in this column equals the chosen value (e.g. severity "High")
+# Filters columns by matching the text exactly (case-insensitive, ignores extra spaces).
+# Used for columns that have no special filter.
 class ExactTextFilter(ReportFilter):
 
     # Keeps records whose string matches the value exactly, it is not case-sensitive, ignores extra spaces

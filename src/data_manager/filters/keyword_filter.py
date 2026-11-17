@@ -6,11 +6,7 @@ import pandas as pd
 
 from src.data_manager.filters.report_filter import ReportFilter
 
-# ----- #
-# Class
-# ----- #
-
-# Keeps the reports whose text in this column contains a keyword (e.g. "office" finds "Head Office")
+# Filter Class based on a keyword
 class KeywordFilter(ReportFilter):
 
     # Keeps records containing the typed keyword, it is not case-sensitive, ignores extra spaces

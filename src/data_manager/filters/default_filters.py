@@ -8,14 +8,11 @@ from src.data_manager.filters.keyword_filter import KeywordFilter
 from src.data_manager.filters.report_filter import ReportFilter
 from src.data_manager.filters.score_band_filter import ScoreBandFilter
 
-
 # Columns that are searched for keywords (location)
 KEYWORD_COLUMNS = ["location"]
 
-# ---------- #
-# Function
-# ---------- #
-
+# Factory Function: build filters through this function.
+# Add filters from here to the dictionary, and the DataManager will use them automatically.
 # Builds the app's filters as a dictionary of column name -> filter; any column not in it is matched on its exact text
 def create_default_filters() -> dict[str, ReportFilter]:
     column_filters = [ScoreBandFilter(), DateRangeFilter(), DeadlineFilter()]

@@ -14,10 +14,6 @@ from src.data_manager.filters.report_filter import ReportFilter
 # Lower boundary of each score band in the urgency column: 0-2, 2-4, 4-6, 6-8, 8 and above
 SCORE_THRESHOLDS = ["0", "2", "4", "6", "8"]
 
-# ----- #
-# Class
-# ----- #
-
 # Keeps the reports whose score is within a band (e.g. "2 to under 4", or "8+" for 8 and above)
 class ScoreBandFilter(ReportFilter):
 
@@ -50,7 +46,7 @@ class ScoreBandFilter(ReportFilter):
 
         return table.reset_index(drop=True)
 
-    # The choices are the fixed bands, not every score in the reports
+    # The choices are the fixed bands, lower band to upper band 
     def _options(self, table: pd.DataFrame) -> list[str]:
         bands = []
         for i, threshold in enumerate(self._thresholds):

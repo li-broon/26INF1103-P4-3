@@ -8,11 +8,6 @@ import pandas as pd
 
 from src.data_manager.constants import DATE_FIELD, DATE_FORMAT, REQUIRED_FIELDS, URGENCY_COLUMN
 
-# ----- #
-# Class
-# ----- #
-
-
 # Checks and tidies one report before it is saved or shown, rejecting one with a missing required field or an invalid date or score
 class RecordCleaner:
 
