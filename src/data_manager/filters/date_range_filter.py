@@ -16,8 +16,6 @@ from src.data_manager.filters.report_filter import ReportFilter
 # Predefined date ranges for filtering, counting back from today
 DATE_RANGES = {"Last 7 Days": 7, "Last 30 Days": 30, "Last 90 Days": 90, "Last 180 Days": 180, "Last 365 Days": 365}
 
-
-
 # Keeps the reports from the last N days (the user picks a range such as "Last 7 Days")
 class DateRangeFilter(ReportFilter):
 
@@ -39,6 +37,6 @@ class DateRangeFilter(ReportFilter):
 
         return table[dates >= cutoff].reset_index(drop=True)
 
-    # The choices are the fixed ranges, not every date in the reports
+    # The choices are the fixed ranges defined by DATE_RANGES, not every date in the reports
     def _options(self, table: pd.DataFrame) -> list[str]:
         return list(self._ranges)
