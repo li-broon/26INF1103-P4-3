@@ -1,10 +1,11 @@
 from src.io_manager.constants import BOLD, CYAN, RESET, UNDERLINE
 
 
-# Prints One Page of the Reports Table: Title, Header, Rows with their Details, Page Footer
+#Prints One Page of the Reports Table: Title, Header, Rows with their Details, Page Footer
 class ReportTableView:
     def __init__(self, formatter):
-        self._formatter = formatter   # The shared ReportFormatter, handed in (association)
+        #The shared ReportFormatter, handed in (association)
+        self._formatter = formatter   
 
     def show(self, table, title: str, pager) -> None:
         total = len(table)
@@ -15,7 +16,7 @@ class ReportTableView:
         print(f"{BOLD}{header}{RESET}")
         print("-" * len(header))
 
-        # One block per report: the summary row, then its wrapped details underneath
+        #One block per report: the summary row, then its wrapped details underneath
         rows = table.iloc[first:last].fillna("-")
         for number, report in enumerate(rows.to_dict("records"), start=first + 1):
             print(self._formatter.build_row(number, report))

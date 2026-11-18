@@ -13,7 +13,7 @@ from src.io_manager.menus.view_menu import ViewMenu
 from src.io_manager.prompts.prompter import Prompter
 
 
-# User interface manager, handling all input and output, prompts, menu, pager
+#User interface manager, handling all input and output, prompts, menu, pager
 class IOManager:
     def __init__(self, ai_manager, logic_manager, data_manager, chart_manager, read=input):
         # Handed in by main() and used, but not created or owned by here (association)
@@ -32,7 +32,7 @@ class IOManager:
                        "page": PageMenu(self._prompter),
                        "filter": FilterMenu(self._prompter)}
 
-    # Move one page forward or back; says so (and returns False) when already on the last or first page
+    #Move one page forward or back; says so (and returns False) when already on the last or first page
     def _turn_page(self, pager, forward: bool) -> bool:
         moved = pager.next() if forward else pager.previous()
         if not moved:
@@ -40,7 +40,7 @@ class IOManager:
             print(f"{YELLOW}You are already on the {end} page.{RESET}")
         return moved
 
-    # Page through a filtered table: next, previous, open a report, or go back
+    #Page through a filtered table: next, previous, open a report, or go back
     def _browse_pages(self, table, title: str) -> None:
         pager = Pager(len(table))
         show_page = True
@@ -65,7 +65,7 @@ class IOManager:
             else:
                 return
 
-    # Show every saved report, most urgent first, with paging, filtering and full-report options
+    #Show every saved report, most urgent first, with paging, filtering and full-report options
     def _view_reports(self) -> None:
         table = self._data_manager.load_records()
 
@@ -103,14 +103,14 @@ class IOManager:
             else:
                 return
 
-    # Ask which report, then print the worker's conversation for it exactly as typed (untranslated)
+    #Ask which report, then print the worker's conversation for it exactly as typed (untranslated)
     def _show_transcript(self, table) -> None:
         number = self._prompter.ask_number(f"Which report number? (1-{len(table)}): ", 1, len(table))
         transcript_id = table.iloc[number - 1].to_dict().get(TRANSCRIPT_COLUMN)
         text = self._data_manager.load_transcript(transcript_id)
         self._card_view.show_transcript(text, f"Transcript for Report #{number}")
 
-    # Ask which column and value to filter by, then page through the matching reports
+    #Ask which column and value to filter by, then page through the matching reports
     def _filter_reports(self) -> None:
         choice = self._menus["filter"].show()
         if choice == FILTER_BACK_OPTION:
@@ -118,7 +118,7 @@ class IOManager:
 
         heading, column = FILTER_COLUMNS[choice - 1]
 
-        # The column's filter decides: a pick list of saved values, or none for a keyword search (location), where a word is typed
+        #The column's filter decides: a pick list of saved values, or none for a keyword search (location), where a word is typed
         values = self._data_manager.get_unique_values(column)
         if values:
             value = self._prompter.choose_from(f"Values saved under {heading}", values)
@@ -134,7 +134,7 @@ class IOManager:
 
         self._browse_pages(matches, f"Reports where {heading} matches '{value}' ({len(matches)} found, most urgent first)")
 
-    # Chat with the worker until the AI has a complete report, then score it, save it and show the result
+    #Chat with the worker until the AI has a complete report, then score it, save it and show the result
     def _run_chatbot(self) -> None:
         # Start the conversation (fails here if the API key is missing)
         try:
@@ -160,7 +160,7 @@ class IOManager:
                     return
                 continue
 
-            # Let the worker know the AI is working, since a reply can take a few seconds
+            #Let the worker know the AI is working, since a reply can take a few seconds
             print("Thinking...\n")
             result = conversation.send(user_text)
 
@@ -168,7 +168,7 @@ class IOManager:
                 self._show_ai_error(result)
                 continue
 
-            # Print the AI's reply, in the worker's own language
+            #Print the AI's reply, in the worker's own language
             print(result.reply)
 
             # All required fields collected: the Logic Manager scores and saves it
@@ -187,7 +187,7 @@ class IOManager:
                     self._view_reports()
                 return
 
-    # Show an AI error, with advice that fits the kind of error
+    #Show an AI error, with advice that fits the kind of error
     def _show_ai_error(self, result) -> None:
         print(f"{RED}{BOLD}  Error Occurred:{RESET}")
 
@@ -203,7 +203,7 @@ class IOManager:
             print(f"   {BOLD}{RED}Message:{RESET} {result.error}")
             print(f"{YELLOW}This report couldn't be finished. Type 'quit' to go back, or tell your supervisor directly.{RESET}\n")
 
-    # Main menu option 3: pick a chart (or all of them), then open it in a window or save it as a picture
+    #Main menu option 3: pick a chart (or all of them), then open it in a window or save it as a picture
     def _show_charts(self) -> None:
         options = self._chart_manager.get_chart_options() + [("all", "All charts on one page")]
         labels = [label for key, label in options]
@@ -227,7 +227,7 @@ class IOManager:
 
            
 
-    # Start the app: show the main menu until the user exits (Ctrl+C also exits cleanly)
+    #Start the app: show the main menu until the user exits (Ctrl+C also exits cleanly)
     def run(self) -> None:
         try:
             while True:

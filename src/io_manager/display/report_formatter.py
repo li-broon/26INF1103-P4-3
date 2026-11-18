@@ -17,7 +17,7 @@ from src.io_manager.constants import (
 )
 
 
-# Turns Report Data into Display Text (Never Prints)
+#Turns Report Data into Display Text (Never Prints)
 class ReportFormatter:
     # The layout of the table does not change, so it is stored once
     def __init__(self, columns=TABLE_COLUMNS, details=DETAIL_FIELDS):
@@ -45,7 +45,7 @@ class ReportFormatter:
         wrapped += [f"{indent}{' ' * DETAIL_LABEL_WIDTH}{line}" for line in lines[1:]]
         return wrapped
 
-    # Turn a True/False value from data.csv into "YES", "No" or "-"
+    #Turn a True/False value from data.csv into "YES", "No" or "-"
     def yes_no(self, value) -> str:
         text = str(value).strip().lower()
         if text in ("true", "yes", "1", "1.0"):
@@ -54,7 +54,7 @@ class ReportFormatter:
             return "No"
         return "-"
 
-    # Check whether a MOM deadline has already passed (a deadline of today is not overdue yet)
+    #Check whether a MOM deadline has already passed (a deadline of today is not overdue yet)
     def is_overdue(self, deadline, today=None) -> bool:
         try:
             due = datetime.strptime(str(deadline), "%Y-%m-%d").date()
@@ -62,7 +62,7 @@ class ReportFormatter:
             return False  # e.g. "Check incident date": no real date to compare
         return due < (today or date.today())
 
-    # Split a saved transcript back into (speaker, text) turns; a line without a "Speaker: " start continues the turn before it
+    #Split a saved transcript back into (speaker, text) turns; a line without a "Speaker: " start continues the turn before it
     def transcript_turns(self, text) -> list:
         turns = []
         for line in str(text or "").splitlines():

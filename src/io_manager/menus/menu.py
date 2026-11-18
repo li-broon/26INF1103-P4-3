@@ -1,30 +1,31 @@
-# A Numbered Menu: Shows a Title and Options, then Asks the User to Pick One (Child Menus Say WHAT to Show, the Parent Shows and Asks)
+#A Numbered Menu: Shows a Title and Options, then Asks the User to Pick One (Child Menus Say WHAT to Show, the Parent Shows and Asks)
 
 from abc import ABC, abstractmethod
 
 from src.io_manager.constants import BOLD, CYAN, GREEN, RESET
 from src.io_manager.prompts.prompter import Prompter
 
-
+#Parent class
 class Menu(ABC):
     def __init__(self, prompter: Prompter):
-        self._prompter = prompter   # The shared Prompter, passed in (the menu uses it but doesn't own it)
+        #The shared Prompter, passed in (the menu uses it but doesn't own it)
+        self._prompter = prompter   
 
-    # Every child menu must say what its title is
+    #Every child menu must say what its title is
     @abstractmethod
     def title(self) -> str:
         pass
 
-    # Every child menu MUST list its options, in order
+    #Every child menu MUST list its options, in order
     @abstractmethod
     def options(self) -> list:
         pass
 
-    # Optional line under the title; a child menu that needs one overrides this method
+    #Optional line under the title; a child menu that needs one overrides this method
     def subtitle(self) -> str:
         return ""
 
-    # Same for every menu: print the title box and numbered options, then ask for a valid number
+    #Same for every menu: print the title box and numbered options, then ask for a valid number
     def show(self) -> int:
         line = "=" * 72
         print(f"\n{line}\n{CYAN}{BOLD}{self.title().center(72)}{RESET}\n{line}")

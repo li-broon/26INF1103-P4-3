@@ -1,13 +1,13 @@
 from src.io_manager.constants import BOLD, CANCEL_WORDS, GREEN, RESET, YELLOW
 
 
-# Asks the User for Input and Keeps Asking Until the Answer is Valid
+#Asks the User for Input and Keeps Asking Until the Answer is Valid
 class Prompter:
     def __init__(self, read=input, cancel_words=CANCEL_WORDS):
         self._read = read                  # Where answers come from: input() in the app, a scripted list in the tests
         self._cancel_words = cancel_words
 
-    # Ask a yes/no question until the answer is y or n
+    #Ask a yes/no question until the answer is y or n
     def ask_yes_no(self, question: str) -> bool:
         while True:
             answer = self._read(f"{question} (y/n): ").strip().lower()
@@ -17,7 +17,7 @@ class Prompter:
                 return False
             print(f"{YELLOW}Please type 'y' for yes or 'n' for no.{RESET}")
 
-    # Ask for a whole number between low and high (both included) until one is given
+    #Ask for a whole number between low and high (both included) until one is given
     def ask_number(self, prompt: str, low: int, high: int) -> int:
         while True:
             user_input = self._read(prompt).strip()
@@ -36,7 +36,7 @@ class Prompter:
                 return choice
             print(f"{YELLOW}{choice} is not an option. Please type a number from {low} to {high}.{RESET}")
 
-    # Show the values as a numbered list and return the one picked, or None if the user chooses 'Back'
+    #Show the values as a numbered list and return the one picked, or None if the user chooses 'Back'
     def choose_from(self, heading: str, values: list):
         back_option = len(values) + 1
 
@@ -49,13 +49,13 @@ class Prompter:
         if choice == back_option:
             return None
 
-        # Subtract 1 because our menu starts at 1, but python lists start at 0
+        #Subtract 1 because our menu starts at 1, but python lists start at 0
         return values[choice - 1]
 
-    # Read a line of free text (may be blank; the caller decides what blank means)
+    #Read a line of free text (may be blank; the caller decides what blank means)
     def ask_text(self, prompt: str) -> str:
         return self._read(prompt).strip()
 
-    # True if the user typed one of the words that mean "I want to leave"
+    #True if the user typed one of the words that mean "I want to leave"
     def is_cancel(self, text: str) -> bool:
         return text.strip().lower() in self._cancel_words

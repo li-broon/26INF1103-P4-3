@@ -3,12 +3,12 @@ from src.io_manager.constants import (
 )
 
 
-# Prints One Report in Full: a Report Opened from the Table, or the Card a Worker Sees After Saving
+#Prints One Report in Full: a Report Opened from the Table, or the Card a Worker Sees After Saving
 class ReportCardView:
     def __init__(self, formatter):
         self._formatter = formatter   # The shared ReportFormatter, handed in (association)
 
-    # Print every field of one report under a title (long text is wrapped, empty fields skipped)
+    #Print every field of one report under a title (long text is wrapped, empty fields skipped)
     def show(self, report: dict, title: str) -> None:
         print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
         for label, column in FULL_REPORT_FIELDS:
@@ -19,12 +19,12 @@ class ReportCardView:
                 print(line)
         print()
 
-    # Open report number N from a table (table numbers start at 1, rows start at 0)
+    #Open report number N from a table (table numbers start at 1, rows start at 0)
     def show_from_table(self, table, number: int) -> None:
         report = table.iloc[number - 1].fillna("-").to_dict()
         self.show(report, f"Report #{number}")
 
-    # Print a report's conversation exactly as the worker and the AI wrote it, untranslated (text=None means none was saved)
+    #Print a report's conversation exactly as the worker and the AI wrote it, untranslated (text=None means none was saved)
     def show_transcript(self, text, title: str) -> None:
         print(f"\n{BOLD}{UNDERLINE}{title}{RESET}\n")
         if not text:
@@ -34,7 +34,7 @@ class ReportCardView:
             print(f"{CYAN}{BOLD}{SPEAKER_DISPLAY_NAMES.get(speaker, speaker)}:{RESET} {message}")
         print()
 
-    # Tells the worker whether the report was really saved; if so, shows it back as a card with the score and MOM details (outcome is a SaveOutcome)
+    #Tells the worker whether the report was really saved; if so, shows it back as a card with the score and MOM details (outcome is a SaveOutcome)
     def show_save_outcome(self, report: dict, outcome) -> None:
         # Only claim success when the Data Manager actually wrote the record
         if not outcome.saved:
@@ -44,13 +44,13 @@ class ReportCardView:
 
         print(f"\n{GREEN}{BOLD} Your report has been saved.{RESET}")
 
-        # The card shows what was saved: the worker's details plus the Logic Manager's results
+        #The card shows what was saved: the worker's details plus the Logic Manager's results
         card = dict(report)
         for column in ("importance_score", "mom_reportable", "deadline"):
             card[column] = getattr(outcome, column)
         self.show(card, "Your Saved Report")
 
-        # A MOM-reportable incident has a legal deadline, so make it stand out
+        #A MOM-reportable incident has a legal deadline, so make it stand out
         if outcome.mom_reportable == "Yes":
             if self._formatter.is_overdue(outcome.deadline):
                 print(f"{RED}{BOLD}  OVERDUE: this incident had to be reported to MOM by {outcome.deadline}. "
