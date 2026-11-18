@@ -1,0 +1,11 @@
+# Merges the different names each team member's Git was set up with, so "git shortlog" and GitHub count their work under one name.
+# Format: Proper Name <proper email> Name in commits <email in commits>
+Liren Koh <2601719@sit.singaporetech.edu.sg> lirenneedhelp <2601719@sit.singaporetech.edu.sg>
+Liren Koh <2601719@sit.singaporetech.edu.sg> liren_koh@SIT <2601719@sit.singaporetech.edu.sg>
+Liren Koh <2601719@sit.singaporetech.edu.sg> Li <2601719@sit.singaporetech.edu.sg>
+Hariz <2604771@sit.singaporetech.edu.sg> Hariz <26047712604771@sit.singaporetech.edu.sg>
+Nithish Kumar <2603191@sit.singaporetech.edu.sg> Nithish-SIT <109410921+RandomPlayerNA@users.noreply.github.com>
+Akira <2601747@sit.singaporetech.edu.sg> AkiraM0shi <2601747@sit.singaporetech.edu.sg>
+Isaac Lai <2605772@sit.singaporetech.edu.sg> Isaac <2605772@sit.singaporetech.edu.sg>
+Isaac Lai <2605772@sit.singaporetech.edu.sg> IsaacLai1 <2605772@sit.singaporetech.edu.sg>
+Dylan <2603841@sit.singaporetech.edu.sg> Dylan-T4 <2603841@sit.singaporetech.edu.sg>
