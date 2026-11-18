@@ -1,6 +1,3 @@
-# ---------------- #
-# Import and Setup
-# ---------------- #
 import matplotlib
 matplotlib.use("agg")  # Draw to memory: no screen is needed (CI and the Docker test command have none)
 import matplotlib.pyplot as plt
@@ -19,10 +16,6 @@ from src.data_manager.constants import MAX_LABEL_LENGTH, MONTH_NAMES, OTHER_LABE
 # What a worker could not answer is stored like this
 UNKNOWN = "unknown (worker could not say)"
 
-
-# ------------ #
-# Test Helpers
-# ------------ #
 
 # One report with every column the charts use (change anything with keyword arguments)
 def report(**changes):
@@ -63,10 +56,6 @@ def unusable_table():
                      "detected_language": float("nan"), "ai_severity": ""})
 
 
-# ------------------ #
-# create_default_charts
-# ------------------ #
-
 # The menu shows the five charts in this order, each under the name the user types
 def test_default_charts_are_the_five_charts_in_menu_order():
     charts = create_default_charts()
@@ -102,10 +91,6 @@ def test_every_default_chart_says_no_data_when_nothing_is_usable():
         assert drew is False, key
         plt.close(figure)
 
-
-# ------------------ #
-# ChartDrawer Tests
-# ------------------ #
 
 # A chart that only remembers whether it was asked to draw
 class SpyChart(ChartDrawer):
@@ -166,10 +151,6 @@ def test_split_axes_gives_the_axis_back_or_cuts_it_into_panels():
     plt.close(figure)
 
 
-# ----------------------- #
-# TimeChartDrawer Tests
-# ----------------------- #
-
 # Reports with a missing, unreadable or wrongly written date are left out; the others get the month they happened in
 def test_dated_keeps_only_valid_dates_and_adds_their_month():
     table = pd.DataFrame({"incident_date": ["2026-10-01", "2026-10-30", "2025-03-12", "not a date", "", float("nan"),
@@ -193,10 +174,6 @@ def test_mark_months_labels_months_and_years():
     assert len(ax.lines) == 1 and ax.lines[0].get_linestyle() == "--"  # One line, between the two years
     plt.close(figure)
 
-
-# ------------------ #
-# LanguageChart Tests
-# ------------------ #
 
 # The pie's legend names each language with how many reports and what share, most common first
 def test_language_chart_counts_each_language():
@@ -224,10 +201,6 @@ def test_language_chart_has_nothing_to_draw_without_a_known_language():
         assert drew is False, languages
         plt.close(figure)
 
-
-# -------------------- #
-# RootCauseChart Tests
-# -------------------- #
 
 # One stacked bar per month: the most common cause at the bottom, and the month's total written on top
 def test_root_cause_chart_stacks_causes_per_month():
@@ -275,10 +248,6 @@ def test_root_cause_chart_has_nothing_to_draw_without_usable_reports():
         plt.close(figure)
 
 
-# ------------------ #
-# MonthlyChart Tests
-# ------------------ #
-
 # One line per year: the legend gives each year's total, and each line has the counts of its months
 def test_monthly_chart_draws_one_line_per_year():
     table = table_of({"incident_date": "2025-01-10"}, {"incident_date": "2025-01-20"},
@@ -320,10 +289,6 @@ def test_monthly_chart_has_nothing_to_draw_without_a_valid_date():
     assert drew is False
     plt.close(figure)
 
-
-# -------------------- #
-# LocationChart Tests
-# -------------------- #
 
 # The chart has two panels, per month and per year, in place of the one axis it was given
 def test_location_chart_has_a_monthly_and_a_yearly_panel():
@@ -384,10 +349,6 @@ def test_location_chart_has_nothing_to_draw_without_usable_reports():
         assert drew is False
         plt.close(figure)
 
-
-# ---------------------------- #
-# SeverityByCauseChart Tests
-# ---------------------------- #
 
 # Severity becomes a number whatever the capital letters; a blank or unknown level has no number
 def test_severity_score_turns_levels_into_numbers():

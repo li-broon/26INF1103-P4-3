@@ -1,6 +1,3 @@
-# ---------------- #
-# Import and Setup
-# ---------------- #
 import os
 import sys
 import tempfile
@@ -21,10 +18,6 @@ CHART_KEYS = list(create_default_charts())
 REPORT = {"reporter_name": "Ann", "incident_date": "2026-10-01", "importance_score": 5, "location": "Tuas, bay 2",
           "root_cause_category": "Fire", "detected_language": "English", "ai_severity": "High", "work_stoppage_hours": 1}
 
-
-# ------------ #
-# Test Helpers
-# ------------ #
 
 # A Data Manager that always gives the same table and remembers how it was asked
 class FakeData:
@@ -57,10 +50,6 @@ def unusable_table():
 def without_matplotlib():
     return mock.patch.dict(sys.modules, {"matplotlib": None, "matplotlib.pyplot": None, "matplotlib.figure": None})
 
-
-# --------------------------------- #
-# Unknown chart name and empty data
-# --------------------------------- #
 
 # A chart name that does not exist is refused with the names the user can choose from, and no reports are loaded
 def test_unknown_chart_is_refused_and_the_choices_are_listed():
@@ -115,10 +104,6 @@ def test_no_reports_for_a_filter_gives_its_own_message():
     assert manager_for(data).build_chart("language", "ai_severity", "Critical") == (None, "No reports to chart for that filter.")
 
 
-# ------------------ #
-# Filters
-# ------------------ #
-
 # Without a filter every report is loaded; with one only the matching reports are
 def test_filter_decides_which_reports_are_loaded():
     data = FakeData(some_reports())
@@ -137,10 +122,6 @@ def test_heading_names_the_reports_and_the_filter():
     figure, _ = manager_for(FakeData(some_reports())).build_chart("language", "ai_severity", "Critical")
     assert figure.texts[0].get_text() == "Incident Reports (2 reports) where ai_severity = Critical"
 
-
-# ------------------------- #
-# matplotlib or screen missing
-# ------------------------- #
 
 # Without matplotlib the user is told how to install it, and nothing is loaded or saved
 def test_missing_matplotlib_is_reported():
@@ -168,10 +149,6 @@ def test_saving_a_picture_needs_no_screen():
         saved, message = manager_for(FakeData(some_reports())).show_chart("language", save_path=os.path.join(folder, "a.png"))
         assert saved is True, message
 
-
-# --------------- #
-# Saving errors
-# --------------- #
 
 # A folder that cannot be made (a file is in the way) gives a message, and the figure is closed
 def test_save_into_an_impossible_folder_is_reported():
@@ -219,10 +196,6 @@ def test_unusable_reports_still_give_a_picture():
             assert os.path.getsize(path) > 0
 
 
-# ------------------------------- #
-# Opening a window (screen faked)
-# ------------------------------- #
-
 # With a screen the chart opens in a window, waits for it to close, and leaves no figure open
 def test_chart_opens_in_a_window_and_closes_it():
     plt.close("all")
@@ -257,10 +230,6 @@ def test_window_without_a_title_still_opens():
     show.assert_called_once()
 
 
-# ------------- #
-# build_chart
-# ------------- #
-
 # The GUI gets a figure of its own that matplotlib's window manager does not know about
 def test_build_chart_gives_a_figure_that_is_not_opened_anywhere():
     plt.close("all")
@@ -281,10 +250,6 @@ def test_build_chart_draws_only_the_chart_asked_for():
     figure, _ = manager_for(FakeData(some_reports())).build_chart("language")
     assert [ax.get_title() for ax in figure.axes] == [create_default_charts()["language"].title]
 
-
-# --------------------------------- #
-# Options, columns and sizes
-# --------------------------------- #
 
 # The menu offers every chart as (name, menu text), in order
 def test_chart_options_list_every_chart_in_order():

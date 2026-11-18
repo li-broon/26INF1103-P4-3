@@ -1,6 +1,3 @@
-# ---------------- #
-# Import and Setup
-# ---------------- #
 import os
 import tempfile
 from types import SimpleNamespace
@@ -23,10 +20,6 @@ LABEL_SIZE = 8
 REPORT = {"reporter_name": "Ann", "incident_date": "2026-10-01", "importance_score": 5, "location": "Tuas, bay 2",
           "root_cause_category": "Fire", "detected_language": "English", "ai_severity": "High", "work_stoppage_hours": 1}
 
-
-# ------------ #
-# Test Helpers
-# ------------ #
 
 # A bar chart with one bar per cause named on the y axis, in a figure of the given size in inches
 def chart_with_cause_labels(width, height):
@@ -52,10 +45,6 @@ def manager_for(table):
     return ChartManager(SimpleNamespace(load_records=lambda ascending=False: table, load_matching_records=lambda c, v: table),
                         create_default_charts())
 
-
-# ------------------- #
-# ChartResizer Tests
-# ------------------- #
 
 # With room to spare the labels keep the size the chart gave them, and all of them are shown
 def test_labels_with_enough_room_keep_their_size():
@@ -95,10 +84,6 @@ def test_labels_are_thinned_out_when_too_small_to_fit_then_restored():
     assert all(size == LABEL_SIZE for size, _ in labels)
     plt.close(figure)
 
-
-# ------------------- #
-# ChartManager Tests
-# ------------------- #
 
 # Reports with every severity blank still give a picture (the severity panels say "No data") instead of a crash
 def test_blank_severities_do_not_crash_the_severity_chart():

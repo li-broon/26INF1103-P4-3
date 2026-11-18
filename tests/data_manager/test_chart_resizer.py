@@ -1,6 +1,3 @@
-# ---------------- #
-# Import and Setup
-# ---------------- #
 import matplotlib
 matplotlib.use("agg")  # Draw to memory: no screen is needed (CI and the Docker test command have none)
 import matplotlib.pyplot as plt
@@ -13,10 +10,6 @@ from src.data_manager.constants import DETAIL_GID, DETAIL_MIN_SCALE, MAX_TEXT_SC
 DESIGN_SIZE = (10, 6)  # Inches, the size every chart in these tests is "designed" for
 DPI = 100
 
-
-# ------------ #
-# Test Helpers
-# ------------ #
 
 # A figure with a real (in memory) canvas, which can measure text
 def measuring_figure():
@@ -74,10 +67,6 @@ def shown_labels(ax):
     return [label for label in ax.get_xticklabels() if label.get_text()]
 
 
-# ----------------------------- #
-# limit_window_size
-# ----------------------------- #
-
 # A Tk window is told the smallest size the chart stays readable at (a fraction of its normal size in pixels)
 def test_tk_window_gets_a_minimum_size():
     window = TkWindow()
@@ -112,10 +101,6 @@ def test_figure_without_a_window_is_ignored():
     ChartResizer(measuring_figure()).limit_window_size()  # The agg manager has no window
     ChartResizer(Figure(figsize=DESIGN_SIZE, dpi=DPI)).limit_window_size()  # A bare figure has no manager at all
 
-
-# ---------------------------- #
-# update: text scale and details
-# ---------------------------- #
 
 # Text grows and shrinks with the window, and always comes back to its own size at the normal size
 def test_text_follows_the_window_size():
@@ -194,10 +179,6 @@ def test_resize_event_updates_the_text():
     assert round(text.get_fontsize(), 6) == 8.0
 
 
-# ------------------------ #
-# _fit_tick_labels
-# ------------------------ #
-
 # A canvas that cannot measure text cannot fit labels: they keep the window scale only, and none is hidden
 def test_labels_keep_the_window_scale_when_text_cannot_be_measured():
     figure = Figure(figsize=DESIGN_SIZE, dpi=DPI)  # A bare figure's canvas has no get_renderer
@@ -266,10 +247,6 @@ def test_a_single_label_is_left_alone():
     ChartResizer(figure).update()
     assert shown_labels(ax)[0].get_visible() is True
 
-
-# ------------------------ #
-# _footprint
-# ------------------------ #
 
 # A label of 40 letters, so its width is much more than its height
 def long_label(figure, rotation):
