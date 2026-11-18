@@ -1,4 +1,5 @@
 import matplotlib
+import pytest
 matplotlib.use("agg")  # Draw to memory: no screen is needed (CI and the Docker test command have none)
 import matplotlib.pyplot as plt
 from matplotlib.backend_bases import ResizeEvent
@@ -10,6 +11,10 @@ from src.data_manager.constants import DETAIL_GID, DETAIL_MIN_SCALE, MAX_TEXT_SC
 DESIGN_SIZE = (10, 6)  # Inches, the size every chart in these tests is "designed" for
 DPI = 100
 
+@pytest.fixture(autouse=True)
+def close_figures():
+    yield
+    plt.close("all")
 
 # A figure with a real (in memory) canvas, which can measure text
 def measuring_figure():
