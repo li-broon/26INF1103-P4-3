@@ -73,57 +73,19 @@ The AI features need a Gemini API key. Never commit it.
 
 1. Create a file called `.env` in the project folder.
 2. Add one line: `GEMINI_API_KEY=your_key_here`
-3. Run the app locally with `pip install -r requirements.txt` then `python main.py`, or use Docker (below).
+3. Run the app locally with `pip install -r requirements.txt` then `python main.py --gui`, or use Docker (below).
 
 If the key is missing, the app shows a clear message when you start a chat. The automated tests never need a key, because they use fake AI services.
 
-## Continuous Integration (CI)
-
-A GitHub Actions workflow in `.github/workflows/ci.yml` runs the full test suite automatically.
-
-- **When it runs:** on every push to `main` and every pull request into `main` that changes a `.py` file, `requirements.txt`, `pytest.ini` or the workflow itself.
-- **What it does:** checks out the code, sets up Python 3.12, installs `requirements.txt`, then runs `pytest` from the project root.
-- **No live AI:** all tests use fake AI responses, and the live translation test is skipped unless `LIVE_AI_TESTS=1` is set. CI therefore needs no API key.
-- **Reading the result:** open the repository's "Actions" tab. A green tick means every test passed. A red cross means at least one failed, so fix it before merging.
-- **Run the same checks yourself:** `pytest` locally, or `docker run -it --rm inf1103-p4 pytest` as shown below.
-
 ## Running with Docker
+
+Build the image once:
 
 ```bash
 docker build -t inf1103-p4 .
-docker run -it --rm -v "$(pwd)/data:/app/data" inf1103-p4
-
 ```
-Command to run test cases in docker
-```bash
-docker run -it --rm inf1103-p4 pytest
 
-```
-or
-```bash
-docker run -it --rm inf1103-p4 pytest tests/logic_manager
-
-```
-to run only the `logic_manager` test cases (scoring, MOM rule and LogicManager), which fulfils the submission requirements.
-Each manager's tests are in their own folder, so `tests/ai_manager`, `tests/data_manager` or `tests/io_manager` work the same way.
-
-### Live translation check (optional, needs the API)
-
-`tests/ai_manager/test_translation_live.py` reports the same incident in English, Malay, Chinese and Tamil through the real AI and compares the four reports: the structured fields (date, time, hospitalised, hours, severity, root cause, near miss, lost-time injury) must come out identical, and the free-text fields get a similarity score against the English run. The normal `pytest` run skips it, so CI and the test commands above stay offline. To run it, with your `.env` in place:
-```bash
-LIVE_AI_TESTS=1 pytest tests/ai_manager/test_translation_live.py -s
-
-```
-or in Docker:
-```bash
-docker run -it --rm --env-file .env -e LIVE_AI_TESTS=1 inf1103-p4 pytest tests/ai_manager/test_translation_live.py -s
-
-```
-`-s` prints the comparison table for each language. It makes about 8 API calls, and the AI's wording of the free-text fields can change between runs, so read the similarity scores as a guide rather than a pass mark.
-
-## Running the GUI with Docker
-
-The GUI (`python main.py --gui`) opens a window, so the container must be given your screen. Pick the command for your system (build the image first, as above).
+The app is used through its GUI (`python main.py --gui`), which opens a window, so the container must be given your screen. Pick the command for your system.
 
 **Linux** (X11, or Wayland with XWayland)
 ```bash
@@ -151,3 +113,42 @@ docker run -it --rm -e DISPLAY=host.docker.internal:0 -v "$(pwd)/data:/app/data"
 ```
 
 The same `DISPLAY=host.docker.internal:0` command also works on any Windows version if an X server such as VcXsrv is running (with access control disabled).
+
+## Running the tests
+
+Command to run test cases in docker
+```bash
+docker run -it --rm inf1103-p4 pytest
+
+```
+or
+```bash
+docker run -it --rm inf1103-p4 pytest tests/logic_manager
+
+```
+to run only the `logic_manager` test cases (scoring, MOM rule and LogicManager), which fulfils the submission requirements.
+Each manager's tests are in their own folder, so `tests/ai_manager`, `tests/data_manager` or `tests/io_manager` work the same way.
+
+### Live translation check (optional, needs the API)
+
+`tests/ai_manager/test_translation_live.py` reports the same incident in English, Malay, Chinese and Tamil through the real AI and compares the four reports: the structured fields (date, time, hospitalised, hours, severity, root cause, near miss, lost-time injury) must come out identical, and the free-text fields get a similarity score against the English run. The normal `pytest` run skips it, so CI and the test commands above stay offline. To run it, with your `.env` in place:
+```bash
+LIVE_AI_TESTS=1 pytest tests/ai_manager/test_translation_live.py -s
+
+```
+or in Docker:
+```bash
+docker run -it --rm --env-file .env -e LIVE_AI_TESTS=1 inf1103-p4 pytest tests/ai_manager/test_translation_live.py -s
+
+```
+`-s` prints the comparison table for each language. It makes about 8 API calls, and the AI's wording of the free-text fields can change between runs, so read the similarity scores as a guide rather than a pass mark.
+
+## Continuous Integration (CI)
+
+A GitHub Actions workflow in `.github/workflows/ci.yml` runs the full test suite automatically.
+
+- **When it runs:** on every push to `main` and every pull request into `main` that changes a `.py` file, `requirements.txt`, `pytest.ini` or the workflow itself.
+- **What it does:** checks out the code, sets up Python 3.12, installs `requirements.txt`, then runs `pytest` from the project root.
+- **No live AI:** all tests use fake AI responses, and the live translation test is skipped unless `LIVE_AI_TESTS=1` is set. CI therefore needs no API key.
+- **Reading the result:** open the repository's "Actions" tab. A green tick means every test passed. A red cross means at least one failed, so fix it before merging.
+- **Run the same checks yourself:** `pytest` locally, or `docker run -it --rm inf1103-p4 pytest` as shown in Running the tests.
